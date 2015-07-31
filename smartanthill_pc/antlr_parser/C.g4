@@ -34,19 +34,10 @@ primaryExpression
     |   Constant
     |   StringLiteral+
     |   '(' expression ')'
-    |   genericSelection
+    |   '_Generic' '(' assignmentExpression ',' genericAssociation ( ',' genericAssociation )* ')'
     |   '__extension__'? '(' compoundStatement ')' // Blocks (GCC extension)
     |   '__builtin_va_arg' '(' unaryExpression ',' typeName ')'
     |   '__builtin_offsetof' '(' typeName ',' unaryExpression ')'
-    ;
-
-genericSelection
-    :   '_Generic' '(' assignmentExpression ',' genericAssocList ')'
-    ;
-
-genericAssocList
-    :   genericAssociation
-    |   genericAssocList ',' genericAssociation
     ;
 
 genericAssociation
@@ -69,8 +60,7 @@ postfixExpression
     ;
 
 argumentExpressionList
-    :   assignmentExpression
-    |   argumentExpressionList ',' assignmentExpression
+    :   assignmentExpression (',' assignmentExpression)*
     ;
 
 unaryExpression
@@ -90,8 +80,7 @@ unaryOperator
 
 castExpression
     :   unaryExpression
-    |   '(' typeName ')' castExpression
-    |   '__extension__' '(' typeName ')' castExpression
+    |   '__extension__'? '(' typeName ')' castExpression
     ;
 
 multiplicativeExpression
@@ -166,8 +155,7 @@ assignmentOperator
     ;
 
 expression
-    :   assignmentExpression
-    |   expression ',' assignmentExpression
+    :   assignmentExpression (',' assignmentExpression)*
     ;
 
 constantExpression
@@ -175,16 +163,8 @@ constantExpression
     ;
 
 declaration
-    :   declarationSpecifiers initDeclaratorList? ';'
+    :   declarationSpecifier+ initDeclaratorList? ';'
     |   staticAssertDeclaration
-    ;
-
-declarationSpecifiers
-    :   declarationSpecifier+
-    ;
-
-declarationSpecifiers2
-    :   declarationSpecifier+
     ;
 
 declarationSpecifier
@@ -196,8 +176,7 @@ declarationSpecifier
     ;
 
 initDeclaratorList
-    :   initDeclarator
-    |   initDeclaratorList ',' initDeclarator
+    :   initDeclarator ( ',' initDeclarator )*
     ;
 
 initDeclarator
@@ -238,18 +217,13 @@ typeSpecifier
     ;
 
 structOrUnionSpecifier
-    :   structOrUnion Identifier? '{' structDeclarationList '}'
+    :   structOrUnion Identifier? '{' structDeclaration+ '}'
     |   structOrUnion Identifier
     ;
 
 structOrUnion
     :   'struct'
     |   'union'
-    ;
-
-structDeclarationList
-    :   structDeclaration
-    |   structDeclarationList structDeclaration
     ;
 
 structDeclaration
@@ -263,8 +237,7 @@ specifierQualifierList
     ;
 
 structDeclaratorList
-    :   structDeclarator
-    |   structDeclaratorList ',' structDeclarator
+    :   structDeclarator ( ',' structDeclarator )*
     ;
 
 structDeclarator
@@ -279,17 +252,11 @@ enumSpecifier
     ;
 
 enumeratorList
-    :   enumerator
-    |   enumeratorList ',' enumerator
+    :   enumerator ( ',' enumerator )*
     ;
 
 enumerator
-    :   enumerationConstant
-    |   enumerationConstant '=' constantExpression
-    ;
-
-enumerationConstant
-    :   Identifier
+    :   Identifier ('=' constantExpression)?
     ;
 
 atomicTypeSpecifier
@@ -324,10 +291,10 @@ declarator
 directDeclarator
     :   Identifier
     |   '(' declarator ')'
-    |   directDeclarator '[' typeQualifierList? assignmentExpression? ']'
-    |   directDeclarator '[' 'static' typeQualifierList? assignmentExpression ']'
-    |   directDeclarator '[' typeQualifierList 'static' assignmentExpression ']'
-    |   directDeclarator '[' typeQualifierList? '*' ']'
+    |   directDeclarator '[' typeQualifier* assignmentExpression? ']'
+    |   directDeclarator '[' 'static' typeQualifier* assignmentExpression ']'
+    |   directDeclarator '[' typeQualifier+ 'static' assignmentExpression ']'
+    |   directDeclarator '[' typeQualifier* '*' ']'
     |   directDeclarator '(' parameterTypeList ')'
     |   directDeclarator '(' identifierList? ')'
     ;
@@ -343,7 +310,6 @@ gccAttributeSpecifier
 
 gccAttributeList
     :   gccAttribute (',' gccAttribute)*
-    |   // empty
     ;
 
 gccAttribute
@@ -359,35 +325,23 @@ nestedParenthesesBlock
     ;
 
 pointer
-    :   '*' typeQualifierList?
-    |   '*' typeQualifierList? pointer
-    |   '^' typeQualifierList? // Blocks language extension
-    |   '^' typeQualifierList? pointer // Blocks language extension
-    ;
-
-typeQualifierList
-    :   typeQualifier
-    |   typeQualifierList typeQualifier
+    :   '*' typeQualifier*
+    |   '*' typeQualifier* pointer
+    |   '^' typeQualifier* // Blocks language extension
+    |   '^' typeQualifier* pointer // Blocks language extension
     ;
 
 parameterTypeList
-    :   parameterList
-    |   parameterList ',' '...'
-    ;
-
-parameterList
-    :   parameterDeclaration
-    |   parameterList ',' parameterDeclaration
+    :   parameterDeclaration ( ',' parameterDeclaration )* (',' '...')?
     ;
 
 parameterDeclaration
-    :   declarationSpecifiers declarator
-    |   declarationSpecifiers2 abstractDeclarator?
+    :   declarationSpecifier+ declarator
+    |   declarationSpecifier+ abstractDeclarator?
     ;
 
 identifierList
-    :   Identifier
-    |   identifierList ',' Identifier
+    :   Identifier ( ',' Identifier )*
     ;
 
 typeName
@@ -401,14 +355,14 @@ abstractDeclarator
 
 directAbstractDeclarator
     :   '(' abstractDeclarator ')' gccDeclaratorExtension*
-    |   '[' typeQualifierList? assignmentExpression? ']'
-    |   '[' 'static' typeQualifierList? assignmentExpression ']'
-    |   '[' typeQualifierList 'static' assignmentExpression ']'
+    |   '[' typeQualifier* assignmentExpression? ']'
+    |   '[' 'static' typeQualifier* assignmentExpression ']'
+    |   '[' typeQualifier* 'static' assignmentExpression ']'
     |   '[' '*' ']'
     |   '(' parameterTypeList? ')' gccDeclaratorExtension*
-    |   directAbstractDeclarator '[' typeQualifierList? assignmentExpression? ']'
-    |   directAbstractDeclarator '[' 'static' typeQualifierList? assignmentExpression ']'
-    |   directAbstractDeclarator '[' typeQualifierList 'static' assignmentExpression ']'
+    |   directAbstractDeclarator '[' typeQualifier* assignmentExpression? ']'
+    |   directAbstractDeclarator '[' 'static' typeQualifier* assignmentExpression ']'
+    |   directAbstractDeclarator '[' typeQualifier+ 'static' assignmentExpression ']'
     |   directAbstractDeclarator '[' '*' ']'
     |   directAbstractDeclarator '(' parameterTypeList? ')' gccDeclaratorExtension*
     ;
@@ -433,8 +387,7 @@ designation
     ;
 
 designatorList
-    :   designator
-    |   designatorList designator
+    :   designator+
     ;
 
 designator
@@ -467,8 +420,7 @@ compoundStatement
     ;
 
 blockItemList
-    :   blockItem
-    |   blockItemList blockItem
+    :   blockItem+
     ;
 
 blockItem
@@ -505,8 +457,7 @@ compilationUnit
     ;
 
 translationUnit
-    :   externalDeclaration
-    |   translationUnit externalDeclaration
+    :   externalDeclaration+
     ;
 
 externalDeclaration
@@ -516,12 +467,11 @@ externalDeclaration
     ;
 
 functionDefinition
-    :   declarationSpecifiers? declarator declarationList? compoundStatement
+    :   declarationSpecifier* declarator declarationList? compoundStatement
     ;
 
 declarationList
-    :   declaration
-    |   declarationList declaration
+    :   declaration+
     ;
 
 Auto : 'auto';

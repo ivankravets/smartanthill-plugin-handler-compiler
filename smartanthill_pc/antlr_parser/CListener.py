@@ -13,24 +13,6 @@ class CListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CParser#genericSelection.
-    def enterGenericSelection(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#genericSelection.
-    def exitGenericSelection(self, ctx):
-        pass
-
-
-    # Enter a parse tree produced by CParser#genericAssocList.
-    def enterGenericAssocList(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#genericAssocList.
-    def exitGenericAssocList(self, ctx):
-        pass
-
-
     # Enter a parse tree produced by CParser#genericAssociation.
     def enterGenericAssociation(self, ctx):
         pass
@@ -229,24 +211,6 @@ class CListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CParser#declarationSpecifiers.
-    def enterDeclarationSpecifiers(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#declarationSpecifiers.
-    def exitDeclarationSpecifiers(self, ctx):
-        pass
-
-
-    # Enter a parse tree produced by CParser#declarationSpecifiers2.
-    def enterDeclarationSpecifiers2(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#declarationSpecifiers2.
-    def exitDeclarationSpecifiers2(self, ctx):
-        pass
-
-
     # Enter a parse tree produced by CParser#declarationSpecifier.
     def enterDeclarationSpecifier(self, ctx):
         pass
@@ -310,15 +274,6 @@ class CListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CParser#structDeclarationList.
-    def enterStructDeclarationList(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#structDeclarationList.
-    def exitStructDeclarationList(self, ctx):
-        pass
-
-
     # Enter a parse tree produced by CParser#structDeclaration.
     def enterStructDeclaration(self, ctx):
         pass
@@ -379,15 +334,6 @@ class CListener(ParseTreeListener):
 
     # Exit a parse tree produced by CParser#enumerator.
     def exitEnumerator(self, ctx):
-        pass
-
-
-    # Enter a parse tree produced by CParser#enumerationConstant.
-    def enterEnumerationConstant(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#enumerationConstant.
-    def exitEnumerationConstant(self, ctx):
         pass
 
 
@@ -499,30 +445,12 @@ class CListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CParser#typeQualifierList.
-    def enterTypeQualifierList(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#typeQualifierList.
-    def exitTypeQualifierList(self, ctx):
-        pass
-
-
     # Enter a parse tree produced by CParser#parameterTypeList.
     def enterParameterTypeList(self, ctx):
         pass
 
     # Exit a parse tree produced by CParser#parameterTypeList.
     def exitParameterTypeList(self, ctx):
-        pass
-
-
-    # Enter a parse tree produced by CParser#parameterList.
-    def enterParameterList(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#parameterList.
-    def exitParameterList(self, ctx):
         pass
 
 
