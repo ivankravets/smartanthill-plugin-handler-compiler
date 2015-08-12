@@ -4,30 +4,129 @@ from antlr4 import *
 # This class defines a complete listener for a parse tree produced by CParser.
 class CListener(ParseTreeListener):
 
-    # Enter a parse tree produced by CParser#primaryExpression.
-    def enterPrimaryExpression(self, ctx):
+    # Enter a parse tree produced by CParser#FunctionExpression.
+    def enterFunctionExpression(self, ctx):
         pass
 
-    # Exit a parse tree produced by CParser#primaryExpression.
-    def exitPrimaryExpression(self, ctx):
-        pass
-
-
-    # Enter a parse tree produced by CParser#genericAssociation.
-    def enterGenericAssociation(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#genericAssociation.
-    def exitGenericAssociation(self, ctx):
+    # Exit a parse tree produced by CParser#FunctionExpression.
+    def exitFunctionExpression(self, ctx):
         pass
 
 
-    # Enter a parse tree produced by CParser#postfixExpression.
-    def enterPostfixExpression(self, ctx):
+    # Enter a parse tree produced by CParser#DotExpression.
+    def enterDotExpression(self, ctx):
         pass
 
-    # Exit a parse tree produced by CParser#postfixExpression.
-    def exitPostfixExpression(self, ctx):
+    # Exit a parse tree produced by CParser#DotExpression.
+    def exitDotExpression(self, ctx):
+        pass
+
+
+    # Enter a parse tree produced by CParser#ParenthesizedExpression.
+    def enterParenthesizedExpression(self, ctx):
+        pass
+
+    # Exit a parse tree produced by CParser#ParenthesizedExpression.
+    def exitParenthesizedExpression(self, ctx):
+        pass
+
+
+    # Enter a parse tree produced by CParser#LiteralExpression.
+    def enterLiteralExpression(self, ctx):
+        pass
+
+    # Exit a parse tree produced by CParser#LiteralExpression.
+    def exitLiteralExpression(self, ctx):
+        pass
+
+
+    # Enter a parse tree produced by CParser#PostIncrementExpression.
+    def enterPostIncrementExpression(self, ctx):
+        pass
+
+    # Exit a parse tree produced by CParser#PostIncrementExpression.
+    def exitPostIncrementExpression(self, ctx):
+        pass
+
+
+    # Enter a parse tree produced by CParser#ArrowExpression.
+    def enterArrowExpression(self, ctx):
+        pass
+
+    # Exit a parse tree produced by CParser#ArrowExpression.
+    def exitArrowExpression(self, ctx):
+        pass
+
+
+    # Enter a parse tree produced by CParser#IndexExpression.
+    def enterIndexExpression(self, ctx):
+        pass
+
+    # Exit a parse tree produced by CParser#IndexExpression.
+    def exitIndexExpression(self, ctx):
+        pass
+
+
+    # Enter a parse tree produced by CParser#SizeOfTypeExpression.
+    def enterSizeOfTypeExpression(self, ctx):
+        pass
+
+    # Exit a parse tree produced by CParser#SizeOfTypeExpression.
+    def exitSizeOfTypeExpression(self, ctx):
+        pass
+
+
+    # Enter a parse tree produced by CParser#IdentifierExpression.
+    def enterIdentifierExpression(self, ctx):
+        pass
+
+    # Exit a parse tree produced by CParser#IdentifierExpression.
+    def exitIdentifierExpression(self, ctx):
+        pass
+
+
+    # Enter a parse tree produced by CParser#UnaryOperatorExpression.
+    def enterUnaryOperatorExpression(self, ctx):
+        pass
+
+    # Exit a parse tree produced by CParser#UnaryOperatorExpression.
+    def exitUnaryOperatorExpression(self, ctx):
+        pass
+
+
+    # Enter a parse tree produced by CParser#AlignOfTypeExpression.
+    def enterAlignOfTypeExpression(self, ctx):
+        pass
+
+    # Exit a parse tree produced by CParser#AlignOfTypeExpression.
+    def exitAlignOfTypeExpression(self, ctx):
+        pass
+
+
+    # Enter a parse tree produced by CParser#SizeOfExpression.
+    def enterSizeOfExpression(self, ctx):
+        pass
+
+    # Exit a parse tree produced by CParser#SizeOfExpression.
+    def exitSizeOfExpression(self, ctx):
+        pass
+
+
+    # Enter a parse tree produced by CParser#StringLiteralExpression.
+    def enterStringLiteralExpression(self, ctx):
+        pass
+
+    # Exit a parse tree produced by CParser#StringLiteralExpression.
+    def exitStringLiteralExpression(self, ctx):
+        pass
+
+
+    # Enter a parse tree produced by CParser#PreIncrementExpression.
+    def enterPreIncrementExpression(self, ctx):
+        pass
+
+    # Exit a parse tree produced by CParser#PreIncrementExpression.
+    def exitPreIncrementExpression(self, ctx):
         pass
 
 
@@ -40,111 +139,12 @@ class CListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CParser#unaryExpression.
-    def enterUnaryExpression(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#unaryExpression.
-    def exitUnaryExpression(self, ctx):
-        pass
-
-
-    # Enter a parse tree produced by CParser#unaryOperator.
-    def enterUnaryOperator(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#unaryOperator.
-    def exitUnaryOperator(self, ctx):
-        pass
-
-
     # Enter a parse tree produced by CParser#castExpression.
     def enterCastExpression(self, ctx):
         pass
 
     # Exit a parse tree produced by CParser#castExpression.
     def exitCastExpression(self, ctx):
-        pass
-
-
-    # Enter a parse tree produced by CParser#multiplicativeExpression.
-    def enterMultiplicativeExpression(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#multiplicativeExpression.
-    def exitMultiplicativeExpression(self, ctx):
-        pass
-
-
-    # Enter a parse tree produced by CParser#additiveExpression.
-    def enterAdditiveExpression(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#additiveExpression.
-    def exitAdditiveExpression(self, ctx):
-        pass
-
-
-    # Enter a parse tree produced by CParser#shiftExpression.
-    def enterShiftExpression(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#shiftExpression.
-    def exitShiftExpression(self, ctx):
-        pass
-
-
-    # Enter a parse tree produced by CParser#relationalExpression.
-    def enterRelationalExpression(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#relationalExpression.
-    def exitRelationalExpression(self, ctx):
-        pass
-
-
-    # Enter a parse tree produced by CParser#equalityExpression.
-    def enterEqualityExpression(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#equalityExpression.
-    def exitEqualityExpression(self, ctx):
-        pass
-
-
-    # Enter a parse tree produced by CParser#andExpression.
-    def enterAndExpression(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#andExpression.
-    def exitAndExpression(self, ctx):
-        pass
-
-
-    # Enter a parse tree produced by CParser#exclusiveOrExpression.
-    def enterExclusiveOrExpression(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#exclusiveOrExpression.
-    def exitExclusiveOrExpression(self, ctx):
-        pass
-
-
-    # Enter a parse tree produced by CParser#inclusiveOrExpression.
-    def enterInclusiveOrExpression(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#inclusiveOrExpression.
-    def exitInclusiveOrExpression(self, ctx):
-        pass
-
-
-    # Enter a parse tree produced by CParser#logicalAndExpression.
-    def enterLogicalAndExpression(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#logicalAndExpression.
-    def exitLogicalAndExpression(self, ctx):
         pass
 
 
@@ -172,15 +172,6 @@ class CListener(ParseTreeListener):
 
     # Exit a parse tree produced by CParser#assignmentExpression.
     def exitAssignmentExpression(self, ctx):
-        pass
-
-
-    # Enter a parse tree produced by CParser#assignmentOperator.
-    def enterAssignmentOperator(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#assignmentOperator.
-    def exitAssignmentOperator(self, ctx):
         pass
 
 
@@ -391,51 +382,6 @@ class CListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CParser#gccDeclaratorExtension.
-    def enterGccDeclaratorExtension(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#gccDeclaratorExtension.
-    def exitGccDeclaratorExtension(self, ctx):
-        pass
-
-
-    # Enter a parse tree produced by CParser#gccAttributeSpecifier.
-    def enterGccAttributeSpecifier(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#gccAttributeSpecifier.
-    def exitGccAttributeSpecifier(self, ctx):
-        pass
-
-
-    # Enter a parse tree produced by CParser#gccAttributeList.
-    def enterGccAttributeList(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#gccAttributeList.
-    def exitGccAttributeList(self, ctx):
-        pass
-
-
-    # Enter a parse tree produced by CParser#gccAttribute.
-    def enterGccAttribute(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#gccAttribute.
-    def exitGccAttribute(self, ctx):
-        pass
-
-
-    # Enter a parse tree produced by CParser#nestedParenthesesBlock.
-    def enterNestedParenthesesBlock(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#nestedParenthesesBlock.
-    def exitNestedParenthesesBlock(self, ctx):
-        pass
-
-
     # Enter a parse tree produced by CParser#pointer.
     def enterPointer(self, ctx):
         pass
@@ -535,15 +481,6 @@ class CListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CParser#designatorList.
-    def enterDesignatorList(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#designatorList.
-    def exitDesignatorList(self, ctx):
-        pass
-
-
     # Enter a parse tree produced by CParser#designator.
     def enterDesignator(self, ctx):
         pass
@@ -589,15 +526,6 @@ class CListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CParser#blockItemList.
-    def enterBlockItemList(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#blockItemList.
-    def exitBlockItemList(self, ctx):
-        pass
-
-
     # Enter a parse tree produced by CParser#blockItem.
     def enterBlockItem(self, ctx):
         pass
@@ -634,12 +562,39 @@ class CListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CParser#jumpStatement.
-    def enterJumpStatement(self, ctx):
+    # Enter a parse tree produced by CParser#GotoStatement.
+    def enterGotoStatement(self, ctx):
         pass
 
-    # Exit a parse tree produced by CParser#jumpStatement.
-    def exitJumpStatement(self, ctx):
+    # Exit a parse tree produced by CParser#GotoStatement.
+    def exitGotoStatement(self, ctx):
+        pass
+
+
+    # Enter a parse tree produced by CParser#ContinueStatement.
+    def enterContinueStatement(self, ctx):
+        pass
+
+    # Exit a parse tree produced by CParser#ContinueStatement.
+    def exitContinueStatement(self, ctx):
+        pass
+
+
+    # Enter a parse tree produced by CParser#BreakStatement.
+    def enterBreakStatement(self, ctx):
+        pass
+
+    # Exit a parse tree produced by CParser#BreakStatement.
+    def exitBreakStatement(self, ctx):
+        pass
+
+
+    # Enter a parse tree produced by CParser#ReturnStatement.
+    def enterReturnStatement(self, ctx):
+        pass
+
+    # Exit a parse tree produced by CParser#ReturnStatement.
+    def exitReturnStatement(self, ctx):
         pass
 
 
@@ -649,15 +604,6 @@ class CListener(ParseTreeListener):
 
     # Exit a parse tree produced by CParser#compilationUnit.
     def exitCompilationUnit(self, ctx):
-        pass
-
-
-    # Enter a parse tree produced by CParser#translationUnit.
-    def enterTranslationUnit(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#translationUnit.
-    def exitTranslationUnit(self, ctx):
         pass
 
 
@@ -676,15 +622,6 @@ class CListener(ParseTreeListener):
 
     # Exit a parse tree produced by CParser#functionDefinition.
     def exitFunctionDefinition(self, ctx):
-        pass
-
-
-    # Enter a parse tree produced by CParser#declarationList.
-    def enterDeclarationList(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#declarationList.
-    def exitDeclarationList(self, ctx):
         pass
 
 

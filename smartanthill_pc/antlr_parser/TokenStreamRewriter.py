@@ -193,9 +193,6 @@ class TokenStreamRewriter(object):
         self.tokens = tokens
         self.rewrites = []
 
-    def getTokenStream(self):
-        return self.tokens
-
     def _add_op(self, op):
         op.instructionIndex = len(self.rewrites)
         self.rewrites.append(op)
@@ -233,7 +230,7 @@ class TokenStreamRewriter(object):
 # 	}
 
     def insertAfterToken(self, t, text):
-        self.insertAfter(t.getTokenIndex(), text)
+        self.insertAfter(t.tokenIndex, text)
 
     def insertAfter(self, index, text):
         # to insert after, just insert before next index (even if past end)
@@ -249,7 +246,7 @@ class TokenStreamRewriter(object):
 # 	}
 
     def insertBeforeToken(self, t, text):
-        self.insertBefore(t.getTokenIndex(), text)
+        self.insertBefore(t.tokenIndex, text)
 
     def insertBefore(self, index, text):
         op = TokenStreamRewriter.InsertBeforeOp(index, text)
@@ -279,8 +276,11 @@ class TokenStreamRewriter(object):
         op = TokenStreamRewriter.ReplaceOp(_from, to, text)
         self._add_op(op)
 
+    def replaceToken(self, tk, text):
+        self.replace(tk.tokenIndex, tk.tokenIndex, text)
+
     def replaceTokens(self, _from, to, text):
-        self.replace(_from.getTokenIndex(), to.getTokenIndex(), text)
+        self.replace(_from.tokenIndex, to.tokenIndex, text)
 
 # 	public void delete(int index) {
 # 		delete(DEFAULT_PROGRAM_NAME, index, index);
@@ -361,7 +361,7 @@ class TokenStreamRewriter(object):
                 op = indexToOp[i]
                 del indexToOp[i]  # remove so any left have index size-1
                 # execute operation and skip
-                i = op.execute(buf, self.getTokenStream())
+                i = op.execute(buf, self.tokens)
             else:
                 # no operation at that index, just dump token
                 t = self.tokens.get(i)

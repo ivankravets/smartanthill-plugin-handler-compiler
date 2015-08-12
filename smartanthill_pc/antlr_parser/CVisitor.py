@@ -5,18 +5,73 @@ from antlr4 import *
 
 class CVisitor(ParseTreeVisitor):
 
-    # Visit a parse tree produced by CParser#primaryExpression.
-    def visitPrimaryExpression(self, ctx):
+    # Visit a parse tree produced by CParser#FunctionExpression.
+    def visitFunctionExpression(self, ctx):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by CParser#genericAssociation.
-    def visitGenericAssociation(self, ctx):
+    # Visit a parse tree produced by CParser#DotExpression.
+    def visitDotExpression(self, ctx):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by CParser#postfixExpression.
-    def visitPostfixExpression(self, ctx):
+    # Visit a parse tree produced by CParser#ParenthesizedExpression.
+    def visitParenthesizedExpression(self, ctx):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by CParser#LiteralExpression.
+    def visitLiteralExpression(self, ctx):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by CParser#PostIncrementExpression.
+    def visitPostIncrementExpression(self, ctx):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by CParser#ArrowExpression.
+    def visitArrowExpression(self, ctx):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by CParser#IndexExpression.
+    def visitIndexExpression(self, ctx):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by CParser#SizeOfTypeExpression.
+    def visitSizeOfTypeExpression(self, ctx):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by CParser#IdentifierExpression.
+    def visitIdentifierExpression(self, ctx):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by CParser#UnaryOperatorExpression.
+    def visitUnaryOperatorExpression(self, ctx):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by CParser#AlignOfTypeExpression.
+    def visitAlignOfTypeExpression(self, ctx):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by CParser#SizeOfExpression.
+    def visitSizeOfExpression(self, ctx):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by CParser#StringLiteralExpression.
+    def visitStringLiteralExpression(self, ctx):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by CParser#PreIncrementExpression.
+    def visitPreIncrementExpression(self, ctx):
         return self.visitChildren(ctx)
 
 
@@ -25,63 +80,8 @@ class CVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by CParser#unaryExpression.
-    def visitUnaryExpression(self, ctx):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by CParser#unaryOperator.
-    def visitUnaryOperator(self, ctx):
-        return self.visitChildren(ctx)
-
-
     # Visit a parse tree produced by CParser#castExpression.
     def visitCastExpression(self, ctx):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by CParser#multiplicativeExpression.
-    def visitMultiplicativeExpression(self, ctx):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by CParser#additiveExpression.
-    def visitAdditiveExpression(self, ctx):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by CParser#shiftExpression.
-    def visitShiftExpression(self, ctx):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by CParser#relationalExpression.
-    def visitRelationalExpression(self, ctx):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by CParser#equalityExpression.
-    def visitEqualityExpression(self, ctx):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by CParser#andExpression.
-    def visitAndExpression(self, ctx):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by CParser#exclusiveOrExpression.
-    def visitExclusiveOrExpression(self, ctx):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by CParser#inclusiveOrExpression.
-    def visitInclusiveOrExpression(self, ctx):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by CParser#logicalAndExpression.
-    def visitLogicalAndExpression(self, ctx):
         return self.visitChildren(ctx)
 
 
@@ -97,11 +97,6 @@ class CVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by CParser#assignmentExpression.
     def visitAssignmentExpression(self, ctx):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by CParser#assignmentOperator.
-    def visitAssignmentOperator(self, ctx):
         return self.visitChildren(ctx)
 
 
@@ -220,31 +215,6 @@ class CVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by CParser#gccDeclaratorExtension.
-    def visitGccDeclaratorExtension(self, ctx):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by CParser#gccAttributeSpecifier.
-    def visitGccAttributeSpecifier(self, ctx):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by CParser#gccAttributeList.
-    def visitGccAttributeList(self, ctx):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by CParser#gccAttribute.
-    def visitGccAttribute(self, ctx):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by CParser#nestedParenthesesBlock.
-    def visitNestedParenthesesBlock(self, ctx):
-        return self.visitChildren(ctx)
-
-
     # Visit a parse tree produced by CParser#pointer.
     def visitPointer(self, ctx):
         return self.visitChildren(ctx)
@@ -300,11 +270,6 @@ class CVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by CParser#designatorList.
-    def visitDesignatorList(self, ctx):
-        return self.visitChildren(ctx)
-
-
     # Visit a parse tree produced by CParser#designator.
     def visitDesignator(self, ctx):
         return self.visitChildren(ctx)
@@ -330,11 +295,6 @@ class CVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by CParser#blockItemList.
-    def visitBlockItemList(self, ctx):
-        return self.visitChildren(ctx)
-
-
     # Visit a parse tree produced by CParser#blockItem.
     def visitBlockItem(self, ctx):
         return self.visitChildren(ctx)
@@ -355,18 +315,28 @@ class CVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by CParser#jumpStatement.
-    def visitJumpStatement(self, ctx):
+    # Visit a parse tree produced by CParser#GotoStatement.
+    def visitGotoStatement(self, ctx):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by CParser#ContinueStatement.
+    def visitContinueStatement(self, ctx):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by CParser#BreakStatement.
+    def visitBreakStatement(self, ctx):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by CParser#ReturnStatement.
+    def visitReturnStatement(self, ctx):
         return self.visitChildren(ctx)
 
 
     # Visit a parse tree produced by CParser#compilationUnit.
     def visitCompilationUnit(self, ctx):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by CParser#translationUnit.
-    def visitTranslationUnit(self, ctx):
         return self.visitChildren(ctx)
 
 
@@ -377,11 +347,6 @@ class CVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by CParser#functionDefinition.
     def visitFunctionDefinition(self, ctx):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by CParser#declarationList.
-    def visitDeclarationList(self, ctx):
         return self.visitChildren(ctx)
 
 

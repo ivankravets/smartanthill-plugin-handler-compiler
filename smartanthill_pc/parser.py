@@ -13,10 +13,51 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from smartanthill_pc.antlr_parser import CVisitor
+import antlr4
+from smartanthill_zc import node, expression, visitor, statement
+from smartanthill_zc.antlr_helper import dump_antlr_tree, get_token_text
+from smartanthill_zc.compiler import Compiler
+from smartanthill_zc.visitor import visit_node
+
+from smartanthill_pc.antlr_parser import CVisitor, CLexer, CParser
+from smartanthill_pc.antlr_parser.TokenStreamRewriter import TokenStreamRewriter
+from smartanthill_pc.c_node import DontCareExprNode, FunctionDeclNode,\
+    PluginSourceNode
+from smartanthill_pc.rewrite import RewriteVisitor
 
 
-def c_parse_tree_to_syntax_tree(compiler, js_tree):
+def process_file(file_name, dump=False):
+    '''
+    Process a c input file, and returns an string with output text
+    '''
+
+    istream = antlr4.FileStream(file_name)
+    lexer = CLexer.CLexer(istream)
+    stream = antlr4.CommonTokenStream(lexer)
+
+    parser = CParser.CParser(stream)
+    ptree = parser.compilationUnit()
+
+    if dump:
+        print '\n'.join(dump_antlr_tree(ptree))
+
+    c = Compiler()
+    source = c_parse_tree_to_syntax_tree(c, ptree)
+
+    if dump:
+        print
+        print '\n'.join(visitor.dump_tree(source))
+
+    rewriter = TokenStreamRewriter(stream)
+    v = RewriteVisitor(c, rewriter)
+    visit_node(v, source)
+
+    async = rewriter.getText()
+
+    return async
+
+
+def c_parse_tree_to_syntax_tree(compiler, tree):
     '''
     Translates a parse tree as returned by antlr4 into a
     syntax tree as used by the compiler, this tree transformation
@@ -27,8 +68,13 @@ def c_parse_tree_to_syntax_tree(compiler, js_tree):
     needed by the application.
     '''
 
-    visitor = _CParseTreeVisitor()
-    source = visitor.visit(js_tree)
+    assert isinstance(tree, CParser.CParser.CompilationUnitContext)
+
+    source = compiler.init_node(PluginSourceNode(), tree)
+    ls = compiler.init_node(node.DeclarationListNode(), tree)
+    source.set_declaration_list(ls)
+    v = _CParseTreeVisitor(compiler, source)
+    v.visit(tree)
 
     compiler.check_stage('syntax')
 
@@ -39,18 +85,19 @@ def c_parse_tree_to_syntax_tree(compiler, js_tree):
 # by CParser.
 
 
-class _CParseTreeVisitor(CVisitor):
+class _CParseTreeVisitor(CVisitor.CVisitor):
 
     '''
     The template for the visitor is copy&paste from super class interface
     ECMAScriptVisitor.ECMAScriptVisitor
     '''
 
-    def __init__(self, compiler):
+    def __init__(self, compiler, source):
         '''
         Constructor
         '''
         self._c = compiler
+        self._s = source
 
     def visitChildren(self, current):
         '''
@@ -60,100 +107,213 @@ class _CParseTreeVisitor(CVisitor):
         a valid interpretation rule here
         '''
         self._c.report_error(current, "Unsupported syntax!")
-        self._c.report_error(current, "Unmatched parser token")
-        assert False
+        self._c.raise_error()
 
-    # Visit a parse tree produced by CParser#primaryExpression.
-    def visitPrimaryExpression(self, ctx):
-        return self.visitChildren(ctx)
+    # Visit a parse tree produced by CParser#FunctionExpression.
+    def visitFunctionExpression(self, ctx):
 
-    # Visit a parse tree produced by CParser#genericAssociation.
-    def visitGenericAssociation(self, ctx):
-        return self.visitChildren(ctx)
+        expr = self._c.init_node(expression.FunctionCallExprNode(), ctx)
+        expr.txt_name = get_token_text(self._c, ctx.Identifier())
+        args = self.visit(ctx.argumentExpressionList())
+        expr.set_argument_list(args)
 
-    # Visit a parse tree produced by CParser#postfixExpression.
-    def visitPostfixExpression(self, ctx):
-        return self.visitChildren(ctx)
+        return expr
+
+    # Visit a parse tree produced by CParser#DotExpression.
+    def visitDotExpression(self, ctx):
+
+        expr = self._c.init_node(DontCareExprNode(), ctx)
+        expr.add_expression(self.visit(ctx.unaryExpression()))
+
+        tk = ctx.Identifier()
+        member = self._c.init_node(expression.VariableExprNode(), tk)
+        member.txt_name = get_token_text(self._c, tk)
+
+        expr.add_expression(member)
+
+        return expr
+
+    # Visit a parse tree produced by CParser#ParenthesizedExpression.
+    def visitParenthesizedExpression(self, ctx):
+
+        return self.visit(ctx.expression())
+
+    # Visit a parse tree produced by CParser#LiteralExpression.
+    def visitLiteralExpression(self, ctx):
+        return self._c.init_node(DontCareExprNode(), ctx)
+
+    # Visit a parse tree produced by CParser#PostIncrementExpression.
+    def visitPostIncrementExpression(self, ctx):
+        expr = self._c.init_node(DontCareExprNode(), ctx)
+        expr.add_expression(self.visit(ctx.unaryExpression()))
+
+        return expr
+
+    # Visit a parse tree produced by CParser#ArrowExpression.
+    def visitArrowExpression(self, ctx):
+        expr = self._c.init_node(DontCareExprNode(), ctx)
+        expr.add_expression(self.visit(ctx.unaryExpression()))
+
+        tk = ctx.Identifier()
+        member = self._c.init_node(expression.VariableExprNode(), tk)
+        member.txt_name = get_token_text(self._c, tk)
+
+        expr.add_expression(member)
+
+        return expr
+
+    # Visit a parse tree produced by CParser#IndexExpression.
+    def visitIndexExpression(self, ctx):
+        expr = self._c.init_node(DontCareExprNode(), ctx)
+        expr.add_expression(self.visit(ctx.unaryExpression()))
+        expr.add_expression(self.visit(ctx.expression()))
+
+        return expr
+
+    # Visit a parse tree produced by CParser#SizeOfTypeExpression.
+    def visitSizeOfTypeExpression(self, ctx):
+        return self._c.init_node(DontCareExprNode(), ctx)
+
+    # Visit a parse tree produced by CParser#IdentifierExpression.
+    def visitIdentifierExpression(self, ctx):
+
+        tk = ctx.Identifier()
+        expr = self._c.init_node(expression.VariableExprNode(), tk)
+        expr.txt_name = get_token_text(self._c, tk)
+
+        return expr
+
+    # Visit a parse tree produced by CParser#UnaryOperatorExpression.
+    def visitUnaryOperatorExpression(self, ctx):
+        expr = self._c.init_node(DontCareExprNode(), ctx)
+        expr.add_expression(self.visit(ctx.castExpression()))
+
+        return expr
+
+    # Visit a parse tree produced by CParser#AlignOfTypeExpression.
+    def visitAlignOfTypeExpression(self, ctx):
+        return self._c.init_node(DontCareExprNode(), ctx)
+
+    # Visit a parse tree produced by CParser#SizeOfExpression.
+    def visitSizeOfExpression(self, ctx):
+        expr = self._c.init_node(DontCareExprNode(), ctx)
+        expr.add_expression(self.visit(ctx.unaryExpression()))
+
+        return expr
+
+    # Visit a parse tree produced by CParser#StringLiteralExpression.
+    def visitStringLiteralExpression(self, ctx):
+        return self._c.init_node(DontCareExprNode(), ctx)
+
+    # Visit a parse tree produced by CParser#PreIncrementExpression.
+    def visitPreIncrementExpression(self, ctx):
+        expr = self._c.init_node(DontCareExprNode(), ctx)
+        expr.add_expression(self.visit(ctx.unaryExpression()))
+
+        return expr
 
     # Visit a parse tree produced by CParser#argumentExpressionList.
     def visitArgumentExpressionList(self, ctx):
-        return self.visitChildren(ctx)
+        args = self._c.init_node(node.ArgumentListNode(), ctx)
 
-    # Visit a parse tree produced by CParser#unaryExpression.
-    def visitUnaryExpression(self, ctx):
-        return self.visitChildren(ctx)
+        for e in ctx.assignmentExpression():
+            expr = self.visit(e)
+            args.add_argument(expr)
 
-    # Visit a parse tree produced by CParser#unaryOperator.
-    def visitUnaryOperator(self, ctx):
-        return self.visitChildren(ctx)
+        return args
 
     # Visit a parse tree produced by CParser#castExpression.
     def visitCastExpression(self, ctx):
-        return self.visitChildren(ctx)
+        if ctx.unaryExpression() is not None:
+            return self.visit(ctx.unaryExpression())
+        else:
+            expr = self._c.init_node(DontCareExprNode(), ctx)
+            expr.add_expression(self.visit(ctx.castExpression()))
 
-    # Visit a parse tree produced by CParser#multiplicativeExpression.
-    def visitMultiplicativeExpression(self, ctx):
-        return self.visitChildren(ctx)
-
-    # Visit a parse tree produced by CParser#additiveExpression.
-    def visitAdditiveExpression(self, ctx):
-        return self.visitChildren(ctx)
-
-    # Visit a parse tree produced by CParser#shiftExpression.
-    def visitShiftExpression(self, ctx):
-        return self.visitChildren(ctx)
-
-    # Visit a parse tree produced by CParser#relationalExpression.
-    def visitRelationalExpression(self, ctx):
-        return self.visitChildren(ctx)
-
-    # Visit a parse tree produced by CParser#equalityExpression.
-    def visitEqualityExpression(self, ctx):
-        return self.visitChildren(ctx)
-
-    # Visit a parse tree produced by CParser#andExpression.
-    def visitAndExpression(self, ctx):
-        return self.visitChildren(ctx)
-
-    # Visit a parse tree produced by CParser#exclusiveOrExpression.
-    def visitExclusiveOrExpression(self, ctx):
-        return self.visitChildren(ctx)
-
-    # Visit a parse tree produced by CParser#inclusiveOrExpression.
-    def visitInclusiveOrExpression(self, ctx):
-        return self.visitChildren(ctx)
-
-    # Visit a parse tree produced by CParser#logicalAndExpression.
-    def visitLogicalAndExpression(self, ctx):
-        return self.visitChildren(ctx)
+            return expr
 
     # Visit a parse tree produced by CParser#logicalOrExpression.
     def visitLogicalOrExpression(self, ctx):
-        return self.visitChildren(ctx)
+
+        if ctx.castExpression() is not None:
+            return self.visit(ctx.castExpression())
+        else:
+            expr = self._c.init_node(DontCareExprNode(), ctx)
+            expr.add_expression(self.visit(ctx.logicalOrExpression(1)))
+            expr.add_expression(self.visit(ctx.logicalOrExpression(2)))
+
+            return expr
 
     # Visit a parse tree produced by CParser#conditionalExpression.
     def visitConditionalExpression(self, ctx):
-        return self.visitChildren(ctx)
+        if ctx.expression() is None:
+            assert ctx.conditionalExpression() is None
+
+            return self.visit(ctx.logicalOrExpression())
+        else:
+            expr = self._c.init_node(DontCareExprNode(), ctx)
+            expr.add_expression(self.visit(ctx.logicalOrExpression()))
+            expr.add_expression(self.visit(ctx.expression()))
+            expr.add_expression(self.visit(ctx.conditionalExpression()))
+
+            return expr
 
     # Visit a parse tree produced by CParser#assignmentExpression.
     def visitAssignmentExpression(self, ctx):
-        return self.visitChildren(ctx)
+        if ctx.conditionalExpression() is not None:
+            return self.visit(ctx.conditionalExpression())
+        else:
+            expr = self._c.init_node(DontCareExprNode(), ctx)
+            expr.add_expression(self.visit(ctx.unaryExpression()))
+            expr.add_expression(self.visit(ctx.assignmentExpression()))
 
-    # Visit a parse tree produced by CParser#assignmentOperator.
-    def visitAssignmentOperator(self, ctx):
-        return self.visitChildren(ctx)
+            return expr
 
     # Visit a parse tree produced by CParser#expression.
     def visitExpression(self, ctx):
-        return self.visitChildren(ctx)
+        expr = self._c.init_node(DontCareExprNode(), ctx)
+        for each in ctx.assignmentExpression():
+            expr.add_expression(self.visit(each))
+
+        return expr
 
     # Visit a parse tree produced by CParser#constantExpression.
     def visitConstantExpression(self, ctx):
-        return self.visitChildren(ctx)
+        return self.visit(ctx.conditionalExpression())
+
+    def _get_direct_declarator_name(self, ctx):
+
+        assert isinstance(ctx, CParser.CParser.DirectDeclaratorContext)
+        if ctx.Identifier() is not None:
+            return get_token_text(self._c, ctx.Identifier())
+        elif ctx.declarator() is not None:
+            return self._get_declarator_name(ctx.declarator())
+        else:
+            assert ctx.directDeclarator() is not None
+            return self._get_direct_declarator_name(ctx.directDeclarator())
+
+    def _get_declarator_name(self, ctx):
+
+        assert isinstance(ctx, CParser.CParser.DeclaratorContext)
+        return self._get_direct_declarator_name(ctx.directDeclarator())
 
     # Visit a parse tree produced by CParser#declaration.
     def visitDeclaration(self, ctx):
-        return self.visitChildren(ctx)
+
+        result = []
+        if ctx.initDeclaratorList() is not None:
+            for each in ctx.initDeclaratorList().initDeclarator():
+
+                decl = self._c.init_node(
+                    statement.VariableDeclarationStmtNode(), ctx)
+                decl.txt_name = self._get_declarator_name(each.declarator())
+
+                if each.initializer() is not None:
+                    init = self.visit(each.initializer())
+                    decl.set_initializer(init)
+
+                result.append(decl)
+        return result
 
     # Visit a parse tree produced by CParser#declarationSpecifier.
     def visitDeclarationSpecifier(self, ctx):
@@ -289,7 +449,11 @@ class _CParseTreeVisitor(CVisitor):
 
     # Visit a parse tree produced by CParser#initializer.
     def visitInitializer(self, ctx):
-        return self.visitChildren(ctx)
+
+        if ctx.assignmentExpression() is not None:
+            return self.visit(ctx.assignmentExpression())
+        else:
+            return self.visitChildren(ctx)
 
     # Visit a parse tree produced by CParser#initializerList.
     def visitInitializerList(self, ctx):
@@ -313,7 +477,7 @@ class _CParseTreeVisitor(CVisitor):
 
     # Visit a parse tree produced by CParser#statement.
     def visitStatement(self, ctx):
-        return self.visitChildren(ctx)
+        return self.visit(ctx.getChild(0))
 
     # Visit a parse tree produced by CParser#labeledStatement.
     def visitLabeledStatement(self, ctx):
@@ -321,19 +485,32 @@ class _CParseTreeVisitor(CVisitor):
 
     # Visit a parse tree produced by CParser#compoundStatement.
     def visitCompoundStatement(self, ctx):
-        return self.visitChildren(ctx)
 
-    # Visit a parse tree produced by CParser#blockItemList.
-    def visitBlockItemList(self, ctx):
-        return self.visitChildren(ctx)
+        sl = self._c.init_node(node.StmtListNode(), ctx)
+        for each in ctx.blockItem():
+            stmt = self.visit(each)
+            if isinstance(stmt, node.StatementNode):
+                sl.add_statement(stmt)
+            else:
+                for each in stmt:
+                    sl.add_statement(each)
+
+        return sl
 
     # Visit a parse tree produced by CParser#blockItem.
     def visitBlockItem(self, ctx):
-        return self.visitChildren(ctx)
+        return self.visit(ctx.getChild(0))
 
     # Visit a parse tree produced by CParser#expressionStatement.
     def visitExpressionStatement(self, ctx):
-        return self.visitChildren(ctx)
+
+        if ctx.expression():
+            stmt = self._c.init_node(statement.ExpressionStmtNode(), ctx)
+            expr = self.visit(ctx.expression())
+            stmt.set_expression(expr)
+            return stmt
+        else:
+            return self._c.init_node(statement.NopStmtNode(), ctx)
 
     # Visit a parse tree produced by CParser#selectionStatement.
     def visitSelectionStatement(self, ctx):
@@ -343,25 +520,47 @@ class _CParseTreeVisitor(CVisitor):
     def visitIterationStatement(self, ctx):
         return self.visitChildren(ctx)
 
-    # Visit a parse tree produced by CParser#jumpStatement.
-    def visitJumpStatement(self, ctx):
-        return self.visitChildren(ctx)
+    # Visit a parse tree produced by CParser#ReturnStatement.
+    def visitReturnStatement(self, ctx):
+
+        stmt = self._c.init_node(statement.ReturnStmtNode(), ctx)
+        if ctx.expression() is not None:
+            expr = self.visit(ctx.expression())
+            stmt.set_expression(expr)
+
+        return stmt
 
     # Visit a parse tree produced by CParser#compilationUnit.
     def visitCompilationUnit(self, ctx):
-        return self.visitChildren(ctx)
 
-    # Visit a parse tree produced by CParser#translationUnit.
-    def visitTranslationUnit(self, ctx):
-        return self.visitChildren(ctx)
+        for d in ctx.externalDeclaration():
+            self.visit(d)
+
+        return None
 
     # Visit a parse tree produced by CParser#externalDeclaration.
     def visitExternalDeclaration(self, ctx):
-        return self.visitChildren(ctx)
+
+        if ctx.functionDefinition() is not None:
+            self.visit(ctx.functionDefinition())
+        elif ctx.declaration() is not None:
+            decls = self.visit(ctx.declaration())
+            for each in decls:
+                self._s.child_declaration_list.add_declaration(each)
+
+        return None
 
     # Visit a parse tree produced by CParser#functionDefinition.
     def visitFunctionDefinition(self, ctx):
-        return self.visitChildren(ctx)
+
+        decl = self._c.init_node(FunctionDeclNode(), ctx)
+
+        sl = self.visit(ctx.compoundStatement())
+        decl.set_statement_list(sl)
+
+        self._s.child_declaration_list.add_declaration(decl)
+
+        return None
 
     # Visit a parse tree produced by CParser#declarationList.
     def visitDeclarationList(self, ctx):
