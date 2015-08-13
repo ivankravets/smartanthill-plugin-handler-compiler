@@ -15,7 +15,7 @@
 
 from antlr4.Token import CommonToken
 from antlr4.tree.Tree import TerminalNodeImpl
-from smartanthill_zc.visitor import NodeVisitor, visit_node
+from smartanthill_phc.common.visitor import NodeVisitor, visit_node
 
 
 class RewriteVisitor(NodeVisitor):

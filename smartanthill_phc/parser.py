@@ -14,16 +14,20 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 import antlr4
-from smartanthill_zc import node, expression, visitor, statement
-from smartanthill_zc.antlr_helper import dump_antlr_tree, get_token_text
-from smartanthill_zc.compiler import Compiler
-from smartanthill_zc.visitor import visit_node
 
-from smartanthill_pc.antlr_parser import CVisitor, CLexer, CParser
-from smartanthill_pc.antlr_parser.TokenStreamRewriter import TokenStreamRewriter
-from smartanthill_pc.c_node import DontCareExprNode, FunctionDeclNode,\
+from smartanthill_phc.TokenStreamRewriter import TokenStreamRewriter
+from smartanthill_phc.antlr_parser import CVisitor, CLexer, CParser
+from smartanthill_phc.c_node import DontCareExprNode, FunctionDeclNode,\
     PluginSourceNode
-from smartanthill_pc.rewrite import RewriteVisitor
+from smartanthill_phc.common import expression
+from smartanthill_phc.common import node
+from smartanthill_phc.common import statement
+from smartanthill_phc.common import visitor
+from smartanthill_phc.common.antlr_helper import dump_antlr_tree,\
+    get_token_text
+from smartanthill_phc.common.compiler import Compiler
+from smartanthill_phc.common.visitor import visit_node
+from smartanthill_phc.rewrite import RewriteVisitor
 
 
 def process_file(file_name, dump=False):

@@ -15,7 +15,7 @@
 
 from setuptools import find_packages, setup
 
-from smartanthill_pc import (__author__, __description__, __email__,
+from smartanthill_phc import (__author__, __description__, __email__,
                              __license__, __title__, __url__, __version__)
 
 setup(

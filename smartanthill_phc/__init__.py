@@ -13,13 +13,18 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from smartanthill_phc import parser
 
+VERSION = (0, 0, "0.dev1")
 
-def test_code_1():
+__version__ = ".".join([str(s) for s in VERSION])
 
-    async = parser.process_file("tests/test_code_1.c")
+__title__ = "smartanthill-phc"
+__description__ = "SmartAnthill Plugin Compiler"
+__url__ = "http://smartanthill.org"
+__docsurl__ = "http://docs.smartanthill.org"
 
-    f = open("tests/test_code_1.async.c", 'r')
+__author__ = "OLogN Technologies AG"
+__email__ = "info@o-log-n.com"
 
-    assert async == f.read()
+__license__ = "GNU GPL v2.0"
+__copyright__ = "Copyright (c) 2015, OLogN Technologies AG"
