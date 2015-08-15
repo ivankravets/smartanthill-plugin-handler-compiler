@@ -15,6 +15,7 @@
 
 import antlr4
 
+from smartanthill_phc import c_node
 from smartanthill_phc.TokenStreamRewriter import TokenStreamRewriter
 from smartanthill_phc.antlr_parser import CVisitor, CLexer, CParser
 from smartanthill_phc.c_node import DontCareExprNode, FunctionDeclNode,\
@@ -28,6 +29,7 @@ from smartanthill_phc.common.antlr_helper import dump_antlr_tree,\
 from smartanthill_phc.common.compiler import Compiler
 from smartanthill_phc.common.visitor import visit_node
 from smartanthill_phc.rewrite import RewriteVisitor
+from smartanthill_phc.state import StateMachineVisitor
 
 
 def process_file(file_name, dump=False):
@@ -47,6 +49,13 @@ def process_file(file_name, dump=False):
 
     c = Compiler()
     source = c_parse_tree_to_syntax_tree(c, ptree)
+
+    if dump:
+        print
+        print '\n'.join(visitor.dump_tree(source))
+
+    sm = StateMachineVisitor(c)
+    visit_node(sm, source)
 
     if dump:
         print
@@ -83,6 +92,14 @@ def c_parse_tree_to_syntax_tree(compiler, tree):
     compiler.check_stage('syntax')
 
     return source
+
+
+def _is_blocking_api_function(name):
+    '''
+    Returns true if this name is in blocking api functions list
+    '''
+    return name == 'zepto_wait_for_pin'
+
 
 # Generated from java-escape by ANTLR 4.5
 # This class defines a complete generic visitor for a parse tree produced
@@ -275,11 +292,14 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
     # Visit a parse tree produced by CParser#expression.
     def visitExpression(self, ctx):
-        expr = self._c.init_node(DontCareExprNode(), ctx)
-        for each in ctx.assignmentExpression():
-            expr.add_expression(self.visit(each))
+        if len(ctx.assignmentExpression()) == 1:
+            return self.visit(ctx.assignmentExpression(0))
+        else:
+            expr = self._c.init_node(DontCareExprNode(), ctx)
+            for each in ctx.assignmentExpression():
+                expr.add_expression(self.visit(each))
 
-        return expr
+            return expr
 
     # Visit a parse tree produced by CParser#constantExpression.
     def visitConstantExpression(self, ctx):
@@ -509,10 +529,15 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
     def visitExpressionStatement(self, ctx):
 
         if ctx.expression():
-            stmt = self._c.init_node(statement.ExpressionStmtNode(), ctx)
             expr = self.visit(ctx.expression())
-            stmt.set_expression(expr)
-            return stmt
+            if _is_blocking_api_function(expr.txt_name):
+                stmt = self._c.init_node(c_node.BlockingCallStmtNode(), ctx)
+                stmt.set_expression(expr)
+                return stmt
+            else:
+                stmt = self._c.init_node(statement.ExpressionStmtNode(), ctx)
+                stmt.set_expression(expr)
+                return stmt
         else:
             return self._c.init_node(statement.NopStmtNode(), ctx)
 

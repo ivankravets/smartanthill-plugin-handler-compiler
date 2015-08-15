@@ -151,6 +151,18 @@ class StmtListNode(StatementNode):
         child.set_parent(self)
         self.childs_statements.append(child)
 
+    def insert_statement_at(self, index, child):
+        '''
+        statement adder
+        '''
+        assert child is not None
+        assert isinstance(child, StatementNode)
+        assert index >= 0
+        assert index <= len(self.childs_statements)
+
+        child.set_parent(self)
+        self.childs_statements.insert(index, child)
+
     def resolve(self, compiler):
         for stmt in self.childs_statements:
             compiler.resolve_node(stmt)
@@ -167,6 +179,26 @@ class StmtListNode(StatementNode):
             return self._scope
         else:
             return super(StmtListNode, self).get_scope(kind)
+
+    def split_at(self, index, other):
+        '''
+        Splits this StmtListNode,
+        all items with index equal or greater than are moved to the other
+        '''
+        assert isinstance(other, StmtListNode)
+        assert index <= len(self.childs_statements)
+        assert index >= 0
+
+        if index == len(self.childs_statements):
+            return
+        else:
+            for i in range(index, len(self.childs_statements)):
+                other.add_statement(self.childs_statements[i])
+
+            if index == 0:
+                self.childs_statements = []
+            else:
+                self.childs_statements = self.childs_statements[0:index - 1]
 
 
 class ExpressionNode(Node):

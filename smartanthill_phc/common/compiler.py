@@ -92,12 +92,15 @@ class Compiler(object):
 
         return node
 
-    def remove_node(self, node):
+    def remove_nodes(self, node):
         '''
         Keeps a record of removed node_id
         Later checks may try to verify no refereces are kept
         '''
-        self.removed_nodes.append(node.node_id)
+        walker = _NodeIdsWalker()
+        walker.walk_node(node)
+
+        self.removed_nodes.extend(walker.node_ids)
 
     def resolve_node(self, node):
         '''
@@ -175,4 +178,22 @@ class _ResolutionCheckWalker(NodeWalker):
         except AttributeError:
             pass
 
+        walk_node_childs(self, node)
+
+
+class _NodeIdsWalker(NodeWalker):
+
+    '''
+    Walker class that will remove all child nodes
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        self.node_ids = []
+
+    def walk_node(self, node):
+        assert node
+        self.node_ids.append(node.node_id)
         walk_node_childs(self, node)

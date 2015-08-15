@@ -23,7 +23,7 @@ struct my_plugin_config { //constant structure filled with a configuration
 };
 
 byte my_plugin_handler_init(const void* plugin_config,void* plugin_state) {
-  const my_plugin_config* pc = (my_plugin_config*) /* before */plugin_config;
+  /* state machine */const my_plugin_config* pc = (my_plugin_config*) /* before */plugin_config;
   /* replaced */(pc->request_pin_number,0/* after */);
 }
 
@@ -31,13 +31,13 @@ byte my_plugin_handler_init(const void* plugin_config,void* plugin_state) {
 
 byte my_plugin_handler(const void* plugin_config, void* plugin_state,
   ZEPTO_PARSER* command, REPLY_HANDLE reply, WaitingFor* waiting_for) {
-  const my_plugin_config* pc = (my_plugin_config*) /* before */plugin_config;
+  /* state machine */const my_plugin_config* pc = (my_plugin_config*) /* before */plugin_config;
 
   //requesting sensor to perform read, using pc->request_pin_number
   /* replaced */(pc->request_pin_number,1/* after */);
 
   //waiting for sensor to indicate that data is ready
-  /* replaced */(pc->ack_pin_number,1/* after */);
+  zepto_wait_for_pin(pc->ack_pin_number,1);
 
   uint16_t data_read = /* replaced */(pc->reply_pin_numbers,4/* after */);
   /* replaced */(reply,data_read/* after */);

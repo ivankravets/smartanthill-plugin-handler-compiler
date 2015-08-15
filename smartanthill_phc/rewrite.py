@@ -35,7 +35,7 @@ class RewriteVisitor(NodeVisitor):
         '''
         Default action when a node specific action is not found
         '''
-        self._compiler.report_error(
+        self._c.report_error(
             node.ctx, "Statement rewrite not supported")
 
     def _visit_expression(self, expr):
@@ -69,9 +69,21 @@ class RewriteVisitor(NodeVisitor):
     def visit_ExpressionStmtNode(self, node):
         self._visit_expression(node.child_expression)
 
+    def visit_BlockingCallStmtNode(self, node):
+        self._visit_expression(node.child_expression)
+
     def visit_ReturnStmtNode(self, node):
         if node.child_expression is not None:
             self._visit_expression(node.child_expression)
+
+    def visit_StateMachineStmtNode(self, node):
+        self._w.insertBeforeToken(node.ctx.start, u"/* state machine */")
+        for each in node.childs_states:
+            visit_node(self, each.child_statement_list)
+
+    def visit_NextStateStmtNode(self, node):
+        # TODO
+        pass
 
     def visit_DontCareExprNode(self, node):
         for each in node.childs_expressions:

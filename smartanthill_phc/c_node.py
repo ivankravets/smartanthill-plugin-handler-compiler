@@ -14,7 +14,8 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 from smartanthill_phc.common.node import ExpressionNode,\
-    resolve_expression_list, Node, StmtListNode, DeclarationListNode
+    resolve_expression_list, Node, StmtListNode, DeclarationListNode,\
+    StatementNode, resolve_expression
 
 
 class DontCareExprNode(ExpressionNode):
@@ -97,3 +98,28 @@ class FunctionDeclNode(Node):
 
     def resolve(self, compiler):
         compiler.resolve_node(self.child_statement_list)
+
+
+class BlockingCallStmtNode(StatementNode):
+
+    '''
+    Node class representing a blocking function call statement
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(BlockingCallStmtNode, self).__init__()
+        self.child_expression = None
+
+    def set_expression(self, child):
+        '''
+        expression setter
+        '''
+        assert isinstance(child, ExpressionNode)
+        child.set_parent(self)
+        self.child_expression = child
+
+    def resolve(self, compiler):
+        resolve_expression(compiler, self, 'child_expression')
