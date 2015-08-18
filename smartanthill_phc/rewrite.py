@@ -18,6 +18,9 @@ from antlr4.tree.Tree import TerminalNodeImpl
 from smartanthill_phc.common.visitor import NodeVisitor, visit_node
 
 
+ENDL = u'\n'
+
+
 class RewriteVisitor(NodeVisitor):
 
     '''
@@ -77,13 +80,34 @@ class RewriteVisitor(NodeVisitor):
             self._visit_expression(node.child_expression)
 
     def visit_StateMachineStmtNode(self, node):
-        self._w.insertBeforeToken(node.ctx.start, u"/* state machine */")
+
+        assert len(node.childs_states) != 0
+
+        b = node.childs_states[
+            0].child_statement_list.childs_statements[0].ctx.start
+
+        self._w.insertBeforeToken(b, u"switch(var) {")
         for each in node.childs_states:
+            l = each.child_statement_list.childs_statements[0].ctx.start
+            self._w.insertBeforeToken(l, (u"case %s:" % each.txt_id) + ENDL)
             visit_node(self, each.child_statement_list)
 
+        e = node.childs_states[
+            -1].child_statement_list.childs_statements[-1].ctx.stop
+
+        self._w.insertAfterToken(e, u"}" + ENDL + u"assert(false);" + ENDL)
+
     def visit_NextStateStmtNode(self, node):
-        # TODO
-        pass
+
+        if node.ref_next_state is None:
+            self._w.insertBeforeToken(
+                node.ctx.start,
+                u"/* next state is 'initial' */" + ENDL)
+        else:
+            self._w.insertAfterToken(
+                node.ctx.stop,
+                (u"/* next state is '%s' */" % node.ref_next_state.txt_id) +
+                ENDL + u"return WAIT;" + ENDL)
 
     def visit_DontCareExprNode(self, node):
         for each in node.childs_expressions:
@@ -93,19 +117,19 @@ class RewriteVisitor(NodeVisitor):
         assert isinstance(node.ctx, TerminalNodeImpl)
         assert isinstance(node.ctx.symbol, CommonToken)
 
-        self._w.insertBeforeToken(node.ctx.symbol, u"/* before */")
+#        self._w.insertBeforeToken(node.ctx.symbol, u"/* before */")
 
     def visit_FunctionCallExprNode(self, node):
         assert isinstance(node.ctx.Identifier(), TerminalNodeImpl)
         assert isinstance(node.ctx.Identifier().symbol, CommonToken)
-        self._w.replaceToken(
-            node.ctx.Identifier().symbol, u"/* replaced */")
+#         self._w.replaceToken(
+#             node.ctx.Identifier().symbol, u"/* replaced */")
 
         visit_node(self, node.child_argument_list)
 
     def visit_ArgumentListNode(self, node):
-
+        pass
         #         for each in node.childs_arguments:
         #             visit_node(self, each)
 
-        self._w.insertAfterToken(node.ctx.stop, u"/* after */")
+#        self._w.insertAfterToken(node.ctx.stop, u"/* after */")

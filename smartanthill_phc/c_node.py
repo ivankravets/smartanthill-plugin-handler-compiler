@@ -87,6 +87,7 @@ class FunctionDeclNode(Node):
         '''
         super(FunctionDeclNode, self).__init__()
         self.child_statement_list = None
+        self.txt_name = None
 
     def set_statement_list(self, child):
         '''

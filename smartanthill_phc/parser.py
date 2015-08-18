@@ -32,7 +32,7 @@ from smartanthill_phc.rewrite import RewriteVisitor
 from smartanthill_phc.state import StateMachineVisitor
 
 
-def process_file(file_name, dump=False):
+def process_file(file_name, func_name, dump):
     '''
     Process a c input file, and returns an string with output text
     '''
@@ -54,7 +54,7 @@ def process_file(file_name, dump=False):
         print
         print '\n'.join(visitor.dump_tree(source))
 
-    sm = StateMachineVisitor(c)
+    sm = StateMachineVisitor(c, func_name)
     visit_node(sm, source)
 
     if dump:
@@ -583,6 +583,13 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
     def visitFunctionDefinition(self, ctx):
 
         decl = self._c.init_node(FunctionDeclNode(), ctx)
+
+        dd = ctx.declarator().directDeclarator()
+        if dd.directDeclarator() and dd.directDeclarator().Identifier():
+            decl.txt_name = get_token_text(
+                self._c, dd.directDeclarator().Identifier())
+        else:
+            self._c.report_error(ctx, "Unsupported function declaration")
 
         sl = self.visit(ctx.compoundStatement())
         decl.set_statement_list(sl)

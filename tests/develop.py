@@ -19,9 +19,9 @@ from smartanthill_phc import parser
 
 def main():
 
-    async = parser.process_file("test_code_1.c", True)
+    async = parser.process_file('test_code_1.c', 'my_plugin_handler', True)
 
-    f = open("test_code_1.async.c", 'wb')
+    f = open('test_code_1.async.c', 'wb')
     f.write(async)
 
 

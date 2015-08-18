@@ -139,6 +139,13 @@ class StmtListNode(StatementNode):
         super(StmtListNode, self).__init__()
         self.childs_statements = []
         self._scope = StatementListScope(self)
+
+        '''
+        When has_flow_stmt flag is false, execution of this statement list will
+        fall off and continue in parent statementlist.
+        When true, last statement is a flow control statement.
+        This is useful information for flow analysis
+        '''
         self.has_flow_stmt = False
 
     def add_statement(self, child):

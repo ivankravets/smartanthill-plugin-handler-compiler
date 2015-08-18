@@ -145,6 +145,12 @@ class TokenStreamRewriter(object):
 
             return self.index + 1
 
+        def __str__(self):
+            '''
+            String representation
+            '''
+            return "I.%s.'%s'" % (self.index, self.text)
+
     # I'm going to try replacing range from x..y with (y-x)+1 ReplaceOp
     # instructions.
     #
@@ -161,6 +167,15 @@ class TokenStreamRewriter(object):
                 buf.write(self.text)
 
             return self.lastIndex + 1
+
+        def __str__(self):
+            '''
+            String representation
+            '''
+            if self.index == self.to:
+                return "R.%s.'%s'" % (self.index, self.text)
+            else:
+                return "R.%s-%s.'%s'" % (self.index, self.to, self.text)
 
     def __init__(self, tokens):
         self.tokens = tokens
@@ -298,7 +313,7 @@ def _reduceToSingleOperationPerIndex(rewrites):
     same index need to be combined etc...  Here are the cases:
 
     I.i.u I.j.v                                leave alone, nonoverlapping
-    I.i.u I.i.v                                combine: Iivu
+    I.i.u I.i.v                                combine: Iiuv
 
     R.i-j.u R.x-y.v    | i-j in x-y            delete first R
     R.i-j.u R.i-j.v                            delete first R
@@ -417,7 +432,7 @@ def _reduceToSingleOperationPerIndex(rewrites):
                 # convert to strings...we're in process of toString'ing
                 # whole token buffer so no lazy eval issue with any
                 # templates
-                iop.text = _catOpText(iop.text, prevIop.text)
+                iop.text = _catOpText(prevIop.text, iop.text)
                 # delete redundant prior insert
                 rewrites[prevIop.instructionIndex] = None
 
@@ -444,8 +459,8 @@ def _reduceToSingleOperationPerIndex(rewrites):
 
 
 def _catOpText(a, b):
-    x = a.toString() if a is not None else ""
-    y = b.toString() if b is not None else ""
+    x = a if a is not None else ""
+    y = b if b is not None else ""
 
     return x + y
 
@@ -453,11 +468,11 @@ def _catOpText(a, b):
 
 
 def _getReplaceOps(rewrites, before):
-    return _getKindOfOps(rewrites, type(TokenStreamRewriter.ReplaceOp), before)
+    return _getKindOfOps(rewrites, TokenStreamRewriter.ReplaceOp, before)
 
 
 def _getInsertBeforeOps(rewrites, before):
-    return _getKindOfOps(rewrites, type(TokenStreamRewriter.InsertBeforeOp),
+    return _getKindOfOps(rewrites, TokenStreamRewriter.InsertBeforeOp,
                          before)
 
 

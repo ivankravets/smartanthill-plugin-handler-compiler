@@ -86,21 +86,29 @@ class NextStateStmtNode(StatementNode):
 
 class StateMachineVisitor(NodeVisitor):
 
-    def __init__(self, compiler):
+    def __init__(self, compiler, func_name):
         '''
         Constructor
         '''
         self._c = compiler
+        self._func_name = func_name
+        self._func_found = False
 
     def visit_PluginSourceNode(self, node):
         visit_node(self, node.child_declaration_list)
+
+        if not self._func_found:
+            self._c.report_error(
+                node.ctx, "Function '%s' not found" % self._func_name)
 
     def visit_DeclarationListNode(self, node):
         for each in node.childs_declarations:
             visit_node(self, each)
 
     def visit_FunctionDeclNode(self, node):
-        _create_state_machine(self._c, node.child_statement_list)
+        if node.txt_name == self._func_name:
+            self._func_found = True
+            _create_state_machine(self._c, node.child_statement_list)
 
 
 def _create_state_machine(compiler, stmt_list):
@@ -108,15 +116,19 @@ def _create_state_machine(compiler, stmt_list):
     Creates an state machine
     '''
 
-    if len(stmt_list.childs_statements) != 0:
-        ctx = stmt_list.childs_statements[0].ctx
-        sm = compiler.init_node(StateMachineStmtNode(), ctx)
+    assert len(stmt_list.childs_statements) != 0
 
-        sl = compiler.init_node(StmtListNode(), Ctx.NONE)
-        stmt_list.split_at(0, sl)
-        stmt_list.add_statement(sm)
+    sm = compiler.init_node(StateMachineStmtNode(), Ctx.NONE)
 
-        _create_state(compiler, sm, sl)
+    sl = compiler.init_node(StmtListNode(), Ctx.NONE)
+    stmt_list.split_at(0, sl)
+    stmt_list.add_statement(sm)
+
+    _create_state(compiler, sm, sl)
+
+    if not sm.childs_states[-1].child_statement_list.has_flow_stmt:
+        x = sm.childs_states[-1].child_statement_list.childs_statements[-1].ctx
+        compiler.report_error(x, "Missing 'return' statement")
 
 
 def _create_state(compiler, state_machine, stmt_list):
@@ -160,11 +172,14 @@ class _StatementsSplitterVisitor(NodeVisitor):
         for i in range(len(node.childs_statements)):
             if self._split:
                 sl = self._c.init_node(StmtListNode(), Ctx.NONE)
-                node.split_at(i, sl)
+                node.split_at(i + 1, sl)
 
-                stmt = self._c.init_node(NextStateStmtNode(), Ctx.NONE)
-                stmt.ref_next = _create_state(self._c, self._sm, sl)
+                # use last statement ctx
+                ctx = node.childs_statements[-1].ctx
+                stmt = self._c.init_node(NextStateStmtNode(), ctx)
+                stmt.ref_next_state = _create_state(self._c, self._sm, sl)
                 node.add_statement(stmt)
+                node.has_flow_stmt = True
 
                 # this node does not have more statements to process, return
                 self._split = False
@@ -178,9 +193,12 @@ class _StatementsSplitterVisitor(NodeVisitor):
                     node.split_at(i + 1, sl)
                     self._c.remove_nodes(sl)
 
-                    stmt = self._c.init_node(NextStateStmtNode(), Ctx.NONE)
-                    # stmt.ref_next = None
+                    # use last statement ctx
+                    ctx = node.childs_statements[-1].ctx
+                    stmt = self._c.init_node(NextStateStmtNode(), ctx)
+                    # stmt.ref_next_state = None
                     node.insert_statement_at(i, stmt)
+                    node.has_flow_stmt = True
 
                     # this node does not have more statements to process,
                     # return

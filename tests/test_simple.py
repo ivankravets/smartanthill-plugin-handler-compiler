@@ -18,8 +18,8 @@ from smartanthill_phc import parser
 
 def test_code_1():
 
-    async = parser.process_file("tests/test_code_1.c")
+    async = parser.process_file('test_code_1.c', 'my_plugin_handler', True)
 
-    f = open("tests/test_code_1.async.c", 'r')
+    f = open('tests/test_code_1.async.c', 'r')
 
     assert async == f.read()
