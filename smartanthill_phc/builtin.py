@@ -13,22 +13,21 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-import cProfile
-import sys
-
-from smartanthill_phc import parser
+from smartanthill_phc.common.node import BasicTypeDeclNode, DeclarationListNode
 
 
-def main():
+def create_builtins(compiler, ctx):
+    '''
+    Creates all built in nodes and adds them to the root
+    '''
 
-    async = parser.process_file('test_code_1.c', 'my_plugin_handler', True)
+    decls = compiler.init_node(DeclarationListNode(), ctx)
+    decls.add_declaration(
+        compiler.init_node(BasicTypeDeclNode('_zc_void'), ctx))
 
-    f = open('test_code_1.async.c', 'wb')
-    f.write(async)
+    decls.add_declaration(
+        compiler.init_node(BasicTypeDeclNode('_zc_dont_care'), ctx))
 
+    compiler.check_stage('built_in')
 
-# temporary entrance
-if __name__ == "__main__":
-    cProfile.run("main()")
-    # main()
-    sys.exit()
+    return decls

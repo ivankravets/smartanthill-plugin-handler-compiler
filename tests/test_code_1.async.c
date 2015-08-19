@@ -31,22 +31,15 @@ byte my_plugin_handler_init(const void* plugin_config,void* plugin_state) {
 
 byte my_plugin_handler(const void* plugin_config, void* plugin_state,
   ZEPTO_PARSER* command, REPLY_HANDLE reply, WaitingFor* waiting_for) {
-  switch(var) {case 1:
-const my_plugin_config* pc = (my_plugin_config*) plugin_config;
+  switch(var) {case 1:const my_plugin_config* pc = (my_plugin_config*) plugin_config;
 
   //requesting sensor to perform read, using pc->request_pin_number
   zepto_set_pin(pc->request_pin_number,1);
 
   //waiting for sensor to indicate that data is ready
-  zepto_wait_for_pin(pc->ack_pin_number,1);/* next state is '2' */
-return WAIT;
-
+  zepto_wait_for_pin(pc->ack_pin_number,1);/* next state is '2' */ return WAIT;
 
   uint16_t data_read = zepto_read_from_pins(pc->reply_pin_numbers,4);
-  case 2:
-zepto_reply_append_byte(reply,data_read);
-  /* next state is 'initial' */
-return 0;}
-assert(false);
-
+  case 2:zepto_reply_append_byte(reply,data_read);
+  /* next state is 'initial' */return 0;} assert(false);
 }

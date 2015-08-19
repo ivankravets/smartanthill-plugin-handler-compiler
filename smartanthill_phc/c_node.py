@@ -13,8 +13,10 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+from smartanthill_phc.common.lookup import RootScope, ReturnStmtScope,\
+    StatementListScope
 from smartanthill_phc.common.node import ExpressionNode,\
-    resolve_expression_list, Node, StmtListNode, DeclarationListNode,\
+    resolve_expression_list, Node, StmtListNode,\
     StatementNode, resolve_expression
 
 
@@ -30,7 +32,6 @@ class DontCareExprNode(ExpressionNode):
         '''
         super(DontCareExprNode, self).__init__()
         self.childs_expressions = []
-        self.ref_decl = None
 
     def add_expression(self, child):
         '''
@@ -43,36 +44,9 @@ class DontCareExprNode(ExpressionNode):
 
     def resolve_expr(self, compiler):
 
-        resolve_expression_list(compiler, self, self.childs_arguments)
+        resolve_expression_list(compiler, self, self.childs_expressions)
 
-#        self.set_type(self.ref_decl.get_type())
-
-        return None
-
-
-class PluginSourceNode(Node):
-
-    '''
-    Node class container of a source program
-    '''
-
-    def __init__(self):
-        '''
-        Constructor
-        '''
-        super(PluginSourceNode, self).__init__()
-        self.child_declaration_list = None
-
-    def set_declaration_list(self, child):
-        '''
-        statement list setter
-        '''
-        assert isinstance(child, DeclarationListNode)
-        child.set_parent(self)
-        self.child_declaration_list = child
-
-    def resolve(self, compiler):
-        compiler.resolve_node(self.child_declaration_list)
+        return self.get_scope(RootScope).lookup_type('_zc_dont_care')
 
 
 class FunctionDeclNode(Node):
@@ -88,6 +62,8 @@ class FunctionDeclNode(Node):
         super(FunctionDeclNode, self).__init__()
         self.child_statement_list = None
         self.txt_name = None
+        self.add_scope(ReturnStmtScope, ReturnStmtScope(self))
+        self.add_scope(StatementListScope, None)
 
     def set_statement_list(self, child):
         '''

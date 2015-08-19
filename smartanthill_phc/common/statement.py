@@ -104,10 +104,6 @@ class ReturnStmtNode(StatementNode):
     def resolve(self, compiler):
         resolve_expression(compiler, self, 'child_expression')
 
-        if not self.child_expression.get_type().is_message_type():
-            compiler.report_error(
-                self.ctx, "Type not valid for reply message")
-
         self.get_scope(ReturnStmtScope).add_return_stmt(
             compiler, self.ctx, self.child_expression.get_type())
 
@@ -323,7 +319,7 @@ class SimpleForStmtNode(StatementNode):
         self.child_begin_expression = None
         self.child_end_expression = None
         self.child_statement_list = None
-        self._scope = StatementListScope(self)
+        self.add_scope(StatementListScope, StatementListScope(self))
 
     def set_begin_expression(self, child):
         '''

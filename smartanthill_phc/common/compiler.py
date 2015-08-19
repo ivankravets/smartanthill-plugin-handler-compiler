@@ -81,6 +81,7 @@ class Compiler(object):
         self.removed_nodes = []
         self.error_flag = False
         self.error_message = []
+        self._replacement = None
 
     def init_node(self, node, ctx):
         '''
@@ -101,6 +102,27 @@ class Compiler(object):
         walker.walk_node(node)
 
         self.removed_nodes.extend(walker.node_ids)
+
+    def replace_self(self, node):
+        '''
+        Helper for node replacement at resolution
+        Replacement can only take place for expressions and statements
+        Actual replacement takes place after resolution method has returned
+        to avoid modifications to the tree in the middle of the process
+        '''
+        assert self._replacement is None
+        self._replacement = node
+
+    def release_replacement(self):
+        '''
+        Returns instance to replace current statement
+        '''
+        replacement = None
+        if self._replacement is not None:
+            replacement = self._replacement
+            self._replacement = None
+
+        return replacement
 
     def resolve_node(self, node):
         '''

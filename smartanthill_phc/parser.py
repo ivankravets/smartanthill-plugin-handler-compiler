@@ -16,20 +16,33 @@
 import antlr4
 
 from smartanthill_phc import c_node
-from smartanthill_phc.TokenStreamRewriter import TokenStreamRewriter
 from smartanthill_phc.antlr_parser import CVisitor, CLexer, CParser
-from smartanthill_phc.c_node import DontCareExprNode, FunctionDeclNode,\
-    PluginSourceNode
+from smartanthill_phc.builtin import create_builtins
+from smartanthill_phc.c_node import DontCareExprNode, FunctionDeclNode
 from smartanthill_phc.common import expression
 from smartanthill_phc.common import node
 from smartanthill_phc.common import statement
-from smartanthill_phc.common import visitor
 from smartanthill_phc.common.antlr_helper import dump_antlr_tree,\
     get_token_text
-from smartanthill_phc.common.compiler import Compiler
-from smartanthill_phc.common.visitor import visit_node
-from smartanthill_phc.rewrite import RewriteVisitor
-from smartanthill_phc.state import StateMachineVisitor
+from smartanthill_phc.common.compiler import Compiler, process_syntax_tree, Ctx
+from smartanthill_phc.common.visitor import check_all_nodes_reachables,\
+    dump_tree
+from smartanthill_phc.rewrite import rewrite_code
+from smartanthill_phc.root import RootNode, PluginSourceNode
+from smartanthill_phc.state import create_states
+
+
+class Parser(object):
+    '''
+    Agregate class to hold parser related stuff
+    '''
+
+    def __init__(self, file_name):
+        self.file_name = file_name
+        self.file_stream = antlr4.FileStream(file_name)
+        self.clexer = CLexer.CLexer(self.file_stream)
+        self.token_stream = antlr4.CommonTokenStream(self.clexer)
+        self.cparser = CParser.CParser(self.token_stream)
 
 
 def process_file(file_name, func_name, dump):
@@ -37,35 +50,33 @@ def process_file(file_name, func_name, dump):
     Process a c input file, and returns an string with output text
     '''
 
-    istream = antlr4.FileStream(file_name)
-    lexer = CLexer.CLexer(istream)
-    stream = antlr4.CommonTokenStream(lexer)
-
-    parser = CParser.CParser(stream)
-    ptree = parser.compilationUnit()
+    parser = Parser(file_name)
+    ptree = parser.cparser.compilationUnit()
 
     if dump:
         print '\n'.join(dump_antlr_tree(ptree))
 
     c = Compiler()
+    root = c.init_node(RootNode(), Ctx.ROOT)
+    builtin = create_builtins(c, Ctx.BUILTIN)
+    root.set_builtins(builtin)
     source = c_parse_tree_to_syntax_tree(c, ptree)
+    root.set_source(source)
 
     if dump:
         print
-        print '\n'.join(visitor.dump_tree(source))
+        print '\n'.join(dump_tree(root))
 
-    sm = StateMachineVisitor(c, func_name)
-    visit_node(sm, source)
+    check_all_nodes_reachables(c, root)
+    process_syntax_tree(c, root)
+
+    create_states(c, root, func_name)
 
     if dump:
         print
-        print '\n'.join(visitor.dump_tree(source))
+        print '\n'.join(dump_tree(root))
 
-    rewriter = TokenStreamRewriter(stream)
-    v = RewriteVisitor(c, rewriter)
-    visit_node(v, source)
-
-    async = rewriter.getText()
+    async = rewrite_code(c, root, parser.token_stream)
 
     return async
 

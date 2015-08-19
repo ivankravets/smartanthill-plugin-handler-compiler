@@ -45,12 +45,10 @@ class FunctionCallExprNode(ExpressionNode):
     def resolve_expr(self, compiler):
         compiler.resolve_node(self.child_argument_list)
 
-        compiler.report_error(
-            self.ctx, "Unresolved function call '%s'" % self.txt_name)
+#         compiler.report_error(
+#             self.ctx, "Unresolved function call '%s'" % self.txt_name)
 
-        t = self.get_scope(RootScope).lookup_type('_zc_void')
-        self.set_type(t)
-        return None
+        return self.get_scope(RootScope).lookup_type('_zc_dont_care')
 
 
 class BodyPartCallExprNode(ExpressionNode):
@@ -102,8 +100,7 @@ class BodyPartCallExprNode(ExpressionNode):
         self.ref_bodypart_decl = bp
         self.ref_method_decl = method
 
-        self.set_type(self.ref_method_decl.get_type())
-        return None
+        return self.ref_method_decl.get_type()
 
     def get_data_value(self, compiler):
         return self.ref_bodypart_decl.get_data_value(compiler, self)
@@ -145,8 +142,8 @@ class MemberAccessExprNode(ExpressionNode):
 
         self.type_decl = t
         self.member_decl = m
-        self.set_type(m.get_type())
-        return None
+
+        return m.get_type()
 
     def get_member_field_sequence(self):
         '''
@@ -174,8 +171,7 @@ class NumberLiteralExprNode(ExpressionNode):
 
         scope = self.get_scope(RootScope)
 
-        self.set_type(scope.lookup_type('_zc_number_literal'))
-        return None
+        return scope.lookup_type('_zc_number_literal')
 
     def get_static_value(self):
         '''
@@ -204,9 +200,8 @@ class BooleanLiteralExprNode(ExpressionNode):
         del compiler
 
         scope = self.get_scope(RootScope)
-        self.set_type(scope.lookup_type('_zc_boolean_literal'))
 
-        return None
+        return scope.lookup_type('_zc_boolean_literal')
 
     def get_static_value(self):
         '''
@@ -304,20 +299,16 @@ class VariableExprNode(ExpressionNode):
         self.ref_decl = None
 
     def resolve_expr(self, compiler):
+        # pylint: disable=unused-argument
 
         decl = lookup.lookup_variable(
             self.get_scope(StatementListScope), self.txt_name)
-        if not decl:
-            decl = self.get_scope(RootScope).lookup_parameter(self.txt_name)
-            if not decl:
-                compiler.report_error(
-                    self.ctx, "Unresolved variable '%s'" % self.txt_name)
-                compiler.raise_error()
+        if decl is not None:
+            self.ref_decl = decl
 
-        self.ref_decl = decl
-
-        self.set_type(self.ref_decl.get_type())
-        return None
+            return self.ref_decl.get_type()
+        else:
+            return self.get_scope(RootScope).lookup_type('_zc_dont_care')
 
     def get_static_value(self):
         '''
@@ -372,8 +363,7 @@ class AssignmentExprNode(ExpressionNode):
                 self.txt_name)
             # no need to raise here
 
-        self.set_type(self.get_scope(RootScope).lookup_type('_zc_void'))
-        return None
+        return self.get_scope(RootScope).lookup_type('_zc_void')
 
 
 class OperatorExprNode(ExpressionNode):
@@ -414,9 +404,10 @@ class OperatorExprNode(ExpressionNode):
         self.child_argument_list.make_match(
             compiler, self.ref_decl.child_parameter_list)
 
-        self.set_type(self.ref_decl.get_type())
-        return self.ref_decl.static_evaluate(compiler, self,
-                                             self.child_argument_list)
+#         self.ref_decl.static_evaluate(compiler, self,
+#                                       self.child_argument_list)
+
+        return self.ref_decl.get_type()
 
 
 class LogicOpExprNode(OperatorExprNode):

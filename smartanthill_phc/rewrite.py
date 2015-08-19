@@ -15,10 +15,24 @@
 
 from antlr4.Token import CommonToken
 from antlr4.tree.Tree import TerminalNodeImpl
+
+from smartanthill_phc.TokenStreamRewriter import TokenStreamRewriter
 from smartanthill_phc.common.visitor import NodeVisitor, visit_node
 
 
-ENDL = u'\n'
+def rewrite_code(compiler, root, token_stream):
+    '''
+    Rewrites code tree
+    '''
+    rewriter = TokenStreamRewriter(token_stream)
+    visitor = RewriteVisitor(compiler, rewriter)
+    visit_node(visitor, root)
+
+    text = rewriter.getText()
+
+    compiler.check_stage('rewrite')
+
+    return text
 
 
 class RewriteVisitor(NodeVisitor):
@@ -46,6 +60,9 @@ class RewriteVisitor(NodeVisitor):
         Helper method to create an expression visitor an call it
         '''
         visit_node(self, expr)
+
+    def visit_RootNode(self, node):
+        visit_node(self, node.child_source)
 
     def visit_PluginSourceNode(self, node):
         visit_node(self, node.child_declaration_list)
@@ -89,39 +106,44 @@ class RewriteVisitor(NodeVisitor):
         self._w.insertBeforeToken(b, u"switch(var) {")
         for each in node.childs_states:
             l = each.child_statement_list.childs_statements[0].ctx.start
-            self._w.insertBeforeToken(l, (u"case %s:" % each.txt_id) + ENDL)
+            self._w.insertBeforeToken(l, u"case %s:" % each.txt_id)
             visit_node(self, each.child_statement_list)
 
         e = node.childs_states[
             -1].child_statement_list.childs_statements[-1].ctx.stop
 
-        self._w.insertAfterToken(e, u"}" + ENDL + u"assert(false);" + ENDL)
+        self._w.insertAfterToken(e, u"} assert(false);")
 
     def visit_NextStateStmtNode(self, node):
 
         if node.ref_next_state is None:
             self._w.insertBeforeToken(
                 node.ctx.start,
-                u"/* next state is 'initial' */" + ENDL)
+                u"/* next state is 'initial' */")
         else:
             self._w.insertAfterToken(
                 node.ctx.stop,
-                (u"/* next state is '%s' */" % node.ref_next_state.txt_id) +
-                ENDL + u"return WAIT;" + ENDL)
+                u"/* next state is '%s' */ return WAIT;" %
+                node.ref_next_state.txt_id)
 
     def visit_DontCareExprNode(self, node):
         for each in node.childs_expressions:
             visit_node(self, each)
 
     def visit_VariableExprNode(self, node):
+
+        # pylint: disable=no-self-use
         assert isinstance(node.ctx, TerminalNodeImpl)
         assert isinstance(node.ctx.symbol, CommonToken)
 
 #        self._w.insertBeforeToken(node.ctx.symbol, u"/* before */")
 
     def visit_FunctionCallExprNode(self, node):
+
+        # pylint: disable=no-self-use
         assert isinstance(node.ctx.Identifier(), TerminalNodeImpl)
         assert isinstance(node.ctx.Identifier().symbol, CommonToken)
+
 #         self._w.replaceToken(
 #             node.ctx.Identifier().symbol, u"/* replaced */")
 

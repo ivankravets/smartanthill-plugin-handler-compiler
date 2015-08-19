@@ -18,6 +18,16 @@ from smartanthill_phc.common.node import Node, StmtListNode, StatementNode
 from smartanthill_phc.common.visitor import NodeVisitor, visit_node
 
 
+def create_states(compiler, root, func_name):
+    '''
+    Creates state machine and state related nodes
+    '''
+    visitor = StateMachineVisitor(compiler, func_name)
+    visit_node(visitor, root)
+
+    compiler.check_stage('state')
+
+
 class StateMachineStmtNode(StatementNode):
 
     '''
@@ -93,6 +103,9 @@ class StateMachineVisitor(NodeVisitor):
         self._c = compiler
         self._func_name = func_name
         self._func_found = False
+
+    def visit_RootNode(self, node):
+        visit_node(self, node.child_source)
 
     def visit_PluginSourceNode(self, node):
         visit_node(self, node.child_declaration_list)

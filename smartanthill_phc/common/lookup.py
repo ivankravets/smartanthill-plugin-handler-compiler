@@ -20,18 +20,15 @@ def lookup_variable(scope, name):
     It will look up name in provided scope, and if not found it will look up in
     the containing scope recursively until it is found, or no more scopes found
     '''
-    if not scope:
+    if scope is None:
         return None
 
     v = scope.lookup_variable(name)
     if v:
         return v
     else:
-        p = scope.get_owner().get_parent()
-        if p:
-            return lookup_variable(p.get_scope(StatementListScope), name)
-        else:
-            return None
+        p = scope.get_owner().get_parent_scope(StatementListScope)
+        return lookup_variable(p, name)
 
 
 class StatementListScope(object):

@@ -94,12 +94,32 @@ class Node(object):
         super(Node, self).__init__()
         self._parent = None
         self._resolved = False
+        self._scopes = {}
 
     def get_scope(self, kind):
         '''
-         Walks the tree up, until an scope of requested kind if found
+        Walks the tree up, until an scope of requested kind if found
         '''
-        return self._parent.get_scope(kind)
+        if kind in self._scopes:
+            return self._scopes[kind]
+        else:
+            return self.get_parent_scope(kind)
+
+    def get_parent_scope(self, kind):
+        '''
+        Asks parent node for scope
+        '''
+        if self._parent is not None:
+            return self._parent.get_scope(kind)
+        else:
+            return None
+
+    def add_scope(self, kind, scope):
+        '''
+        Adds an scope to this node
+        '''
+        assert kind not in self._scopes
+        self._scopes[kind] = scope
 
     def set_parent(self, parent):
         '''
@@ -135,17 +155,15 @@ class StmtListNode(StatementNode):
     def __init__(self):
         '''
         Constructor
-        '''
-        super(StmtListNode, self).__init__()
-        self.childs_statements = []
-        self._scope = StatementListScope(self)
 
-        '''
         When has_flow_stmt flag is false, execution of this statement list will
         fall off and continue in parent statementlist.
         When true, last statement is a flow control statement.
         This is useful information for flow analysis
         '''
+        super(StmtListNode, self).__init__()
+        self.childs_statements = []
+        self.add_scope(StatementListScope, StatementListScope(self))
         self.has_flow_stmt = False
 
     def add_statement(self, child):
@@ -171,21 +189,15 @@ class StmtListNode(StatementNode):
         self.childs_statements.insert(index, child)
 
     def resolve(self, compiler):
-        for stmt in self.childs_statements:
-            compiler.resolve_node(stmt)
+        for i in range(len(self.childs_statements)):
+            _resolve_statement_list_item(
+                compiler, self, self.childs_statements, i)
+
+            stmt = self.childs_statements[i]
             if self.has_flow_stmt:
                 compiler.report_error(stmt.ctx, "Unreachable statement")
             if stmt.is_flow_stmt:
                 self.has_flow_stmt = True
-
-    def get_scope(self, kind):
-        ''''
-        Returns this node scope
-        '''
-        if kind == StatementListScope:
-            return self._scope
-        else:
-            return super(StmtListNode, self).get_scope(kind)
 
     def split_at(self, index, other):
         '''
@@ -208,6 +220,32 @@ class StmtListNode(StatementNode):
                 self.childs_statements = self.childs_statements[0:index - 1]
 
 
+def resolve_statement_list(compiler, parent, stmt_list):
+    '''
+    Resolve child statement list, to allow statement replacement
+    '''
+    for i in range(len(stmt_list)):
+        _resolve_statement_list_item(compiler, parent, stmt_list, i)
+
+
+def _resolve_statement_list_item(compiler, parent, stmt_list, i):
+    '''
+    Resolve child statement list by index, to allow statement
+    replacement
+    '''
+    compiler.resolve_node(stmt_list[i])
+
+    replacement = compiler.release_replacement()
+    if replacement is not None:
+        assert replacement is not stmt_list[i]
+        assert isinstance(replacement, StatementNode)
+        replacement.set_parent(parent)
+        stmt_list[i] = replacement
+
+        # resolve again (replacement)
+        _resolve_expression_list_item(compiler, parent, stmt_list, i)
+
+
 class ExpressionNode(Node):
 
     '''
@@ -221,14 +259,12 @@ class ExpressionNode(Node):
         super(ExpressionNode, self).__init__()
         self._resolved_type = None
 
-    def resolve_expr(self, compiler):
+    def resolve(self, compiler):
         '''
-        Base implementation of expression resolution template method
-        Must be overrided or resolution type must be externally assigned
+        Base implementation of expression resolution method
         '''
-        del compiler
-        assert self._resolved_type
-        return None
+        t = self.resolve_expr(compiler)
+        self.set_type(t)
 
     def set_type(self, resolved_type):
         '''
@@ -267,8 +303,10 @@ def resolve_expression(compiler, parent, child_name):
 
     expr = getattr(parent, child_name)
     if expr:
-        replacement = expr.resolve_expr(compiler)
-        if replacement and replacement != expr:
+        compiler.resolve_node(expr)
+        replacement = compiler.release_replacement()
+        if replacement is not None:
+            assert replacement is not expr
             assert isinstance(replacement, ExpressionNode)
             replacement.set_parent(parent)
             setattr(parent, child_name, replacement)
@@ -292,9 +330,11 @@ def _resolve_expression_list_item(compiler, parent, expr_list, i):
     Resolve child expression list by index, to allow expression
     replacement
     '''
-    replacement = expr_list[i].resolve_expr(compiler)
+    compiler.resolve_node(expr_list[i])
+    replacement = compiler.release_replacement()
 
-    if replacement is not None and replacement != expr_list[i]:
+    if replacement is not None:
+        assert replacement is not expr_list[i]
         assert isinstance(replacement, ExpressionNode)
         replacement.set_parent(parent)
         expr_list[i] = replacement
@@ -369,27 +409,9 @@ class TypeDeclNode(Node):
         # pylint: disable=unused-argument
         assert False
 
-    def is_message_type(self):
-        '''
-        Types that can go to the reply buffer, should return true here
-        Also implies that type knows how to marshall to binary format
-        '''
-        # pylint: disable=no-self-use
-        return False
-
-    def process_reverse_response(self, reversed_data):
-        '''
-        Process response data
-        Only implemented by types that return true to is_message_type
-        '''
-        # pylint: disable=no-self-use
-        # pylint: disable=unused-argument
-        assert False
-
     def lookup_member(self, name):
         '''
         Base method for type member look up
-        Only implemented by types that return true to is_message_type
         '''
         # pylint: disable=no-self-use
         # pylint: disable=unused-argument
@@ -415,6 +437,19 @@ def expression_type_match(compiler, lhs_type, parent, child_name):
         return True
     else:
         return False
+
+
+class BasicTypeDeclNode(TypeDeclNode):
+
+    '''
+    Basic, built-in types are implemented using this class
+    '''
+
+    def __init__(self, type_name):
+        '''
+        Constructor
+        '''
+        super(BasicTypeDeclNode, self).__init__(type_name)
 
 
 class DeclarationListNode(Node):
