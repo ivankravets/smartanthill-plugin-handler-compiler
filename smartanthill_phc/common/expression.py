@@ -14,7 +14,6 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-from smartanthill_phc.common import lookup
 from smartanthill_phc.common.lookup import StatementListScope, RootScope
 from smartanthill_phc.common.node import ArgumentListNode, ExpressionNode,\
     expression_type_match, resolve_expression
@@ -301,8 +300,8 @@ class VariableExprNode(ExpressionNode):
     def resolve_expr(self, compiler):
         # pylint: disable=unused-argument
 
-        decl = lookup.lookup_variable(
-            self.get_scope(StatementListScope), self.txt_name)
+        decl = self.get_scope(
+            StatementListScope).lookup_variable(self.txt_name)
         if decl is not None:
             self.ref_decl = decl
 
@@ -347,8 +346,8 @@ class AssignmentExprNode(ExpressionNode):
 
         resolve_expression(compiler, self, 'child_rhs')
 
-        decl = lookup.lookup_variable(
-            self.get_scope(StatementListScope), self.txt_name)
+        decl = self.get_scope(
+            StatementListScope).lookup_variable(self.txt_name)
         if not decl:
             compiler.report_error(
                 self.ctx, "Unresolved variable '%s'" % self.txt_name)

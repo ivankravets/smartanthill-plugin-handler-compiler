@@ -16,12 +16,12 @@
 import cProfile
 import sys
 
-from smartanthill_phc import parser
+from smartanthill_phc import api
 
 
 def main():
 
-    async = parser.process_file('test_code_1.c', 'my_plugin_handler', True)
+    async = api.process_file('test_code_1.c', 'my_plugin_handler', True)
 
     f = open('test_code_1.async.c', 'wb')
     f.write(async)
@@ -29,6 +29,6 @@ def main():
 
 # temporary entrance
 if __name__ == "__main__":
-    cProfile.run("main()")
-    # main()
+  #  cProfile.run("api()")
+    main()
     sys.exit()

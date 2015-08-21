@@ -376,8 +376,8 @@ def _reduceToSingleOperationPerIndex(rewrites):
                 # E.g., insert before 2, delete 2..2; update replace
                 # text to include insert before, kill insert
                 rewrites[iop.instructionIndex] = None
-                rop.text = iop.text.toString() + \
-                    (rop.text.toString() if rop.text is not None else "")
+                rop.text = iop.text + \
+                    (rop.text if rop.text is not None else "")
 
             elif iop.index > rop.index and iop.index <= rop.lastIndex:
                 # delete insert as it's a no-op.
@@ -415,7 +415,7 @@ def _reduceToSingleOperationPerIndex(rewrites):
             elif not disjoint and not same:
                 raise RuntimeError(
                     "replace op boundaries of %s overlap with previous %s" % (
-                        rop.toString(), prevRop.toString()))
+                        rop, prevRop))
 
     # WALK INSERTS
     for i in range(0, len(rewrites)):
@@ -447,7 +447,7 @@ def _reduceToSingleOperationPerIndex(rewrites):
             if iop.index >= rop.index and iop.index <= rop.lastIndex:
                 raise RuntimeError(
                     "insert op %s within boundaries of previous %s" % (
-                        iop.toString(), rop.toString()))
+                        iop, rop))
 
     # System.out.println("rewrites after="+rewrites);
     result = []

@@ -208,16 +208,10 @@ class StmtListNode(StatementNode):
         assert index <= len(self.childs_statements)
         assert index >= 0
 
-        if index == len(self.childs_statements):
-            return
-        else:
-            for i in range(index, len(self.childs_statements)):
-                other.add_statement(self.childs_statements[i])
+        for i in range(index, len(self.childs_statements)):
+            other.add_statement(self.childs_statements[i])
 
-            if index == 0:
-                self.childs_statements = []
-            else:
-                self.childs_statements = self.childs_statements[0:index - 1]
+        self.childs_statements = self.childs_statements[0:index]
 
 
 def resolve_statement_list(compiler, parent, stmt_list):

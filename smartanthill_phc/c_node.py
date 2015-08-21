@@ -49,6 +49,34 @@ class DontCareExprNode(ExpressionNode):
         return self.get_scope(RootScope).lookup_type('_zc_dont_care')
 
 
+class TypeCastExprNode(ExpressionNode):
+
+    '''
+    Node class representing an explicit type cast
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(TypeCastExprNode, self).__init__()
+        self.child_expression = None
+
+    def set_expression(self, child):
+        '''
+        expression setter
+        '''
+        assert isinstance(child, ExpressionNode)
+        child.set_parent(self)
+        self.child_expression = child
+
+    def resolve_expr(self, compiler):
+
+        resolve_expression(compiler, self, 'child_expression')
+
+        return self.get_scope(RootScope).lookup_type('_zc_dont_care')
+
+
 class FunctionDeclNode(Node):
 
     '''

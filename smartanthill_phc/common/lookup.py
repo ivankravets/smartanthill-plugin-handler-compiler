@@ -14,23 +14,6 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-def lookup_variable(scope, name):
-    '''
-    Variable lookup algorithm
-    It will look up name in provided scope, and if not found it will look up in
-    the containing scope recursively until it is found, or no more scopes found
-    '''
-    if scope is None:
-        return None
-
-    v = scope.lookup_variable(name)
-    if v:
-        return v
-    else:
-        p = scope.get_owner().get_parent_scope(StatementListScope)
-        return lookup_variable(p, name)
-
-
 class StatementListScope(object):
 
     '''
@@ -43,9 +26,6 @@ class StatementListScope(object):
         '''
         self._owner = owner
         self._variables = {}
-
-    def get_owner(self):
-        return self._owner
 
     def add_variable(self, compiler, name, node):
         '''
@@ -61,10 +41,19 @@ class StatementListScope(object):
 
     def lookup_variable(self, name):
         '''
-        Looks up a variable in this scope
-        Returns None if not found
+        Variable lookup algorithm
+        It will look up name in this scope,
+        and if not found it will look up in the containing scope recursively
+        until either it is found, or no more scopes are available
         '''
-        return self._variables[name] if name in self._variables else None
+        if name in self._variables:
+            return self._variables[name]
+        else:
+            p = self._owner.get_parent_scope(StatementListScope)
+            if p is not None:
+                return p.lookup_variable(name)
+            else:
+                return None
 
 
 class ReturnStmtScope(object):

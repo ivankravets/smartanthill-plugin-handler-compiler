@@ -13,11 +13,9 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from antlr4.Token import CommonToken
-from antlr4.tree.Tree import TerminalNodeImpl
-
 from smartanthill_phc.TokenStreamRewriter import TokenStreamRewriter
 from smartanthill_phc.common.visitor import NodeVisitor, visit_node
+from smartanthill_phc.parser import get_declarator_name
 
 
 def rewrite_code(compiler, root, token_stream):
@@ -47,6 +45,7 @@ class RewriteVisitor(NodeVisitor):
         '''
         self._c = compiler
         self._w = writer
+        self._nb = None
 
     def default_visit(self, node):
         '''
@@ -62,6 +61,7 @@ class RewriteVisitor(NodeVisitor):
         visit_node(self, expr)
 
     def visit_RootNode(self, node):
+        self._nb = node.child_non_blocking_data
         visit_node(self, node.child_source)
 
     def visit_PluginSourceNode(self, node):
@@ -83,6 +83,21 @@ class RewriteVisitor(NodeVisitor):
         pass
 
     def visit_VariableDeclarationStmtNode(self, node):
+
+        if self._nb.is_moved_var_decl(node):
+
+            decl_list = node.ctx.initDeclaratorList()
+            assert decl_list is not None
+            assert len(decl_list.initDeclarator()) == 1
+            tk = get_declarator_name(decl_list.initDeclarator(0).declarator())
+
+            if node.child_initializer is not None:
+                self._w.replaceTokens(
+                    node.ctx.start, tk.symbol,
+                    u"_sa_state->%s" % node.txt_name)
+            else:
+                self._w.deleteTokens(node.ctx.start, node.ctx.stop)
+
         if node.child_initializer is not None:
             self._visit_expression(node.child_initializer)
 
@@ -103,7 +118,7 @@ class RewriteVisitor(NodeVisitor):
         b = node.childs_states[
             0].child_statement_list.childs_statements[0].ctx.start
 
-        self._w.insertBeforeToken(b, u"switch(var) {")
+        self._w.insertBeforeToken(b, u"switch(_sa_state->_sa_next) {")
         for each in node.childs_states:
             l = each.child_statement_list.childs_statements[0].ctx.start
             self._w.insertBeforeToken(l, u"case %s:" % each.txt_id)
@@ -119,39 +134,31 @@ class RewriteVisitor(NodeVisitor):
         if node.ref_next_state is None:
             self._w.insertBeforeToken(
                 node.ctx.start,
-                u"/* next state is 'initial' */")
+                u"_sa_state->_sa_next = 0;")
         else:
             self._w.insertAfterToken(
                 node.ctx.stop,
-                u"/* next state is '%s' */ return WAIT;" %
+                u"_sa_state->_sa_next = %s; return WAIT;" %
                 node.ref_next_state.txt_id)
 
     def visit_DontCareExprNode(self, node):
         for each in node.childs_expressions:
             visit_node(self, each)
 
+    def visit_TypeCastExprNode(self, node):
+        visit_node(self, node.child_expression)
+
     def visit_VariableExprNode(self, node):
 
-        # pylint: disable=no-self-use
-        assert isinstance(node.ctx, TerminalNodeImpl)
-        assert isinstance(node.ctx.symbol, CommonToken)
-
-#        self._w.insertBeforeToken(node.ctx.symbol, u"/* before */")
+        if node.ref_decl is not None:
+            if self._nb.is_moved_var_decl(node.ref_decl):
+                self._w.replaceToken(
+                    node.ctx.symbol,
+                    u"(_sa_state->%s)" % node.txt_name)
 
     def visit_FunctionCallExprNode(self, node):
-
-        # pylint: disable=no-self-use
-        assert isinstance(node.ctx.Identifier(), TerminalNodeImpl)
-        assert isinstance(node.ctx.Identifier().symbol, CommonToken)
-
-#         self._w.replaceToken(
-#             node.ctx.Identifier().symbol, u"/* replaced */")
-
         visit_node(self, node.child_argument_list)
 
     def visit_ArgumentListNode(self, node):
-        pass
-        #         for each in node.childs_arguments:
-        #             visit_node(self, each)
-
-#        self._w.insertAfterToken(node.ctx.stop, u"/* after */")
+        for each in node.childs_arguments:
+            visit_node(self, each)

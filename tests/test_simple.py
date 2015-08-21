@@ -13,12 +13,12 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from smartanthill_phc import parser
+from smartanthill_phc import api
 
 
 def test_code_1():
 
-    async = parser.process_file(
+    async = api.process_file(
         'tests/test_code_1.c', 'my_plugin_handler', True)
 
     f = open('tests/test_code_1.async.c', 'r')

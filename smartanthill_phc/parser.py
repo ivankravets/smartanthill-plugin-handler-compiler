@@ -13,72 +13,16 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-import antlr4
 
 from smartanthill_phc import c_node
-from smartanthill_phc.antlr_parser import CVisitor, CLexer, CParser
-from smartanthill_phc.builtin import create_builtins
-from smartanthill_phc.c_node import DontCareExprNode, FunctionDeclNode
+from smartanthill_phc.antlr_parser import CVisitor, CParser
+from smartanthill_phc.c_node import DontCareExprNode, FunctionDeclNode,\
+    TypeCastExprNode
 from smartanthill_phc.common import expression
 from smartanthill_phc.common import node
 from smartanthill_phc.common import statement
-from smartanthill_phc.common.antlr_helper import dump_antlr_tree,\
-    get_token_text
-from smartanthill_phc.common.compiler import Compiler, process_syntax_tree, Ctx
-from smartanthill_phc.common.visitor import check_all_nodes_reachables,\
-    dump_tree
-from smartanthill_phc.rewrite import rewrite_code
-from smartanthill_phc.root import RootNode, PluginSourceNode
-from smartanthill_phc.state import create_states
-
-
-class Parser(object):
-    '''
-    Agregate class to hold parser related stuff
-    '''
-
-    def __init__(self, file_name):
-        self.file_name = file_name
-        self.file_stream = antlr4.FileStream(file_name)
-        self.clexer = CLexer.CLexer(self.file_stream)
-        self.token_stream = antlr4.CommonTokenStream(self.clexer)
-        self.cparser = CParser.CParser(self.token_stream)
-
-
-def process_file(file_name, func_name, dump):
-    '''
-    Process a c input file, and returns an string with output text
-    '''
-
-    parser = Parser(file_name)
-    ptree = parser.cparser.compilationUnit()
-
-    if dump:
-        print '\n'.join(dump_antlr_tree(ptree))
-
-    c = Compiler()
-    root = c.init_node(RootNode(), Ctx.ROOT)
-    builtin = create_builtins(c, Ctx.BUILTIN)
-    root.set_builtins(builtin)
-    source = c_parse_tree_to_syntax_tree(c, ptree)
-    root.set_source(source)
-
-    if dump:
-        print
-        print '\n'.join(dump_tree(root))
-
-    check_all_nodes_reachables(c, root)
-    process_syntax_tree(c, root)
-
-    create_states(c, root, func_name)
-
-    if dump:
-        print
-        print '\n'.join(dump_tree(root))
-
-    async = rewrite_code(c, root, parser.token_stream)
-
-    return async
+from smartanthill_phc.common.antlr_helper import get_token_text
+from smartanthill_phc.root import PluginSourceNode
 
 
 def c_parse_tree_to_syntax_tree(compiler, tree):
@@ -110,6 +54,26 @@ def _is_blocking_api_function(name):
     Returns true if this name is in blocking api functions list
     '''
     return name == 'zepto_wait_for_pin'
+
+
+def _get_direct_declarator_name(ctx):
+
+    assert isinstance(ctx, CParser.CParser.DirectDeclaratorContext)
+    if ctx.Identifier() is not None:
+        return ctx.Identifier()
+    elif ctx.declarator() is not None:
+        return get_declarator_name(ctx.declarator())
+    else:
+        assert ctx.directDeclarator() is not None
+        return _get_direct_declarator_name(ctx.directDeclarator())
+
+
+def get_declarator_name(ctx):
+    '''
+    Returns the Identifier token from a nested declarator
+    '''
+    assert isinstance(ctx, CParser.CParser.DeclaratorContext)
+    return _get_direct_declarator_name(ctx.directDeclarator())
 
 
 # Generated from java-escape by ANTLR 4.5
@@ -259,8 +223,8 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
         if ctx.unaryExpression() is not None:
             return self.visit(ctx.unaryExpression())
         else:
-            expr = self._c.init_node(DontCareExprNode(), ctx)
-            expr.add_expression(self.visit(ctx.castExpression()))
+            expr = self._c.init_node(TypeCastExprNode(), ctx)
+            expr.set_expression(self.visit(ctx.castExpression()))
 
             return expr
 
@@ -316,39 +280,29 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
     def visitConstantExpression(self, ctx):
         return self.visit(ctx.conditionalExpression())
 
-    def _get_direct_declarator_name(self, ctx):
-
-        assert isinstance(ctx, CParser.CParser.DirectDeclaratorContext)
-        if ctx.Identifier() is not None:
-            return get_token_text(self._c, ctx.Identifier())
-        elif ctx.declarator() is not None:
-            return self._get_declarator_name(ctx.declarator())
-        else:
-            assert ctx.directDeclarator() is not None
-            return self._get_direct_declarator_name(ctx.directDeclarator())
-
-    def _get_declarator_name(self, ctx):
-
-        assert isinstance(ctx, CParser.CParser.DeclaratorContext)
-        return self._get_direct_declarator_name(ctx.directDeclarator())
-
     # Visit a parse tree produced by CParser#declaration.
     def visitDeclaration(self, ctx):
 
-        result = []
-        if ctx.initDeclaratorList() is not None:
-            for each in ctx.initDeclaratorList().initDeclarator():
+        if ctx.initDeclaratorList() is None:
+            # TODO this is a type declaration
+            # self._c.report_error(ctx, "Incomplete declaration not supported")
+            return []
 
-                decl = self._c.init_node(
-                    statement.VariableDeclarationStmtNode(), ctx)
-                decl.txt_name = self._get_declarator_name(each.declarator())
+        if len(ctx.initDeclaratorList().initDeclarator()) != 1:
+            self._c.report_error(ctx, "Combined declaration not supported")
+            return []
 
-                if each.initializer() is not None:
-                    init = self.visit(each.initializer())
-                    decl.set_initializer(init)
+        decl = self._c.init_node(statement.VariableDeclarationStmtNode(), ctx)
+        decl_ctx = ctx.initDeclaratorList().initDeclarator(0).declarator()
+        tk = get_declarator_name(decl_ctx)
+        decl.txt_name = get_token_text(self._c, tk)
 
-                result.append(decl)
-        return result
+        init_ctx = ctx.initDeclaratorList().initDeclarator(0).initializer()
+        if init_ctx is not None:
+            init = self.visit(init_ctx)
+            decl.set_initializer(init)
+
+        return [decl]
 
     # Visit a parse tree produced by CParser#declarationSpecifier.
     def visitDeclarationSpecifier(self, ctx):
