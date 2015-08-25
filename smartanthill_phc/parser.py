@@ -17,7 +17,7 @@
 from smartanthill_phc import c_node
 from smartanthill_phc.antlr_parser import CVisitor, CParser
 from smartanthill_phc.c_node import DontCareExprNode, FunctionDeclNode,\
-    TypeCastExprNode
+    TypeCastExprNode, StateDataStuctDeclarationNode
 from smartanthill_phc.common import expression
 from smartanthill_phc.common import node
 from smartanthill_phc.common import statement
@@ -25,7 +25,7 @@ from smartanthill_phc.common.antlr_helper import get_token_text
 from smartanthill_phc.root import PluginSourceNode
 
 
-def c_parse_tree_to_syntax_tree(compiler, tree):
+def c_parse_tree_to_syntax_tree(compiler, tree, non_blocking_data):
     '''
     Translates a parse tree as returned by antlr4 into a
     syntax tree as used by the compiler, this tree transformation
@@ -37,6 +37,7 @@ def c_parse_tree_to_syntax_tree(compiler, tree):
     '''
 
     assert isinstance(tree, CParser.CParser.CompilationUnitContext)
+    assert non_blocking_data is not None
 
     source = compiler.init_node(PluginSourceNode(), tree)
     ls = compiler.init_node(node.DeclarationListNode(), tree)
@@ -94,6 +95,7 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
         '''
         self._c = compiler
         self._s = source
+        self._first_ctx = False
 
     def visitChildren(self, current):
         '''
@@ -534,6 +536,11 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
     # Visit a parse tree produced by CParser#externalDeclaration.
     def visitExternalDeclaration(self, ctx):
+
+        if not self._first_ctx:
+            self._first_ctx = True
+            n = self._c.init_node(StateDataStuctDeclarationNode(), ctx)
+            self._s.child_declaration_list.add_declaration(n)
 
         if ctx.functionDefinition() is not None:
             self.visit(ctx.functionDefinition())

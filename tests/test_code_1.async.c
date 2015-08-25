@@ -14,7 +14,7 @@
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-struct my_plugin_config { //constant structure filled with a configuration
+struct _sa_state_data_t {byte some;};struct my_plugin_config { //constant structure filled with a configuration
                       //  for specific 'ant body part'
   byte bodypart_id;//always present
   byte request_pin_number;//pin to request sensor read
@@ -36,7 +36,7 @@ byte my_plugin_handler(const void* plugin_config, void* plugin_state,
   //requesting sensor to perform read, using pc->request_pin_number
   switch(_sa_state->_sa_next) {case 0:zepto_set_pin(pc->request_pin_number,1);
 
-  _sa_state->some = 4
+  _sa_state->some = 4;
   //waiting for sensor to indicate that data is ready
   zepto_wait_for_pin(pc->ack_pin_number,1);_sa_state->_sa_next = 1; return WAIT;
 

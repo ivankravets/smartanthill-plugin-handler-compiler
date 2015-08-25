@@ -16,6 +16,7 @@
 from smartanthill_phc.TokenStreamRewriter import TokenStreamRewriter
 from smartanthill_phc.common.visitor import NodeVisitor, visit_node
 from smartanthill_phc.parser import get_declarator_name
+from smartanthill_phc.root import NonBlockingData
 
 
 def rewrite_code(compiler, root, token_stream):
@@ -61,7 +62,7 @@ class RewriteVisitor(NodeVisitor):
         visit_node(self, expr)
 
     def visit_RootNode(self, node):
-        self._nb = node.child_non_blocking_data
+        self._nb = node.get_scope(NonBlockingData)
         visit_node(self, node.child_source)
 
     def visit_PluginSourceNode(self, node):
@@ -70,6 +71,21 @@ class RewriteVisitor(NodeVisitor):
     def visit_DeclarationListNode(self, node):
         for each in node.childs_declarations:
             visit_node(self, each)
+
+    def visit_StateDataStuctDeclarationNode(self, node):
+
+        tk = node.ctx.start
+        self._w.insertBeforeToken(tk, u"struct _sa_state_data_t {")
+
+        for each in self._nb.refs_moved_var_decls:
+            start = each.ctx.declarationSpecifier(0).start
+            stop = each.ctx.initDeclaratorList().initDeclarator(
+                0).declarator().stop
+
+            txt = self._w.tokens.getText((start.tokenIndex, stop.tokenIndex))
+            self._w.insertBeforeToken(tk, u"%s;" % txt)
+
+        self._w.insertBeforeToken(tk, u"};")
 
     def visit_FunctionDeclNode(self, node):
         visit_node(self, node.child_statement_list)

@@ -36,7 +36,7 @@ byte my_plugin_handler(const void* plugin_config, void* plugin_state,
   //requesting sensor to perform read, using pc->request_pin_number
   zepto_set_pin(pc->request_pin_number,1);
 
-  byte some = 4
+  byte some = 4;
   //waiting for sensor to indicate that data is ready
   zepto_wait_for_pin(pc->ack_pin_number,1);
 

@@ -19,7 +19,7 @@ from smartanthill_phc.common.expression import VariableExprNode
 from smartanthill_phc.common.node import Node, StmtListNode, StatementNode
 from smartanthill_phc.common.statement import VariableDeclarationStmtNode
 from smartanthill_phc.common.visitor import NodeVisitor, visit_node
-from smartanthill_phc.root import NonBlockingDataNode
+from smartanthill_phc.root import NonBlockingData
 
 
 def create_states(compiler, root, func_name):
@@ -29,7 +29,7 @@ def create_states(compiler, root, func_name):
     visitor = StateMachineVisitor(compiler, func_name)
     visit_node(visitor, root)
     nb = visitor.finish()
-    root.set_non_blocking_data(nb)
+    root.get_scope(NonBlockingData).refs_moved_var_decls = nb
 
     compiler.check_stage('state')
 
@@ -134,22 +134,10 @@ class NextStateStmtNode(StatementNode):
         self.ref_next_state = None
 
 
-class StateMachineDataNode(Node):
-    '''
-    Keep track of all data accessed by each state
-    '''
-
-    def __init__(self):
-        '''
-        Constructor
-        '''
-        super(StateMachineDataNode, self).__init__()
-
-
 class DeclsHelper(object):
 
     '''
-    Node class representing an state machine
+    Helper class to detect which variables are accessed in each state
     '''
 
     def __init__(self):
@@ -201,9 +189,7 @@ class StateMachineVisitor(NodeVisitor):
         self._h = DeclsHelper()
 
     def finish(self):
-        nb = self._c.init_node(NonBlockingDataNode(), Ctx.BUILTIN)
-        nb.refs_moved_var_decls = self._h.analyze_vars()
-        return nb
+        return self._h.analyze_vars()
 
     def visit_RootNode(self, node):
         visit_node(self, node.child_source)
@@ -218,6 +204,9 @@ class StateMachineVisitor(NodeVisitor):
     def visit_DeclarationListNode(self, node):
         for each in node.childs_declarations:
             visit_node(self, each)
+
+    def visit_StateDataStuctDeclarationNode(self, node):
+        pass
 
     def visit_FunctionDeclNode(self, node):
         if node.txt_name == self._func_name:

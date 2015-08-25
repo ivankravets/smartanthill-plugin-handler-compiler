@@ -23,7 +23,7 @@ from smartanthill_phc.common.visitor import dump_tree,\
     check_all_nodes_reachables
 from smartanthill_phc.parser import c_parse_tree_to_syntax_tree
 from smartanthill_phc.rewrite import rewrite_code
-from smartanthill_phc.root import RootNode
+from smartanthill_phc.root import RootNode, NonBlockingData
 from smartanthill_phc.state import create_states
 
 
@@ -55,7 +55,8 @@ def process_file(file_name, func_name, dump):
     root = c.init_node(RootNode(), Ctx.ROOT)
     builtin = create_builtins(c, Ctx.BUILTIN)
     root.set_builtins(builtin)
-    source = c_parse_tree_to_syntax_tree(c, ptree)
+    source = c_parse_tree_to_syntax_tree(
+        c, ptree, root.get_scope(NonBlockingData))
     root.set_source(source)
 
     if dump:

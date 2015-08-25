@@ -42,17 +42,16 @@ class PluginSourceNode(Node):
         compiler.resolve_node(self.child_declaration_list)
 
 
-class NonBlockingDataNode(Node):
+class NonBlockingData(object):
 
     '''
-    Node class container of a source program
+    Helper container for state machine related info
     '''
 
     def __init__(self):
         '''
         Constructor
         '''
-        super(NonBlockingDataNode, self).__init__()
         self.refs_moved_var_decls = []
 
     def is_moved_var_decl(self, decl):
@@ -75,8 +74,8 @@ class RootNode(Node):
         super(RootNode, self).__init__()
         self.child_builtins = None
         self.child_source = None
-        self.child_non_blocking_data = None
         self.add_scope(RootScope, RootScope(self))
+        self.add_scope(NonBlockingData, NonBlockingData())
 
     def set_builtins(self, child):
         '''
@@ -94,18 +93,8 @@ class RootNode(Node):
         child.set_parent(self)
         self.child_source = child
 
-    def set_non_blocking_data(self, child):
-        '''
-        Non-blocking data setter
-        '''
-        assert isinstance(child, NonBlockingDataNode)
-        child.set_parent(self)
-        self.child_non_blocking_data = child
-
     def resolve(self, compiler):
         # First built-ins
         compiler.resolve_node(self.child_builtins)
-        # Then middle stuff
-        compiler.resolve_node(self.child_non_blocking_data)
         # Last user code
         compiler.resolve_node(self.child_source)

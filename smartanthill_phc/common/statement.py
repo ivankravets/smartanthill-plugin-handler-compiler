@@ -91,7 +91,6 @@ class ReturnStmtNode(StatementNode):
         '''
         super(ReturnStmtNode, self).__init__()
         self.child_expression = None
-        self.is_flow_stmt = True
 
     def set_expression(self, child):
         '''
@@ -100,6 +99,13 @@ class ReturnStmtNode(StatementNode):
         assert isinstance(child, ExpressionNode)
         child.set_parent(self)
         self.child_expression = child
+
+    def is_flow_stmt(self):
+        '''
+        Returns true when this is a flow statement
+        '''
+        # pylint: disable=no-self-use
+        return True
 
     def resolve(self, compiler):
         resolve_expression(compiler, self, 'child_expression')

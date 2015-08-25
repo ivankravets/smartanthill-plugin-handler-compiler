@@ -143,7 +143,13 @@ class StatementNode(Node):
 
     def __init__(self):
         super(StatementNode, self).__init__()
-        self.is_flow_stmt = False
+
+    def is_flow_stmt(self):
+        '''
+        Returns true when this is a flow statement
+        '''
+        # pylint: disable=no-self-use
+        return False
 
 
 class StmtListNode(StatementNode):
@@ -157,7 +163,7 @@ class StmtListNode(StatementNode):
         Constructor
 
         When has_flow_stmt flag is false, execution of this statement list will
-        fall off and continue in parent statementlist.
+        fall off and continue in parent statement list.
         When true, last statement is a flow control statement.
         This is useful information for flow analysis
         '''
@@ -196,7 +202,7 @@ class StmtListNode(StatementNode):
             stmt = self.childs_statements[i]
             if self.has_flow_stmt:
                 compiler.report_error(stmt.ctx, "Unreachable statement")
-            if stmt.is_flow_stmt:
+            if stmt.is_flow_stmt():
                 self.has_flow_stmt = True
 
     def split_at(self, index, other):
@@ -210,6 +216,7 @@ class StmtListNode(StatementNode):
 
         for i in range(index, len(self.childs_statements)):
             other.add_statement(self.childs_statements[i])
+            self.childs_statements[i] = None
 
         self.childs_statements = self.childs_statements[0:index]
 
