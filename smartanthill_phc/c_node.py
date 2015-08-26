@@ -17,7 +17,7 @@ from smartanthill_phc.common.lookup import RootScope, ReturnStmtScope,\
     StatementListScope
 from smartanthill_phc.common.node import ExpressionNode,\
     resolve_expression_list, Node, StmtListNode,\
-    StatementNode, resolve_expression
+    StatementNode, resolve_expression, DeclarationListNode
 
 
 class DontCareExprNode(ExpressionNode):
@@ -89,6 +89,7 @@ class FunctionDeclNode(Node):
         '''
         super(FunctionDeclNode, self).__init__()
         self.child_statement_list = None
+        self.child_argument_list = None
         self.txt_name = None
         self.add_scope(ReturnStmtScope, ReturnStmtScope(self))
         self.add_scope(StatementListScope, None)
@@ -101,8 +102,33 @@ class FunctionDeclNode(Node):
         child.set_parent(self)
         self.child_statement_list = child
 
+    def set_argument_list(self, child):
+        '''
+        argument list setter
+        '''
+        assert isinstance(child, DeclarationListNode)
+        child.set_parent(self)
+        self.child_argument_list = child
+
     def resolve(self, compiler):
         compiler.resolve_node(self.child_statement_list)
+
+
+class ArgumentDeclNode(Node):
+
+    '''
+    Node class representing a function argument declaration
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(ArgumentDeclNode, self).__init__()
+        self.txt_name = None
+
+    def resolve(self, compiler):
+        pass
 
 
 class BlockingCallStmtNode(StatementNode):
@@ -144,3 +170,22 @@ class StateDataStuctDeclarationNode(Node):
 
     def resolve(self, compiler):
         pass
+
+
+class StateDataCastStmtNode(StatementNode):
+
+    '''
+    Node class representing argument cast of state data
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(StateDataCastStmtNode, self).__init__()
+        self.txt_arg = None
+
+    def resolve(self, compiler):
+        # pylint: disable=no-self-use
+        # pylint: disable=unused-argument
+        assert False

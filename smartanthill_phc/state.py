@@ -13,7 +13,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from smartanthill_phc.c_node import TypeCastExprNode
+from smartanthill_phc.c_node import TypeCastExprNode, StateDataCastStmtNode
 from smartanthill_phc.common.compiler import Ctx
 from smartanthill_phc.common.expression import VariableExprNode
 from smartanthill_phc.common.node import Node, StmtListNode, StatementNode
@@ -89,9 +89,10 @@ class StateMachineStmtNode(StatementNode):
             if len(value[1]) != 0:
                 self.refs_moved_var_decls.append(key)
 
-
-#     def resolve(self, compiler):
-#         compiler.resolve_node(self.child_statement_list)
+    def resolve(self, compiler):
+        # pylint: disable=no-self-use
+        # pylint: disable=unused-argument
+        assert False
 
 
 class StateNode(Node):
@@ -211,6 +212,17 @@ class StateMachineVisitor(NodeVisitor):
     def visit_FunctionDeclNode(self, node):
         if node.txt_name == self._func_name:
             self._func_found = True
+            d = self._c.init_node(
+                StateDataCastStmtNode(), node.child_statement_list.ctx.start)
+
+            args = node.child_argument_list.childs_declarations
+            if len(args) >= 2:
+                d.txt_arg = args[1].txt_name
+            else:
+                self._c.report_error(node.ctx, "Too few arguments")
+
+            node.child_statement_list.insert_statement_at(0, d)
+
             _create_state_machine(
                 self._c, node.child_statement_list, self._h)
 
@@ -241,6 +253,9 @@ def _skip_statements(stmt_list):
 
     for i in range(len(stmt_list.childs_statements)):
         stmt = stmt_list.childs_statements[i]
+        if isinstance(stmt, StateDataCastStmtNode):
+            continue
+
         if not isinstance(stmt, VariableDeclarationStmtNode):
             return i
         if not isinstance(stmt.child_initializer, TypeCastExprNode):

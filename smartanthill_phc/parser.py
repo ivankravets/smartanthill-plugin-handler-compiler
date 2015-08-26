@@ -17,11 +17,12 @@
 from smartanthill_phc import c_node
 from smartanthill_phc.antlr_parser import CVisitor, CParser
 from smartanthill_phc.c_node import DontCareExprNode, FunctionDeclNode,\
-    TypeCastExprNode, StateDataStuctDeclarationNode
+    TypeCastExprNode, StateDataStuctDeclarationNode, ArgumentDeclNode
 from smartanthill_phc.common import expression
 from smartanthill_phc.common import node
 from smartanthill_phc.common import statement
 from smartanthill_phc.common.antlr_helper import get_token_text
+from smartanthill_phc.common.node import DeclarationListNode
 from smartanthill_phc.root import PluginSourceNode
 
 
@@ -556,10 +557,26 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
         decl = self._c.init_node(FunctionDeclNode(), ctx)
 
+        al = self._c.init_node(DeclarationListNode(), ctx)
+        decl.set_argument_list(al)
+
         dd = ctx.declarator().directDeclarator()
         if dd.directDeclarator() and dd.directDeclarator().Identifier():
             decl.txt_name = get_token_text(
                 self._c, dd.directDeclarator().Identifier())
+
+            assert dd.parameterTypeList() is not None
+
+            for each in dd.parameterTypeList().parameterDeclaration():
+                assert each.declarator() is not None
+
+                tk = each.declarator().directDeclarator().Identifier()
+                assert tk is not None
+
+                arg = self._c.init_node(ArgumentDeclNode(), tk)
+                arg.txt_name = get_token_text(self._c, tk)
+
+                decl.child_argument_list.add_declaration(arg)
         else:
             self._c.report_error(ctx, "Unsupported function declaration")
 

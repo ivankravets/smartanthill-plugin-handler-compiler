@@ -157,6 +157,12 @@ class RewriteVisitor(NodeVisitor):
                 u"_sa_state->_sa_next = %s; return WAIT;" %
                 node.ref_next_state.txt_id)
 
+    def visit_StateDataCastStmtNode(self, node):
+        self._w.insertAfterToken(
+            node.ctx,
+            u"_sa_state_data_t* _sa_state = (_sa_state_data_t*)%s;" %
+            node.txt_arg)
+
     def visit_DontCareExprNode(self, node):
         for each in node.childs_expressions:
             visit_node(self, each)

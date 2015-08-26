@@ -30,7 +30,7 @@ byte my_plugin_handler_init(const void* plugin_config,void* plugin_state) {
 //TODO: reinit? (via deinit, or directly, or implicitly)
 
 byte my_plugin_handler(const void* plugin_config, void* plugin_state,
-  ZEPTO_PARSER* command, REPLY_HANDLE reply, WaitingFor* waiting_for) {
+  ZEPTO_PARSER* command, REPLY_HANDLE reply, WaitingFor* waiting_for) {_sa_state_data_t* _sa_state = (_sa_state_data_t*)plugin_state;
   const my_plugin_config* pc = (my_plugin_config*) plugin_config;
 
   //requesting sensor to perform read, using pc->request_pin_number
