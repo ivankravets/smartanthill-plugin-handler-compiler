@@ -135,7 +135,7 @@ class NextStateStmtNode(StatementNode):
         super(NextStateStmtNode, self).__init__()
         self.ref_next_state = None
 
-    def is_flow_stmt(self):
+    def is_closed_stmt(self):
         '''
         Returns true
         '''
@@ -170,7 +170,7 @@ class JumpStateStmtNode(StatementNode):
         super(JumpStateStmtNode, self).__init__()
         self.ref_next_state = None
 
-    def is_flow_stmt(self):
+    def is_closed_stmt(self):
         '''
         Returns true
         '''
@@ -274,8 +274,9 @@ def _create_state_machine(compiler, stmt_list, helper):
     '''
     Creates an state machine
     '''
-
-    assert len(stmt_list.childs_statements) != 0
+    if not stmt_list.is_closed_stmt():
+        compiler.report_error(stmt_list.ctx, "Missing 'return' statement")
+        return
 
     sm = compiler.init_node(StateMachineStmtNode(), Ctx.NONE)
 
@@ -287,9 +288,8 @@ def _create_state_machine(compiler, stmt_list, helper):
 
     _create_state(compiler, sm, sl, helper)
 
-    if not sm.childs_states[-1].child_statement_list.has_flow_stmt:
-        x = sm.childs_states[-1].child_statement_list.childs_statements[-1].ctx
-        compiler.report_error(x, "Missing 'return' statement")
+    for each in sm.childs_states:
+        assert each.child_statement_list.is_closed_stmt()
 
 
 def _skip_statements(stmt_list):
@@ -329,9 +329,36 @@ def _create_state(compiler, state_machine, stmt_list, helper):
 
 
 # pylint: disable=too-many-instance-attributes
-
-
 class _StatementsSplitterVisitor(NodeVisitor):
+
+    '''
+    States are created by splitting statement lists, at blocking statements
+    Each statement list can be 'open' when after execution of last statement
+    in the list, flow will continue with next statement
+    at parent statement list.
+    Or 'closed' when it contains a 'return' (usually the last statement)
+    that will avoid execution after it
+
+    It is required that the most parent statement list, used as root for the
+    state machine creation, it is a 'closed' statement list
+
+    Every time we split an statement list, we add a 'next statement' movement
+    at the end of the base part, and two things need to be checked:
+    If this was a 'closed' statement list, flow does not 'fall down' to parent
+    statement list, so no state return is required.
+    If this was an 'open' statement list (because of previous requirement,
+    this is not the root statement list), then flow must be returned to
+    next statement in parent statement list after the last state is executed.
+    So we must add a 'jump statement' at the end of the statement list, and
+    inform the parent statement list that an split at the parent is needed,
+    and that the state created needs to be set at that 'jump statement'
+
+    If the parent statement list has no more statements, we can delegate the
+    task to its parent statement list.
+
+    Also a branch statement can 'close' an statement list,
+    if all of its branches are closed
+    '''
 
     def __init__(self, compiler, state_machine, state, helper):
         '''
@@ -365,10 +392,10 @@ class _StatementsSplitterVisitor(NodeVisitor):
                 sl = self._c.init_node(StmtListNode(), node.ctx)
                 node.split_at(i + 1, sl)
 
-                if not node.has_flow_stmt:
+                jmp = None
+                if not sl.is_closed_stmt():
                     jmp = self._c.init_node(JumpStateStmtNode(), node.ctx)
                     sl.add_statement(jmp)
-                    sl.has_flow_stmt = True
                     self._jumps.append(jmp)
 
                 # use last statement ctx
@@ -376,11 +403,10 @@ class _StatementsSplitterVisitor(NodeVisitor):
                 nxt = self._c.init_node(NextStateStmtNode(), ctx)
                 nxt.ref_next_state = self._create_state(sl)
                 node.add_statement(nxt)
-                node.has_flow_stmt = True
 
                 # this node does not have more statements to process, return
                 self._was_blocking = False
-                return
+                return jmp
             elif self._was_split:
                 if len(self._jumps) == 0:
                     # nothing to do
@@ -394,36 +420,41 @@ class _StatementsSplitterVisitor(NodeVisitor):
                     sl = self._c.init_node(StmtListNode(), node.ctx)
                     node.split_at(i + 1, sl)
 
+                    jumps = self._jumps
+                    self._jumps = []
+                    jmp = None
+                    if not sl.is_closed_stmt():
+                        jmp = self._c.init_node(JumpStateStmtNode(), node.ctx)
+                        sl.add_statement(jmp)
+                        self._jumps.append(jmp)
+                        self._was_split = True
+
                     # use last statement ctx
                     ctx = node.childs_statements[-1].ctx
-                    jmp = self._c.init_node(JumpStateStmtNode(), ctx)
-                    jmp.ref_next_state = self._create_state(sl)
-                    node.add_statement(jmp)
-                    node.has_flow_stmt = True
+                    jmp2 = self._c.init_node(JumpStateStmtNode(), ctx)
+                    jmp2.ref_next_state = self._create_state(sl)
+                    node.add_statement(jmp2)
 
-                    for j in self._jumps:
-                        j.ref_next_state = jmp.ref_next_state
+                    for j in jumps:
+                        j.ref_next_state = jmp2.ref_next_state
 
-                    self._jumps = []
                     # this node does not have more statements to process,
                     # return
-                    return
+                    return jmp
             elif self._was_return:
-                # remove all statements below this
-                sl = self._c.init_node(StmtListNode(), node.ctx)
-                node.split_at(i + 1, sl)
-                self._c.remove_nodes(sl)
+                # this must be last statement
+                assert node.is_closed_stmt()
+                assert len(node.childs_statements) == i + 1
 
                 # use last statement ctx
                 ctx = node.childs_statements[-1].ctx
                 nxt = self._c.init_node(InitStateStmtNode(), ctx)
                 node.insert_statement_at(i, nxt)
-                node.has_flow_stmt = True
 
                 # this node does not have more statements to process,
                 # return
                 self._was_return = False
-                return
+                return None
 
     def visit_StmtListNode(self, node):
         self._visit_stmt_list(node)

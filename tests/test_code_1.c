@@ -46,13 +46,16 @@ byte my_plugin_handler(const void* plugin_config, void* plugin_state,
   uint16_t data_read = zepto_read_from_pins(pc->reply_pin_numbers,4);
   if (data_read != 0) 
     zepto_wait_for_pin(pc->ack_pin_number,some);
-  else if (some != 0) {
-    zepto_wait_for_pin(pc->ack_pin_number,some);
-    zepto_reply_append_byte(reply,some);
-  }
-  else
-    zepto_reply_append_byte(reply,0);
+  else {
+      if (some != 0) {
+        zepto_wait_for_pin(pc->ack_pin_number,some);
+        zepto_reply_append_byte(reply,some);
+      }
+      else
+        zepto_reply_append_byte(reply,0);
 
+      zepto_do_something(reply,0);
+  }
   zepto_reply_append_byte(reply,0xff);
 
   return 0;

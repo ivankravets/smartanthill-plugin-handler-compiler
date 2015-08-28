@@ -144,7 +144,7 @@ class StatementNode(Node):
     def __init__(self):
         super(StatementNode, self).__init__()
 
-    def is_flow_stmt(self):
+    def is_closed_stmt(self):
         '''
         Returns true when this is a flow statement
         Next statement in statement list will not be executed
@@ -162,16 +162,10 @@ class StmtListNode(StatementNode):
     def __init__(self):
         '''
         Constructor
-
-        When has_flow_stmt flag is false, execution of this statement list will
-        fall off and continue in parent statement list.
-        When true, last statement is a flow control statement.
-        This is useful information for flow analysis
         '''
         super(StmtListNode, self).__init__()
         self.childs_statements = []
         self.add_scope(StatementListScope, StatementListScope(self))
-        self.has_flow_stmt = False
 
     def add_statement(self, child):
         '''
@@ -196,15 +190,16 @@ class StmtListNode(StatementNode):
         self.childs_statements.insert(index, child)
 
     def resolve(self, compiler):
+        has_flow_stmt = False
         for i in range(len(self.childs_statements)):
             _resolve_statement_list_item(
                 compiler, self, self.childs_statements, i)
 
             stmt = self.childs_statements[i]
-            if self.has_flow_stmt:
+            if has_flow_stmt:
                 compiler.report_error(stmt.ctx, "Unreachable statement")
-            if stmt.is_flow_stmt():
-                self.has_flow_stmt = True
+            if stmt.is_closed_stmt():
+                has_flow_stmt = True
 
     def split_at(self, index, other):
         '''
@@ -220,6 +215,15 @@ class StmtListNode(StatementNode):
             self.childs_statements[i] = None
 
         self.childs_statements = self.childs_statements[0:index]
+
+    def is_closed_stmt(self):
+        '''
+        Returns true when last statement is closed
+        '''
+        if len(self.childs_statements) != 0:
+            return self.childs_statements[-1].is_closed_stmt()
+        else:
+            return False
 
 
 def resolve_statement_list(compiler, parent, stmt_list):

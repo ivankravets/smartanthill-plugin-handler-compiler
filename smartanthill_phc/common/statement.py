@@ -100,7 +100,7 @@ class ReturnStmtNode(StatementNode):
         child.set_parent(self)
         self.child_expression = child
 
-    def is_flow_stmt(self):
+    def is_closed_stmt(self):
         '''
         Returns true when this is a flow statement
         '''
@@ -252,6 +252,16 @@ class IfElseStmtNode(StatementNode):
         assert isinstance(child, StmtListNode)
         child.set_parent(self)
         self.child_else_branch = child
+
+    def is_closed_stmt(self):
+        '''
+        Returns true when last statement is closed
+        '''
+        if self.child_else_branch is not None:
+            return self.child_if_branch.is_closed_stmt() and\
+                self.child_else_branch.is_closed_stmt()
+        else:
+            return False
 
     def resolve(self, compiler):
         resolve_expression(compiler, self, 'child_expression')
