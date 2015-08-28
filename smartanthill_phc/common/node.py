@@ -147,6 +147,7 @@ class StatementNode(Node):
     def is_flow_stmt(self):
         '''
         Returns true when this is a flow statement
+        Next statement in statement list will not be executed
         '''
         # pylint: disable=no-self-use
         return False

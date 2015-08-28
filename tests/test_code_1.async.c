@@ -44,6 +44,16 @@ byte my_plugin_handler(const void* plugin_config, void* plugin_state,
   case 1:zepto_wait_for_pin(pc->ack_pin_number,(_sa_state->some));_sa_state->_sa_next = 2; return WAIT;
 
   case 2:uint16_t data_read = zepto_read_from_pins(pc->reply_pin_numbers,4);
-  zepto_reply_append_byte(reply,data_read);
+  if (data_read != 0) 
+    case 3:zepto_wait_for_pin(pc->ack_pin_number,(_sa_state->some))/* goto 5; */;_sa_state->_sa_next = 3; return WAIT;
+  else if ((_sa_state->some) != 0) {
+    zepto_wait_for_pin(pc->ack_pin_number,(_sa_state->some));_sa_state->_sa_next = 4; return WAIT;
+    case 4:zepto_reply_append_byte(reply,(_sa_state->some));
+  /* goto 5; */}
+  else
+    zepto_reply_append_byte(reply,0)/* goto 5; */;
+
+  case 5:zepto_reply_append_byte(reply,0xff);
+
   _sa_state->_sa_next = 0;return 0;} assert(false);
 }

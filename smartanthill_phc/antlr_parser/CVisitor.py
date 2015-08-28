@@ -305,8 +305,13 @@ class CVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by CParser#selectionStatement.
-    def visitSelectionStatement(self, ctx):
+    # Visit a parse tree produced by CParser#IfStatement.
+    def visitIfStatement(self, ctx):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by CParser#SwitchStatement.
+    def visitSwitchStatement(self, ctx):
         return self.visitChildren(ctx)
 
 

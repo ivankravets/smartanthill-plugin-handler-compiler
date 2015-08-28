@@ -5097,9 +5097,24 @@ class CParser ( Parser ):
             super(CParser.SelectionStatementContext, self).__init__(parent, invokingState)
             self.parser = parser
 
+
+        def getRuleIndex(self):
+            return CParser.RULE_selectionStatement
+
+     
+        def copyFrom(self, ctx):
+            super(CParser.SelectionStatementContext, self).copyFrom(ctx)
+
+
+
+    class IfStatementContext(SelectionStatementContext):
+
+        def __init__(self, parser, ctx): # actually a CParser.SelectionStatementContext)
+            super(CParser.IfStatementContext, self).__init__(parser)
+            self.copyFrom(ctx)
+
         def expression(self):
             return self.getTypedRuleContext(CParser.ExpressionContext,0)
-
 
         def statement(self, i=None):
             if i is None:
@@ -5108,23 +5123,47 @@ class CParser ( Parser ):
                 return self.getTypedRuleContext(CParser.StatementContext,i)
 
 
-        def getRuleIndex(self):
-            return CParser.RULE_selectionStatement
-
         def enterRule(self, listener):
             if isinstance( listener, CListener ):
-                listener.enterSelectionStatement(self)
+                listener.enterIfStatement(self)
 
         def exitRule(self, listener):
             if isinstance( listener, CListener ):
-                listener.exitSelectionStatement(self)
+                listener.exitIfStatement(self)
 
         def accept(self, visitor):
             if isinstance( visitor, CVisitor ):
-                return visitor.visitSelectionStatement(self)
+                return visitor.visitIfStatement(self)
             else:
                 return visitor.visitChildren(self)
 
+
+    class SwitchStatementContext(SelectionStatementContext):
+
+        def __init__(self, parser, ctx): # actually a CParser.SelectionStatementContext)
+            super(CParser.SwitchStatementContext, self).__init__(parser)
+            self.copyFrom(ctx)
+
+        def expression(self):
+            return self.getTypedRuleContext(CParser.ExpressionContext,0)
+
+        def statement(self):
+            return self.getTypedRuleContext(CParser.StatementContext,0)
+
+
+        def enterRule(self, listener):
+            if isinstance( listener, CListener ):
+                listener.enterSwitchStatement(self)
+
+        def exitRule(self, listener):
+            if isinstance( listener, CListener ):
+                listener.exitSwitchStatement(self)
+
+        def accept(self, visitor):
+            if isinstance( visitor, CVisitor ):
+                return visitor.visitSwitchStatement(self)
+            else:
+                return visitor.visitChildren(self)
 
 
 
@@ -5136,6 +5175,7 @@ class CParser ( Parser ):
             self.state = 742
             token = self._input.LA(1)
             if token in [CParser.If]:
+                localctx = CParser.IfStatementContext(self, localctx)
                 self.enterOuterAlt(localctx, 1)
                 self.state = 727
                 self.match(CParser.If)
@@ -5158,6 +5198,7 @@ class CParser ( Parser ):
 
 
             elif token in [CParser.Switch]:
+                localctx = CParser.SwitchStatementContext(self, localctx)
                 self.enterOuterAlt(localctx, 2)
                 self.state = 736
                 self.match(CParser.Switch)

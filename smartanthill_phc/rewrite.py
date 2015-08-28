@@ -127,6 +127,12 @@ class RewriteVisitor(NodeVisitor):
         if node.child_expression is not None:
             self._visit_expression(node.child_expression)
 
+    def visit_IfElseStmtNode(self, node):
+        self._visit_expression(node.child_expression)
+        visit_node(self, node.child_if_branch)
+        if node.child_else_branch is not None:
+            visit_node(self, node.child_else_branch)
+
     def visit_StateMachineStmtNode(self, node):
 
         assert len(node.childs_states) != 0
@@ -147,21 +153,27 @@ class RewriteVisitor(NodeVisitor):
 
     def visit_NextStateStmtNode(self, node):
 
-        if node.ref_next_state is None:
-            self._w.insertBeforeToken(
-                node.ctx.start,
-                u"_sa_state->_sa_next = 0;")
-        else:
-            self._w.insertAfterToken(
-                node.ctx.stop,
-                u"_sa_state->_sa_next = %s; return WAIT;" %
-                node.ref_next_state.txt_id)
+        self._w.insertAfterToken(
+            node.ctx.stop,
+            u"_sa_state->_sa_next = %s; return WAIT;" %
+            node.ref_next_state.txt_id)
+
+    def visit_InitStateStmtNode(self, node):
+
+        self._w.insertBeforeToken(
+            node.ctx.start,
+            u"_sa_state->_sa_next = 0;")
 
     def visit_StateDataCastStmtNode(self, node):
         self._w.insertAfterToken(
             node.ctx,
             u"_sa_state_data_t* _sa_state = (_sa_state_data_t*)%s;" %
             node.txt_arg)
+
+    def visit_JumpStateStmtNode(self, node):
+        self._w.insertBeforeToken(
+            node.ctx.stop,
+            u"/* goto %s; */" % node.ref_next_state.txt_id)
 
     def visit_DontCareExprNode(self, node):
         for each in node.childs_expressions:

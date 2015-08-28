@@ -17,7 +17,7 @@
 from smartanthill_phc.common.lookup import StatementListScope, ReturnStmtScope,\
     RootScope
 from smartanthill_phc.common.node import ArgumentListNode, ExpressionNode,\
-    ResolutionHelper, StatementNode, expression_type_match, resolve_expression,\
+    ResolutionHelper, StatementNode, resolve_expression,\
     StmtListNode
 
 
@@ -258,12 +258,12 @@ class IfElseStmtNode(StatementNode):
         compiler.resolve_node(self.child_if_branch)
         compiler.resolve_node(self.child_else_branch)
 
-        t = self.get_scope(RootScope).lookup_type('_zc_boolean')
-
-        if not expression_type_match(compiler, t, self, 'child_expression'):
-            compiler.report_error(
-                self.ctx, "Condition can not be evaluated to boolean")
-            # no need to raise here
+#         t = self.get_scope(RootScope).lookup_type('_zc_boolean')
+#
+#         if not expression_type_match(compiler, t, self, 'child_expression'):
+#             compiler.report_error(
+#                 self.ctx, "Condition can not be evaluated to boolean")
+        # no need to raise here
 
 
 class McuSleepStmtNode(StatementNode):

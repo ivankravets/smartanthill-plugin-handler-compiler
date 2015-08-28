@@ -238,8 +238,8 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
             return self.visit(ctx.castExpression())
         else:
             expr = self._c.init_node(DontCareExprNode(), ctx)
+            expr.add_expression(self.visit(ctx.logicalOrExpression(0)))
             expr.add_expression(self.visit(ctx.logicalOrExpression(1)))
-            expr.add_expression(self.visit(ctx.logicalOrExpression(2)))
 
             return expr
 
@@ -509,8 +509,26 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
         else:
             return self._c.init_node(statement.NopStmtNode(), ctx)
 
-    # Visit a parse tree produced by CParser#selectionStatement.
-    def visitSelectionStatement(self, ctx):
+    # Visit a parse tree produced by CParser#IfStatement.
+    def visitIfStatement(self, ctx):
+        stmt = self._c.init_node(statement.IfElseStmtNode(), ctx)
+        expr = self.visit(ctx.expression())
+        stmt.set_expression(expr)
+
+        assert len(ctx.statement()) >= 1
+        if_stmt = self.visit(ctx.statement()[0])
+        if_stmt = statement.make_statement_list(self._c, if_stmt)
+        stmt.set_if_branch(if_stmt)
+
+        if len(ctx.statement()) >= 2:
+            else_stmt = self.visit(ctx.statement()[1])
+            else_stmt = statement.make_statement_list(self._c, else_stmt)
+            stmt.set_else_branch(else_stmt)
+
+        return stmt
+
+    # Visit a parse tree produced by CParser#SwitchStatement.
+    def visitSwitchStatement(self, ctx):
         return self.visitChildren(ctx)
 
     # Visit a parse tree produced by CParser#iterationStatement.

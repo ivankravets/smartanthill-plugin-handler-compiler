@@ -544,12 +544,21 @@ class CListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CParser#selectionStatement.
-    def enterSelectionStatement(self, ctx):
+    # Enter a parse tree produced by CParser#IfStatement.
+    def enterIfStatement(self, ctx):
         pass
 
-    # Exit a parse tree produced by CParser#selectionStatement.
-    def exitSelectionStatement(self, ctx):
+    # Exit a parse tree produced by CParser#IfStatement.
+    def exitIfStatement(self, ctx):
+        pass
+
+
+    # Enter a parse tree produced by CParser#SwitchStatement.
+    def enterSwitchStatement(self, ctx):
+        pass
+
+    # Exit a parse tree produced by CParser#SwitchStatement.
+    def exitSwitchStatement(self, ctx):
         pass
 
 

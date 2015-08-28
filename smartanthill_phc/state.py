@@ -124,7 +124,8 @@ class StateNode(Node):
 class NextStateStmtNode(StatementNode):
 
     '''
-    Node class representing an state
+    Statement node class representing state to be processed next time we enter
+    this function
     '''
 
     def __init__(self):
@@ -133,6 +134,48 @@ class NextStateStmtNode(StatementNode):
         '''
         super(NextStateStmtNode, self).__init__()
         self.ref_next_state = None
+
+    def is_flow_stmt(self):
+        '''
+        Returns true
+        '''
+        # pylint: disable=no-self-use
+        return True
+
+
+class InitStateStmtNode(StatementNode):
+
+    '''
+    Statement node class representing the end of state machine, next entry
+    should restart the state machine from the initial state
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(InitStateStmtNode, self).__init__()
+
+
+class JumpStateStmtNode(StatementNode):
+
+    '''
+    Statement node class representing an state jump that does not need to wait
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(JumpStateStmtNode, self).__init__()
+        self.ref_next_state = None
+
+    def is_flow_stmt(self):
+        '''
+        Returns true
+        '''
+        # pylint: disable=no-self-use
+        return True
 
 
 class DeclsHelper(object):
@@ -236,7 +279,7 @@ def _create_state_machine(compiler, stmt_list, helper):
 
     sm = compiler.init_node(StateMachineStmtNode(), Ctx.NONE)
 
-    sl = compiler.init_node(StmtListNode(), Ctx.NONE)
+    sl = compiler.init_node(StmtListNode(), stmt_list.ctx)
 
     i = _skip_statements(stmt_list)
     stmt_list.split_at(i, sl)
@@ -285,6 +328,9 @@ def _create_state(compiler, state_machine, stmt_list, helper):
     return st
 
 
+# pylint: disable=too-many-instance-attributes
+
+
 class _StatementsSplitterVisitor(NodeVisitor):
 
     def __init__(self, compiler, state_machine, state, helper):
@@ -295,8 +341,10 @@ class _StatementsSplitterVisitor(NodeVisitor):
         self._sm = state_machine
         self._st = state
         self._h = helper
-        self._split = False
+        self._was_blocking = False
+        self._was_split = False
         self._was_return = False
+        self._jumps = []
 
     def default_visit(self, node):
         '''
@@ -305,42 +353,80 @@ class _StatementsSplitterVisitor(NodeVisitor):
         self._c.report_error(
             node.ctx, "Statement not supported")
 
-    def visit_StmtListNode(self, node):
+    def _create_state(self, stmt_list):
+        return _create_state(self._c, self._sm, stmt_list, self._h)
+
+    def _visit_stmt_list(self, node):
 
         for i in range(len(node.childs_statements)):
             visit_node(self, node.childs_statements[i])
-            if self._split:
-                sl = self._c.init_node(StmtListNode(), Ctx.NONE)
+
+            if self._was_blocking:
+                sl = self._c.init_node(StmtListNode(), node.ctx)
                 node.split_at(i + 1, sl)
+
+                if not node.has_flow_stmt:
+                    jmp = self._c.init_node(JumpStateStmtNode(), node.ctx)
+                    sl.add_statement(jmp)
+                    sl.has_flow_stmt = True
+                    self._jumps.append(jmp)
 
                 # use last statement ctx
                 ctx = node.childs_statements[-1].ctx
-                stmt = self._c.init_node(NextStateStmtNode(), ctx)
-                stmt.ref_next_state = _create_state(
-                    self._c, self._sm, sl, self._h)
-                node.add_statement(stmt)
+                nxt = self._c.init_node(NextStateStmtNode(), ctx)
+                nxt.ref_next_state = self._create_state(sl)
+                node.add_statement(nxt)
                 node.has_flow_stmt = True
 
                 # this node does not have more statements to process, return
-                self._split = False
+                self._was_blocking = False
                 return
+            elif self._was_split:
+                if len(self._jumps) == 0:
+                    # nothing to do
+                    self._was_split = False
+                elif len(node.childs_statements) == i + 1:
+                    # make it else where
+                    return
+                else:
+                    self._was_split = False
+
+                    sl = self._c.init_node(StmtListNode(), node.ctx)
+                    node.split_at(i + 1, sl)
+
+                    # use last statement ctx
+                    ctx = node.childs_statements[-1].ctx
+                    jmp = self._c.init_node(JumpStateStmtNode(), ctx)
+                    jmp.ref_next_state = self._create_state(sl)
+                    node.add_statement(jmp)
+                    node.has_flow_stmt = True
+
+                    for j in self._jumps:
+                        j.ref_next_state = jmp.ref_next_state
+
+                    self._jumps = []
+                    # this node does not have more statements to process,
+                    # return
+                    return
             elif self._was_return:
                 # remove all statements below this
-                sl = self._c.init_node(StmtListNode(), Ctx.NONE)
+                sl = self._c.init_node(StmtListNode(), node.ctx)
                 node.split_at(i + 1, sl)
                 self._c.remove_nodes(sl)
 
                 # use last statement ctx
                 ctx = node.childs_statements[-1].ctx
-                stmt = self._c.init_node(NextStateStmtNode(), ctx)
-                # stmt.ref_next_state = None
-                node.insert_statement_at(i, stmt)
+                nxt = self._c.init_node(InitStateStmtNode(), ctx)
+                node.insert_statement_at(i, nxt)
                 node.has_flow_stmt = True
 
                 # this node does not have more statements to process,
                 # return
                 self._was_return = False
                 return
+
+    def visit_StmtListNode(self, node):
+        self._visit_stmt_list(node)
 
     def visit_NopStmtNode(self, node):
         # Nothing to do here
@@ -355,12 +441,24 @@ class _StatementsSplitterVisitor(NodeVisitor):
         visit_node(self, node.child_expression)
 
     def visit_BlockingCallStmtNode(self, node):
-        self._split = True
+        self._was_blocking = True
         visit_node(self, node.child_expression)
 
     def visit_ReturnStmtNode(self, node):
         self._was_return = True
         visit_node(self, node.child_expression)
+
+    def visit_IfElseStmtNode(self, node):
+        visit_node(self, node.child_expression)
+        visit_node(self, node.child_if_branch)
+        if node.child_else_branch is not None:
+            visit_node(self, node.child_else_branch)
+
+        self._was_split = True
+
+    def visit_JumpStateStmtNode(self, node):
+        # Nothing to do here
+        pass
 
     def visit_DontCareExprNode(self, node):
         for each in node.childs_expressions:
