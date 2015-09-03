@@ -14,7 +14,7 @@
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-struct my_plugin_config { //constant structure filled with a configuration
+struct _sa_state_data_t {};struct my_plugin_config { //constant structure filled with a configuration
                       //  for specific 'ant body part'
   byte bodypart_id;//always present
   byte request_pin_number;//pin to request sensor read
@@ -30,34 +30,24 @@ byte my_plugin_handler_init(const void* plugin_config,void* plugin_state) {
 //TODO: reinit? (via deinit, or directly, or implicitly)
 
 byte my_plugin_handler(const void* plugin_config, void* plugin_state,
-  ZEPTO_PARSER* command, REPLY_HANDLE reply, WaitingFor* waiting_for) {
+  ZEPTO_PARSER* command, REPLY_HANDLE reply, WaitingFor* waiting_for) {_sa_state_data_t* _sa_state = (_sa_state_data_t*)plugin_state;
   const my_plugin_config* pc = (my_plugin_config*) plugin_config;
 
-  //requesting sensor to perform read, using pc->request_pin_number
-  zepto_set_pin(pc->request_pin_number,1);
+  switch(_sa_state->_sa_next) {case 0:zepto_wait_for_pin(some0, 0);_sa_state->_sa_next = 1; return WAIT;
+  case 1:uint16_t data_read = zepto_read_from_pins(some0, 0);
+  
+  if(codition) {
+    zepto_wait_for_pin(some1, 1)/* goto 5; */;_sa_state->_sa_next = 2; return WAIT;
+    case 2:zepto_read_from_pins1(some1, 1);
 
-  byte some = 4;
-  //waiting for sensor to indicate that data is ready
-  zepto_wait_for_pin(pc->ack_pin_number,1);
-  zepto_read_from_pins(pc->reply_pin_numbers,4);
+    if(cond2) {
+      zepto_wait_for_pin(some2, 2)/* goto 4; */;_sa_state->_sa_next = 3; return WAIT;
+      case 3:zepto_read_from_pins2(some2, 2);
+    /* goto 4; */}
+    case 4:zepto_reply_append_byte1(reply1,0);
+  /* goto 5; */}
+  
+  case 5:zepto_reply_append_byte1(reply1,0);
 
-  //waiting for sensor to indicate that data is ready
-  zepto_wait_for_pin(pc->ack_pin_number,some);
-  uint16_t data_read = zepto_read_from_pins2(pc->reply_pin_numbers,4);
-  if (data_read != 0) {
-    zepto_wait_for_pin(pc->ack_pin_number,some);
-    zepto_read_from_pins3(pc->reply_pin_numbers,4);
-  } else {
-      if (some != 0) {
-        zepto_wait_for_pin(pc->ack_pin_number,some);
-        zepto_reply_append_byte(reply,some);
-      }
-      else
-        zepto_reply_append_byte2(reply,0);
-
-      zepto_reply_append_byte3(reply,0);
-  }
-  zepto_reply_append_byte4(reply,0);
-
-  return 0;
+  _sa_state->_sa_next = 0;return 0;} assert(false);
 }

@@ -39,24 +39,25 @@ byte my_plugin_handler(const void* plugin_config, void* plugin_state,
   _sa_state->some = 4;
   //waiting for sensor to indicate that data is ready
   zepto_wait_for_pin(pc->ack_pin_number,1);_sa_state->_sa_next = 1; return WAIT;
+  case 1:zepto_read_from_pins(pc->reply_pin_numbers,4);
 
   //waiting for sensor to indicate that data is ready
-  case 1:zepto_wait_for_pin(pc->ack_pin_number,(_sa_state->some));_sa_state->_sa_next = 2; return WAIT;
-
-  case 2:uint16_t data_read = zepto_read_from_pins(pc->reply_pin_numbers,4);
-  if (data_read != 0) 
-    case 3:zepto_wait_for_pin(pc->ack_pin_number,(_sa_state->some))/* goto 5; */;_sa_state->_sa_next = 3; return WAIT;
-  else {
+  zepto_wait_for_pin(pc->ack_pin_number,(_sa_state->some));_sa_state->_sa_next = 2; return WAIT;
+  case 2:uint16_t data_read = zepto_read_from_pins2(pc->reply_pin_numbers,4);
+  if (data_read != 0) {
+    zepto_wait_for_pin(pc->ack_pin_number,(_sa_state->some))/* goto 6; */;_sa_state->_sa_next = 3; return WAIT;
+    case 3:zepto_read_from_pins3(pc->reply_pin_numbers,4);
+  } else {
       if ((_sa_state->some) != 0) {
-        zepto_wait_for_pin(pc->ack_pin_number,(_sa_state->some));_sa_state->_sa_next = 4; return WAIT;
+        zepto_wait_for_pin(pc->ack_pin_number,(_sa_state->some))/* goto 5; */;_sa_state->_sa_next = 4; return WAIT;
         case 4:zepto_reply_append_byte(reply,(_sa_state->some));
-      /* goto 5; */}
+      }
       else
-        zepto_reply_append_byte(reply,0)/* goto 5; */;
+        zepto_reply_append_byte2(reply,0)/* goto 5; *//* goto 6; */;
 
-      case 5:zepto_do_something(reply,0);
-  /* goto 6; *//* goto 6; */}
-  case 6:zepto_reply_append_byte(reply,0xff);
+      case 5:zepto_reply_append_byte3(reply,0);
+  /* goto 6; */}
+  case 6:zepto_reply_append_byte4(reply,0);
 
   _sa_state->_sa_next = 0;return 0;} assert(false);
 }

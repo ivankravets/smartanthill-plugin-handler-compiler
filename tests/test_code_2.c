@@ -33,31 +33,21 @@ byte my_plugin_handler(const void* plugin_config, void* plugin_state,
   ZEPTO_PARSER* command, REPLY_HANDLE reply, WaitingFor* waiting_for) {
   const my_plugin_config* pc = (my_plugin_config*) plugin_config;
 
-  //requesting sensor to perform read, using pc->request_pin_number
-  zepto_set_pin(pc->request_pin_number,1);
+  zepto_wait_for_pin(some0, 0);
+  uint16_t data_read = zepto_read_from_pins(some0, 0);
+  
+  if(codition) {
+    zepto_wait_for_pin(some1, 1);
+    zepto_read_from_pins1(some1, 1);
 
-  byte some = 4;
-  //waiting for sensor to indicate that data is ready
-  zepto_wait_for_pin(pc->ack_pin_number,1);
-  zepto_read_from_pins(pc->reply_pin_numbers,4);
-
-  //waiting for sensor to indicate that data is ready
-  zepto_wait_for_pin(pc->ack_pin_number,some);
-  uint16_t data_read = zepto_read_from_pins2(pc->reply_pin_numbers,4);
-  if (data_read != 0) {
-    zepto_wait_for_pin(pc->ack_pin_number,some);
-    zepto_read_from_pins3(pc->reply_pin_numbers,4);
-  } else {
-      if (some != 0) {
-        zepto_wait_for_pin(pc->ack_pin_number,some);
-        zepto_reply_append_byte(reply,some);
-      }
-      else
-        zepto_reply_append_byte2(reply,0);
-
-      zepto_reply_append_byte3(reply,0);
+    if(cond2) {
+      zepto_wait_for_pin(some2, 2);
+      zepto_read_from_pins2(some2, 2);
+    }
+    zepto_reply_append_byte1(reply1,0);
   }
-  zepto_reply_append_byte4(reply,0);
+  
+  zepto_reply_append_byte1(reply1,0);
 
   return 0;
 }

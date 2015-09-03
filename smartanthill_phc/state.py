@@ -322,45 +322,55 @@ def _create_state(compiler, state_machine, stmt_list, helper):
     st.txt_id = str(len(state_machine.childs_states))
     state_machine.add_state(st)
 
-    v = _StatementsSplitterVisitor(compiler, state_machine, st, helper)
-    visit_node(v, stmt_list)
+    assert stmt_list.is_closed_stmt()
+    v = _StatementsSplitterVisitor(
+        stmt_list, compiler, state_machine, st, helper)
+    v.visit_each_stmt()
 
     return st
 
 
-# pylint: disable=too-many-instance-attributes
 class _StatementsSplitterVisitor(NodeVisitor):
-
     '''
     States are created by splitting statement lists, at blocking statements
-    Each statement list can be 'open' when after execution of last statement
-    in the list, flow will continue with next statement
-    at parent statement list.
-    Or 'closed' when it contains a 'return' (usually the last statement)
-    that will avoid execution after it
 
-    It is required that the most parent statement list, used as root for the
-    state machine creation, it is a 'closed' statement list
+    Each statement can be 'open' or 'closed'.
+    A 'closed' statement means that execution flow will change.
+    'return' is a 'closed' statement.
+    An statement list will be 'closed' if it contains one closed statement.
+    Flow will certainly find a 'return' within it at some point.
+    An 'if else' statement will be closed only if both branches are closed.
 
-    Every time we split an statement list, we add a 'next statement' movement
-    at the end of the base part, and two things need to be checked:
-    If this was a 'closed' statement list, flow does not 'fall down' to parent
-    statement list, so no state return is required.
-    If this was an 'open' statement list (because of previous requirement,
-    this is not the root statement list), then flow must be returned to
-    next statement in parent statement list after the last state is executed.
-    So we must add a 'jump statement' at the end of the statement list, and
-    inform the parent statement list that an split at the parent is needed,
-    and that the state created needs to be set at that 'jump statement'
+    When we create the state machine, we need to split code flow at certain
+    points.
+    Each time an statement list is split, we create a new state.
+    When we split an statement list, we must check if it is 'open' or 'closed'.
+    When it is 'closed' it means we can freely split it, without much
+    consequence, as flow reaching its end, will find a 'return' statement.
+    But when we split an 'open' statement list, we must create a 'merge' point,
+    where flow should continue after the end of the statement list.
+    To do so, we need two thing,
+    First we need to add a jump to the end of current statement list to
+    change flow back to the 'merge' point.
+    Second, we must create the 'merge' point.
+    Such point is the statement to be executed right after the flow falls down
+    the previously 'open' statement list.
+    To do so, we split the containing (or parent) statement list at such point.
+    If the containing statement list is not closed either,
+    splitting it will in turn need to create a new 'merge' point
+    at its containing statement list.
+    This will create a cascade effect that will go up the flow structure until
+    a 'closed' statement list if found.
 
-    If the parent statement list has no more statements, we can delegate the
-    task to its parent statement list.
+    The 'root' statement list is required to be 'closed'
 
-    Also a branch statement can 'close' an statement list,
-    if all of its branches are closed
+    When the 'merge' point is after the last statement of an statement list,
+    then actual split is not required (it would create an empty statement list)
+    and we can just propagate the merge to its containing statement list.
+
     '''
 
-    def __init__(self, compiler, state_machine, state, helper):
+    def __init__(self, stmt_list, compiler, state_machine, state, helper):
         '''
         Constructor
         '''
@@ -368,10 +378,10 @@ class _StatementsSplitterVisitor(NodeVisitor):
         self._sm = state_machine
         self._st = state
         self._h = helper
-        self._was_blocking = False
-        self._was_split = False
-        self._was_return = False
-        self._jumps = []
+        self.merges = []
+
+        self._stmt_list = stmt_list
+        self._index = 0
 
     def default_visit(self, node):
         '''
@@ -383,81 +393,102 @@ class _StatementsSplitterVisitor(NodeVisitor):
     def _create_state(self, stmt_list):
         return _create_state(self._c, self._sm, stmt_list, self._h)
 
-    def _visit_stmt_list(self, node):
+    def insert_before_current(self, stmt):
+        '''
+        Insert statement before current one
+        Index will be incremented to account for the extra statement
+        Inserted statement will never be visited, because it will be inserted
+        at a place visitor already did
+        '''
+        self._stmt_list.insert_statement_at(self._index, stmt)
 
-        for i in range(len(node.childs_statements)):
-            visit_node(self, node.childs_statements[i])
+        self._index += 1
 
-            if self._was_blocking:
-                sl = self._c.init_node(StmtListNode(), node.ctx)
-                node.split_at(i + 1, sl)
+    def insert_after_current(self, stmt):
+        '''
+        Insert statement after current one
+        Index will be incremented to account for the extra statement
+        and to avoid visitation of inserted statement
+        '''
+        self._stmt_list.insert_statement_at(self._index + 1, stmt)
 
-                jmp = None
-                if not sl.is_closed_stmt():
-                    jmp = self._c.init_node(JumpStateStmtNode(), node.ctx)
-                    sl.add_statement(jmp)
-                    self._jumps.append(jmp)
+        self._index += 1
 
-                # use last statement ctx
-                ctx = node.childs_statements[-1].ctx
-                nxt = self._c.init_node(NextStateStmtNode(), ctx)
-                nxt.ref_next_state = self._create_state(sl)
-                node.add_statement(nxt)
+    def split_after_current(self, wait, ctx):
+        '''
+        Splits current statement list after current statement
+        There will be no more statements to visit at current statement list
+        If statement list is not closed, then a jump is added at the end,
+        to merge code flow back. Such merge will be left pending to complete
+        '''
+        if not self._stmt_list.is_closed_stmt():
+            jmp = self._c.init_node(JumpStateStmtNode(), ctx)
+            self._stmt_list.add_statement(jmp)
+            self.merges.append(jmp)
 
-                # this node does not have more statements to process, return
-                self._was_blocking = False
-                return jmp
-            elif self._was_split:
-                if len(self._jumps) == 0:
-                    # nothing to do
-                    self._was_split = False
-                elif len(node.childs_statements) == i + 1:
-                    # make it else where
-                    return
-                else:
-                    self._was_split = False
+        sl = self._c.init_node(StmtListNode(), ctx)
+        self._stmt_list.split_at(self._index + 1, sl)
 
-                    sl = self._c.init_node(StmtListNode(), node.ctx)
-                    node.split_at(i + 1, sl)
+        nxt = None
+        if wait:
+            nxt = self._c.init_node(NextStateStmtNode(), ctx)
+        else:
+            nxt = self._c.init_node(JumpStateStmtNode(), ctx)
 
-                    jumps = self._jumps
-                    self._jumps = []
-                    jmp = None
-                    if not sl.is_closed_stmt():
-                        jmp = self._c.init_node(JumpStateStmtNode(), node.ctx)
-                        sl.add_statement(jmp)
-                        self._jumps.append(jmp)
-                        self._was_split = True
+        nxt.ref_next_state = self._create_state(sl)
+        self.insert_after_current(nxt)
 
-                    # use last statement ctx
-                    ctx = node.childs_statements[-1].ctx
-                    jmp2 = self._c.init_node(JumpStateStmtNode(), ctx)
-                    jmp2.ref_next_state = self._create_state(sl)
-                    node.add_statement(jmp2)
+        return nxt.ref_next_state
 
-                    for j in jumps:
-                        j.ref_next_state = jmp2.ref_next_state
+    def process_pending_merges(self, ctx):
+        '''
+        Process pending child merges, and propagate upwards if needed
+        '''
+        if len(self.merges) == 0:
+            # nothing to do
+            pass
+        elif len(self._stmt_list.childs_statements) == self._index + 1:
+            # This is the last statement, no need to make it here
+            # Propagate upward
+            pass
+        else:
+            # split_after_curret may create its own merge points
+            jumps = self.merges
+            self.merges = []
 
-                    # this node does not have more statements to process,
-                    # return
-                    return jmp
-            elif self._was_return:
-                # this must be last statement
-                assert node.is_closed_stmt()
-                assert len(node.childs_statements) == i + 1
+#            ctx = self._stmt_list.childs_statements[-1].ctx
+            nxt = self.split_after_current(False, ctx)
 
-                # use last statement ctx
-                ctx = node.childs_statements[-1].ctx
-                nxt = self._c.init_node(InitStateStmtNode(), ctx)
-                node.insert_statement_at(i, nxt)
+            for j in jumps:
+                j.ref_next_state = nxt
 
-                # this node does not have more statements to process,
-                # return
-                self._was_return = False
-                return None
+    def visit_stmt_list(self, stmt_list):
+
+        assert isinstance(stmt_list, StmtListNode)
+
+        v = _StatementsSplitterVisitor(
+            stmt_list, self._c, self._sm, self._st, self._h)
+        v.visit_each_stmt()
+
+        self.merges.extend(v.merges)
+
+    def visit_each_stmt(self):
+
+        was_closed = self._stmt_list.is_closed_stmt()
+
+        while self._index < len(self._stmt_list.childs_statements):
+            stmt = self._stmt_list.childs_statements[self._index]
+            visit_node(self, stmt)
+
+            self._index += 1
+
+        if was_closed:
+            assert len(self.merges) == 0
 
     def visit_StmtListNode(self, node):
-        self._visit_stmt_list(node)
+
+        self.visit_stmt_list(node)
+        self.process_pending_merges(node.ctx)
 
     def visit_NopStmtNode(self, node):
         # Nothing to do here
@@ -472,20 +503,29 @@ class _StatementsSplitterVisitor(NodeVisitor):
         visit_node(self, node.child_expression)
 
     def visit_BlockingCallStmtNode(self, node):
-        self._was_blocking = True
+
         visit_node(self, node.child_expression)
+
+        self.split_after_current(True, node.ctx)
 
     def visit_ReturnStmtNode(self, node):
-        self._was_return = True
+
         visit_node(self, node.child_expression)
+
+        # this must be last statement
+        assert node == self._stmt_list.childs_statements[-1]
+
+        nxt = self._c.init_node(InitStateStmtNode(), node.ctx)
+        self.insert_before_current(nxt)
 
     def visit_IfElseStmtNode(self, node):
-        visit_node(self, node.child_expression)
-        visit_node(self, node.child_if_branch)
-        if node.child_else_branch is not None:
-            visit_node(self, node.child_else_branch)
 
-        self._was_split = True
+        visit_node(self, node.child_expression)
+        self.visit_stmt_list(node.child_if_branch)
+        if node.child_else_branch is not None:
+            self.visit_stmt_list(node.child_else_branch)
+
+        self.process_pending_merges(node.ctx)
 
     def visit_JumpStateStmtNode(self, node):
         # Nothing to do here

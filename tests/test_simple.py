@@ -19,7 +19,7 @@ from smartanthill_phc import api
 def test_code_1():
 
     async = api.process_file(
-        'tests/test_code_1.c', 'my_plugin_handler', True)
+        'tests/test_code_1.c', 'my_plugin_handler', False)
 
     f = open('tests/test_code_1.async.c', 'r')
 

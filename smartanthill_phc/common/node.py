@@ -196,6 +196,8 @@ class StmtListNode(StatementNode):
                 compiler, self, self.childs_statements, i)
 
             stmt = self.childs_statements[i]
+            # state _StatementsSplitterVisitor needs nice flow statements
+            # so no unreachable statements allowed
             if has_flow_stmt:
                 compiler.report_error(stmt.ctx, "Unreachable statement")
             if stmt.is_closed_stmt():
