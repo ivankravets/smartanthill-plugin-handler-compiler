@@ -262,10 +262,11 @@ class ExpressionNode(Node):
 
     def __init__(self):
         '''
-        Never actually called, just let pylint happy
+        Constructor
         '''
         super(ExpressionNode, self).__init__()
         self._resolved_type = None
+        self.has_parenthesis = False
 
     def resolve(self, compiler):
         '''

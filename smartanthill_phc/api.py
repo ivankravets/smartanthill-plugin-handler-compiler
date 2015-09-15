@@ -22,7 +22,7 @@ from smartanthill_phc.common.compiler import Compiler, Ctx, process_syntax_tree
 from smartanthill_phc.common.visitor import dump_tree,\
     check_all_nodes_reachables
 from smartanthill_phc.parser import c_parse_tree_to_syntax_tree
-from smartanthill_phc.rewrite import rewrite_code
+from smartanthill_phc.rewrite2 import rewrite_code
 from smartanthill_phc.root import RootNode, NonBlockingData
 from smartanthill_phc.state import create_states
 

@@ -451,6 +451,20 @@ class UnaryOpExprNode(OperatorExprNode):
         super(UnaryOpExprNode, self).__init__()
 
 
+class PostfixOpExprNode(OperatorExprNode):
+
+    '''
+    Node class representing a postfix unary operator expression
+    Postfix '++', '--'
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(PostfixOpExprNode, self).__init__()
+
+
 class ComparisonOpExprNode(OperatorExprNode):
 
     '''

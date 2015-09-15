@@ -25,9 +25,9 @@ def visit_node(visitor, node):
     name = 'visit_' + type(node).__name__
     attr = getattr(visitor, name, None)
     if attr:
-        attr(node)
+        return attr(node)
     else:
-        getattr(visitor, 'default_visit')(node)
+        return getattr(visitor, 'default_visit')(node)
 
 
 def walk_node_childs(walker, node):

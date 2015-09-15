@@ -134,6 +134,7 @@ class NextStateStmtNode(StatementNode):
         '''
         super(NextStateStmtNode, self).__init__()
         self.ref_next_state = None
+        self.flag_wait = False
 
     def is_closed_stmt(self):
         '''
@@ -155,27 +156,6 @@ class InitStateStmtNode(StatementNode):
         Constructor
         '''
         super(InitStateStmtNode, self).__init__()
-
-
-class JumpStateStmtNode(StatementNode):
-
-    '''
-    Statement node class representing an state jump that does not need to wait
-    '''
-
-    def __init__(self):
-        '''
-        Constructor
-        '''
-        super(JumpStateStmtNode, self).__init__()
-        self.ref_next_state = None
-
-    def is_closed_stmt(self):
-        '''
-        Returns true
-        '''
-        # pylint: disable=no-self-use
-        return True
 
 
 class DeclsHelper(object):
@@ -422,19 +402,15 @@ class _StatementsSplitterVisitor(NodeVisitor):
         to merge code flow back. Such merge will be left pending to complete
         '''
         if not self._stmt_list.is_closed_stmt():
-            jmp = self._c.init_node(JumpStateStmtNode(), ctx)
+            jmp = self._c.init_node(NextStateStmtNode(), ctx)
             self._stmt_list.add_statement(jmp)
             self.merges.append(jmp)
 
         sl = self._c.init_node(StmtListNode(), ctx)
         self._stmt_list.split_at(self._index + 1, sl)
 
-        nxt = None
-        if wait:
-            nxt = self._c.init_node(NextStateStmtNode(), ctx)
-        else:
-            nxt = self._c.init_node(JumpStateStmtNode(), ctx)
-
+        nxt = self._c.init_node(NextStateStmtNode(), ctx)
+        nxt.flag_wait = wait
         nxt.ref_next_state = self._create_state(sl)
         self.insert_after_current(nxt)
 
@@ -527,7 +503,7 @@ class _StatementsSplitterVisitor(NodeVisitor):
 
         self.process_pending_merges(node.ctx)
 
-    def visit_JumpStateStmtNode(self, node):
+    def visit_NextStateStmtNode(self, node):
         # Nothing to do here
         pass
 
