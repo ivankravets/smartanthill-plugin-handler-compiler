@@ -151,6 +151,28 @@ class MemberAccessExprNode(ExpressionNode):
         return self.member_decl.field_sequence
 
 
+class LiteralExprNode(ExpressionNode):
+
+    '''
+    Node class representing a generic literal
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(LiteralExprNode, self).__init__()
+        self.txt_literal = None
+
+    def resolve_expr(self, compiler):
+
+        # pylint: disable=unused-argument
+
+        scope = self.get_scope(RootScope)
+
+        return scope.lookup_type('_zc_dont_care')
+
+
 class NumberLiteralExprNode(ExpressionNode):
 
     '''
@@ -394,19 +416,44 @@ class OperatorExprNode(ExpressionNode):
             RootScope).lookup_operator(self.txt_operator)
 
         if len(candidates) == 0:
-            compiler.report_error(
-                self.ctx, "Unresolved operator '%s'" % self.txt_operator)
-            compiler.raise_error()
+            if False:
+                compiler.report_error(
+                    self.ctx, "Unresolved operator '%s'" % self.txt_operator)
+                compiler.raise_error()
+            else:
+                return self.get_scope(RootScope).lookup_type('_zc_dont_care')
 
         self.ref_decl = self.child_argument_list.overload_filter(
             compiler, candidates)
         self.child_argument_list.make_match(
             compiler, self.ref_decl.child_parameter_list)
 
-#         self.ref_decl.static_evaluate(compiler, self,
-#                                       self.child_argument_list)
+        self.ref_decl.static_evaluate(compiler, self,
+                                      self.child_argument_list)
 
         return self.ref_decl.get_type()
+
+
+class BinaryOpExprNode(OperatorExprNode):
+
+    '''
+    Node class representing a binary operator expression
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(BinaryOpExprNode, self).__init__()
+
+    @staticmethod
+    def create(compiler, ctx):
+        '''
+        Creates a new instance, and a new argument list
+        '''
+        node = compiler.init_node(BinaryOpExprNode(), ctx)
+        node.set_argument_list(compiler.init_node(ArgumentListNode(), ctx))
+        return node
 
 
 class LogicOpExprNode(OperatorExprNode):
@@ -450,6 +497,15 @@ class UnaryOpExprNode(OperatorExprNode):
         '''
         super(UnaryOpExprNode, self).__init__()
 
+    @staticmethod
+    def create(compiler, ctx):
+        '''
+        Creates a new instance, and a new argument list
+        '''
+        node = compiler.init_node(UnaryOpExprNode(), ctx)
+        node.set_argument_list(compiler.init_node(ArgumentListNode(), ctx))
+        return node
+
 
 class PostfixOpExprNode(OperatorExprNode):
 
@@ -463,6 +519,15 @@ class PostfixOpExprNode(OperatorExprNode):
         Constructor
         '''
         super(PostfixOpExprNode, self).__init__()
+
+    @staticmethod
+    def create(compiler, ctx):
+        '''
+        Creates a new instance, and a new argument list
+        '''
+        node = compiler.init_node(PostfixOpExprNode(), ctx)
+        node.set_argument_list(compiler.init_node(ArgumentListNode(), ctx))
+        return node
 
 
 class ComparisonOpExprNode(OperatorExprNode):

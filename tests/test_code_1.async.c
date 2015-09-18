@@ -20,7 +20,7 @@ byte some;
 
 byte my_plugin_handler_init(const void* plugin_config,void* plugin_state) {
 void = (void)plugin_config;
-zepto_set_pin(pc(op)request_pin_number,);
+zepto_set_pin(pc -> request_pin_number,0);
 }
 
 //TODO: reinit? (via deinit, or directly, or implicitly)
@@ -32,37 +32,37 @@ void = (void)plugin_config;
 switch(_sa_state->_sa_next) {
 case 0:
 {
-zepto_set_pin(pc(op)request_pin_number,);
-do_something(pc(op)request_pin_number);
+zepto_set_pin(pc -> request_pin_number,1);
+do_something(pc -> request_pin_number);
 do_something_else();
-_sa_state->some = ;
-zepto_wait_for_pin(pc(op)ack_pin_number,);
+_sa_state->some = 4;
+zepto_wait_for_pin(pc -> ack_pin_number,1);
 _sa_state->_sa_next = 1; return WAIT;
 }
 case 1:
 {
-zepto_read_from_pins(pc(op)reply_pin_numbers,);
-zepto_wait_for_pin(pc(op)ack_pin_number,(_sa_state->some));
+zepto_read_from_pins(pc -> reply_pin_numbers,4);
+zepto_wait_for_pin(pc -> ack_pin_number,(_sa_state->some));
 _sa_state->_sa_next = 2; return WAIT;
 }
 case 2:
 {
-void = zepto_read_from_pins2(pc(op)reply_pin_numbers,);
-if(data_read(op))
+void = zepto_read_from_pins2(pc -> reply_pin_numbers,4);
+if(data_read != 0)
 {
-zepto_wait_for_pin(pc(op)ack_pin_number,(_sa_state->some));
+zepto_wait_for_pin(pc -> ack_pin_number,(_sa_state->some));
 _sa_state->_sa_next = 3; return WAIT;
 }
 else
 {
-if((_sa_state->some)(op))
+if((_sa_state->some) != 0)
 {
-zepto_wait_for_pin(pc(op)ack_pin_number,(_sa_state->some));
+zepto_wait_for_pin(pc -> ack_pin_number,(_sa_state->some));
 _sa_state->_sa_next = 4; return WAIT;
 }
 else
 {
-zepto_reply_append_byte2(reply,);
+zepto_reply_append_byte2(reply,0);
 }
 _sa_state->_sa_next = 5; return NEXT;
 }
@@ -70,7 +70,7 @@ _sa_state->_sa_next = 6; return NEXT;
 }
 case 3:
 {
-zepto_read_from_pins3(pc(op)reply_pin_numbers,);
+zepto_read_from_pins3(pc -> reply_pin_numbers,4);
 _sa_state->_sa_next = 6; return NEXT;
 }
 case 4:
@@ -80,14 +80,14 @@ _sa_state->_sa_next = 5; return NEXT;
 }
 case 5:
 {
-zepto_reply_append_byte3(reply,);
+zepto_reply_append_byte3(reply,0);
 _sa_state->_sa_next = 6; return NEXT;
 }
 case 6:
 {
-zepto_reply_append_byte4(reply,);
+zepto_reply_append_byte4(reply,0);
 _sa_state->_sa_next = 0;
-return ;
+return 0;
 }
 }
 assert(false);

@@ -22,6 +22,8 @@ from smartanthill_phc.common import expression
 from smartanthill_phc.common import node
 from smartanthill_phc.common import statement
 from smartanthill_phc.common.antlr_helper import get_token_text
+from smartanthill_phc.common.expression import PostfixOpExprNode,\
+    BinaryOpExprNode, LiteralExprNode, UnaryOpExprNode
 from smartanthill_phc.common.node import DeclarationListNode
 from smartanthill_phc.root import PluginSourceNode
 
@@ -126,48 +128,65 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
     # Visit a parse tree produced by CParser#DotExpression.
     def visitDotExpression(self, ctx):
 
-        expr = self._c.init_node(DontCareExprNode(), ctx)
-        expr.add_expression(self.visit(ctx.unaryExpression()))
+        expr = BinaryOpExprNode.create(self._c, ctx)
+        expr.txt_operator = get_token_text(self._c, ctx.getChild(1))
+        expr.child_argument_list.add_argument(
+            self.visit(ctx.unaryExpression()))
 
         tk = ctx.Identifier()
         member = self._c.init_node(expression.VariableExprNode(), tk)
         member.txt_name = get_token_text(self._c, tk)
 
-        expr.add_expression(member)
+        expr.child_argument_list.add_argument(member)
 
         return expr
 
     # Visit a parse tree produced by CParser#ParenthesizedExpression.
     def visitParenthesizedExpression(self, ctx):
 
-        return self.visit(ctx.expression())
+        expr = self.visit(ctx.expression())
+        expr.has_parenthesis = True
+
+        return expr
 
     # Visit a parse tree produced by CParser#LiteralExpression.
     def visitLiteralExpression(self, ctx):
-        return self._c.init_node(DontCareExprNode(), ctx)
+
+        expr = self._c.init_node(LiteralExprNode(), ctx)
+        expr.txt_literal = str(ctx.Constant().getText())
+
+        return expr
 
     # Visit a parse tree produced by CParser#PostIncrementExpression.
     def visitPostIncrementExpression(self, ctx):
-        expr = self._c.init_node(DontCareExprNode(), ctx)
-        expr.add_expression(self.visit(ctx.unaryExpression()))
+
+        expr = PostfixOpExprNode.create(self._c, ctx)
+        expr.txt_operator = get_token_text(self._c, ctx.getChild(1))
+        expr.child_argument_list.add_argument(
+            self.visit(ctx.unaryExpression()))
 
         return expr
 
     # Visit a parse tree produced by CParser#ArrowExpression.
     def visitArrowExpression(self, ctx):
-        expr = self._c.init_node(DontCareExprNode(), ctx)
-        expr.add_expression(self.visit(ctx.unaryExpression()))
+
+        expr = BinaryOpExprNode.create(self._c, ctx)
+        expr.txt_operator = get_token_text(self._c, ctx.getChild(1))
+        expr.child_argument_list.add_argument(
+            self.visit(ctx.unaryExpression()))
 
         tk = ctx.Identifier()
         member = self._c.init_node(expression.VariableExprNode(), tk)
         member.txt_name = get_token_text(self._c, tk)
 
-        expr.add_expression(member)
+        expr.child_argument_list.add_argument(member)
 
         return expr
 
     # Visit a parse tree produced by CParser#IndexExpression.
     def visitIndexExpression(self, ctx):
+
+        assert False
         expr = self._c.init_node(DontCareExprNode(), ctx)
         expr.add_expression(self.visit(ctx.unaryExpression()))
         expr.add_expression(self.visit(ctx.expression()))
@@ -176,6 +195,7 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
     # Visit a parse tree produced by CParser#SizeOfTypeExpression.
     def visitSizeOfTypeExpression(self, ctx):
+        assert False
         return self._c.init_node(DontCareExprNode(), ctx)
 
     # Visit a parse tree produced by CParser#IdentifierExpression.
@@ -189,17 +209,22 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
     # Visit a parse tree produced by CParser#UnaryOperatorExpression.
     def visitUnaryOperatorExpression(self, ctx):
-        expr = self._c.init_node(DontCareExprNode(), ctx)
-        expr.add_expression(self.visit(ctx.castExpression()))
+
+        expr = UnaryOpExprNode.create(self._c, ctx)
+        expr.txt_operator = get_token_text(self._c, ctx.getChild(0))
+        expr.child_argument_list.add_argument(
+            self.visit(ctx.castExpression()))
 
         return expr
 
     # Visit a parse tree produced by CParser#AlignOfTypeExpression.
     def visitAlignOfTypeExpression(self, ctx):
+        assert False
         return self._c.init_node(DontCareExprNode(), ctx)
 
     # Visit a parse tree produced by CParser#SizeOfExpression.
     def visitSizeOfExpression(self, ctx):
+        assert False
         expr = self._c.init_node(DontCareExprNode(), ctx)
         expr.add_expression(self.visit(ctx.unaryExpression()))
 
@@ -207,17 +232,22 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
     # Visit a parse tree produced by CParser#StringLiteralExpression.
     def visitStringLiteralExpression(self, ctx):
+        assert False
         return self._c.init_node(DontCareExprNode(), ctx)
 
     # Visit a parse tree produced by CParser#PreIncrementExpression.
     def visitPreIncrementExpression(self, ctx):
-        expr = self._c.init_node(DontCareExprNode(), ctx)
-        expr.add_expression(self.visit(ctx.unaryExpression()))
+
+        expr = UnaryOpExprNode.create(self._c, ctx)
+        expr.txt_operator = get_token_text(self._c, ctx.getChild(0))
+        expr.child_argument_list.add_argument(
+            self.visit(ctx.unaryExpression()))
 
         return expr
 
     # Visit a parse tree produced by CParser#argumentExpressionList.
     def visitArgumentExpressionList(self, ctx):
+
         args = self._c.init_node(node.ArgumentListNode(), ctx)
 
         for e in ctx.assignmentExpression():
@@ -228,6 +258,7 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
     # Visit a parse tree produced by CParser#castExpression.
     def visitCastExpression(self, ctx):
+
         if ctx.unaryExpression() is not None:
             return self.visit(ctx.unaryExpression())
         else:
@@ -242,9 +273,12 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
         if ctx.castExpression() is not None:
             return self.visit(ctx.castExpression())
         else:
-            expr = self._c.init_node(DontCareExprNode(), ctx)
-            expr.add_expression(self.visit(ctx.logicalOrExpression(0)))
-            expr.add_expression(self.visit(ctx.logicalOrExpression(1)))
+            expr = BinaryOpExprNode.create(self._c, ctx)
+            expr.txt_operator = get_token_text(self._c, ctx.getChild(1))
+            expr.child_argument_list.add_argument(
+                self.visit(ctx.logicalOrExpression(0)))
+            expr.child_argument_list.add_argument(
+                self.visit(ctx.logicalOrExpression(1)))
 
             return expr
 

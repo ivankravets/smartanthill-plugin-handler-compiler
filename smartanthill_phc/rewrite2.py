@@ -210,9 +210,25 @@ class _RewriteVisitor(NodeVisitor):
         return u"%s(%s)" % (node.txt_name,
                             self._args(node.child_argument_list))
 
-    def visit_NumberLiteralExprNode(self, node):
+    def visit_LiteralExprNode(self, node):
         # pylint: disable=no-self-use
         return node.txt_literal
+
+    def visit_BinaryOpExprNode(self, node):
+
+        txt0 = self._expr(node.child_argument_list.childs_arguments[0])
+        txt1 = self._expr(node.child_argument_list.childs_arguments[1])
+        return u"%s %s %s" % (txt0, node.txt_operator, txt1)
+
+    def visit_UnaryOpExprNode(self, node):
+
+        txt0 = self._expr(node.child_argument_list.childs_arguments[0])
+        return u"%s %s" % (node.txt_operator, txt0)
+
+    def visit_PostfixOpExprNode(self, node):
+
+        txt0 = self._expr(node.child_argument_list.childs_arguments[0])
+        return u"%s %s" % (txt0, node.txt_operator)
 
     def visit_ArgumentListNode(self, node):
 
