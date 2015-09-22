@@ -13,6 +13,8 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+#include <stdint.h>
+typedef uint8_t byte;
 
 struct my_plugin_config { //constant structure filled with a configuration
                       //  for specific 'ant body part'
@@ -23,15 +25,15 @@ struct my_plugin_config { //constant structure filled with a configuration
 };
 
 byte my_plugin_handler_init(const void* plugin_config,void* plugin_state) {
-  const my_plugin_config* pc = (my_plugin_config*) plugin_config;
+  const struct my_plugin_config* pc = (struct my_plugin_config*) plugin_config;
   zepto_set_pin(pc->request_pin_number,0);
 }
 
 //TODO: reinit? (via deinit, or directly, or implicitly)
 
 byte my_plugin_handler(const void* plugin_config, void* plugin_state,
-  ZEPTO_PARSER* command, REPLY_HANDLE reply, WaitingFor* waiting_for) {
-  const my_plugin_config* pc = (my_plugin_config*) plugin_config;
+  void* command, void* reply, void* waiting_for) {
+  const struct my_plugin_config* pc = (struct my_plugin_config*) plugin_config;
 
   //requesting sensor to perform read, using pc->request_pin_number
   zepto_set_pin(pc->request_pin_number,1);

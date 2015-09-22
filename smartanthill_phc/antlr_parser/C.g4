@@ -729,6 +729,11 @@ PragmaDirective
         -> channel(HIDDEN)
     ;
 
+IncludeDirective
+    :   '#' Whitespace? 'include' Whitespace ~[\r\n]*
+        -> channel(HIDDEN)
+    ;
+
 Whitespace
     :   [ \t]+
         -> channel(HIDDEN)

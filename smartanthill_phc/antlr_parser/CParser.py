@@ -15,7 +15,7 @@ else:
 def serializedATN():
     with StringIO() as buf:
         buf.write(u"\3\u0430\ud6d1\u8206\uad2d\u4417\uaef1\u8d80\uaadd\3")
-        buf.write(u"k\u0341\4\2\t\2\4\3\t\3\4\4\t\4\4\5\t\5\4\6\t\6\4\7\t")
+        buf.write(u"l\u0341\4\2\t\2\4\3\t\3\4\4\t\4\4\5\t\5\4\6\t\6\4\7\t")
         buf.write(u"\7\4\b\t\b\4\t\t\t\4\n\t\n\4\13\t\13\4\f\t\f\4\r\t\r")
         buf.write(u"\4\16\t\16\4\17\t\17\4\20\t\20\4\21\t\21\4\22\t\22\4")
         buf.write(u"\23\t\23\4\24\t\24\4\25\t\25\4\26\t\26\4\27\t\27\4\30")
@@ -501,8 +501,8 @@ class CParser ( Parser ):
                       u"RightShiftAssign", u"AndAssign", u"XorAssign", u"OrAssign", 
                       u"Equal", u"NotEqual", u"Arrow", u"Dot", u"Ellipsis", 
                       u"Identifier", u"Constant", u"StringLiteral", u"LineDirective", 
-                      u"PragmaDirective", u"Whitespace", u"Newline", u"BlockComment", 
-                      u"LineComment" ]
+                      u"PragmaDirective", u"IncludeDirective", u"Whitespace", 
+                      u"Newline", u"BlockComment", u"LineComment" ]
 
     RULE_unaryExpression = 0
     RULE_argumentExpressionList = 1
@@ -678,10 +678,11 @@ class CParser ( Parser ):
     StringLiteral=99
     LineDirective=100
     PragmaDirective=101
-    Whitespace=102
-    Newline=103
-    BlockComment=104
-    LineComment=105
+    IncludeDirective=102
+    Whitespace=103
+    Newline=104
+    BlockComment=105
+    LineComment=106
 
     def __init__(self, input):
         super(CParser, self).__init__(input)

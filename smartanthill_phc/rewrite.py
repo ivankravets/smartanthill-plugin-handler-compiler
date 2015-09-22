@@ -74,18 +74,22 @@ class RewriteVisitor(NodeVisitor):
 
     def visit_StateDataStuctDeclarationNode(self, node):
 
-        tk = node.ctx.start
-        self._w.insertBeforeToken(tk, u"struct _sa_state_data_t {")
+        txt = u"\nstruct _sa_state_t {"
+        txt += u"\nbyte _sa_next;"
 
         for each in self._nb.refs_moved_var_decls:
             start = each.ctx.declarationSpecifier(0).start
             stop = each.ctx.initDeclaratorList().initDeclarator(
                 0).declarator().stop
 
-            txt = self._w.tokens.getText((start.tokenIndex, stop.tokenIndex))
-            self._w.insertBeforeToken(tk, u"%s;" % txt)
+            txt += u"\n"
+            txt += self._w.tokens.getText((start.tokenIndex, stop.tokenIndex))
+            txt += u";"
 
-        self._w.insertBeforeToken(tk, u"};")
+        txt += u"\n};"
+        if node.ctx.stop.line is not None:
+            txt += u"\n//#line %s\n" % node.ctx.stop.line
+        self._w.insertAfterToken(node.ctx.stop, txt)
 
     def visit_FunctionDeclNode(self, node):
         visit_node(self, node.child_statement_list)
@@ -121,6 +125,11 @@ class RewriteVisitor(NodeVisitor):
         self._visit_expression(node.child_expression)
 
     def visit_BlockingCallStmtNode(self, node):
+
+        self._w.replaceToken(
+            node.child_expression.ctx.Identifier().symbol,
+            u"%s_non_blocking" % node.child_expression.txt_name)
+
         self._visit_expression(node.child_expression)
 
     def visit_ReturnStmtNode(self, node):
@@ -137,27 +146,30 @@ class RewriteVisitor(NodeVisitor):
 
         assert len(node.childs_states) != 0
 
-        b = node.childs_states[
-            0].child_statement_list.childs_statements[0].ctx.start
-
-        self._w.insertBeforeToken(b, u"switch(_sa_state->_sa_next) {")
+        txt = u"\n\nswitch(_sa_state->_sa_next) {"
         for each in node.childs_states:
-            l = each.child_statement_list.childs_statements[0].ctx.start
-            self._w.insertBeforeToken(l, u"case %s:" % each.txt_id)
-            visit_node(self, each.child_statement_list)
 
-        e = node.childs_states[
-            -1].child_statement_list.childs_statements[-1].ctx.stop
+            txt += u"\ncase %s: goto label_%s;" % (each.txt_id, each.txt_id)
+#            visit_node(self, each.child_statement_list)
 
-        self._w.insertAfterToken(e, u"} assert(false);")
+        txt += u"\ndefault: assert(0);"
+        txt += u"\n}"
+        txt += u"\nlabel_0:;"  # mb: add semicolon after label
+        if node.ctx.line is not None:
+            txt += u"\n//#line %s\n" % node.ctx.line
+
+        self._w.insertAfterToken(node.ctx, txt)
 
     def visit_NextStateStmtNode(self, node):
 
-        txt = 'WAIT' if node.flag_wait else 'NEXT'
-        self._w.insertAfterToken(
-            node.ctx.stop,
-            u"_sa_state->_sa_next = %s; return %s;" %
-            (node.ref_next_state.txt_id, txt))
+        nxt = node.ref_next_state.txt_id
+        txt = u"\n_sa_state->_sa_next = %s;" % nxt
+        txt += u"\nreturn 1; /* WAIT */"
+        txt += u"\nlabel_%s:;" % nxt  # mb: add semicolon after label
+        if node.ctx.stop.line is not None:
+            txt += u"\n//#line %s\n" % node.ctx.stop.line
+
+        self._w.insertAfterToken(node.ctx.stop, txt)
 
     def visit_InitStateStmtNode(self, node):
 
@@ -168,7 +180,7 @@ class RewriteVisitor(NodeVisitor):
     def visit_StateDataCastStmtNode(self, node):
         self._w.insertAfterToken(
             node.ctx,
-            u"_sa_state_data_t* _sa_state = (_sa_state_data_t*)%s;" %
+            u"\nstruct _sa_state_t* _sa_state = (struct _sa_state_t*)%s;" %
             node.txt_arg)
 
     def visit_DontCareExprNode(self, node):
@@ -177,6 +189,10 @@ class RewriteVisitor(NodeVisitor):
 
     def visit_TypeCastExprNode(self, node):
         visit_node(self, node.child_expression)
+
+    def visit_LiteralExprNode(self, node):
+        # nothing to do here
+        pass
 
     def visit_VariableExprNode(self, node):
 

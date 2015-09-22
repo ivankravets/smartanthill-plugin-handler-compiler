@@ -143,6 +143,7 @@ class BlockingCallStmtNode(StatementNode):
         '''
         super(BlockingCallStmtNode, self).__init__()
         self.child_expression = None
+        self.txt_next = u"TODO"
 
     def set_expression(self, child):
         '''

@@ -24,3 +24,13 @@ def test_code_1():
     f = open('tests/test_code_1.async.c', 'r')
 
     assert async == f.read()
+
+
+def test_code_2():
+
+    async = api.process_file(
+        'tests/test_code_2.c', 'my_plugin_handler', False)
+
+    f = open('tests/test_code_2.async.c', 'r')
+
+    assert async == f.read()

@@ -106,16 +106,8 @@ class StateNode(Node):
         Constructor
         '''
         super(StateNode, self).__init__()
-        self.child_statement_list = None
         self.txt_id = None
-
-    def set_statement_list(self, child):
-        '''
-        statement list setter
-        '''
-        assert isinstance(child, StmtListNode)
-        child.set_parent(self)
-        self.child_statement_list = child
+        self.wait_condition = None
 
 #     def resolve(self, compiler):
 #         compiler.resolve_node(self.child_statement_list)
@@ -134,14 +126,6 @@ class NextStateStmtNode(StatementNode):
         '''
         super(NextStateStmtNode, self).__init__()
         self.ref_next_state = None
-        self.flag_wait = False
-
-    def is_closed_stmt(self):
-        '''
-        Returns true
-        '''
-        # pylint: disable=no-self-use
-        return True
 
 
 class InitStateStmtNode(StatementNode):
@@ -156,6 +140,20 @@ class InitStateStmtNode(StatementNode):
         Constructor
         '''
         super(InitStateStmtNode, self).__init__()
+
+
+class LabelStmtNode(StatementNode):
+
+    '''
+    Statement node class representing a goto label
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(LabelStmtNode, self).__init__()
+        self.txt_label = None
 
 
 class DeclsHelper(object):
@@ -258,18 +256,20 @@ def _create_state_machine(compiler, stmt_list, helper):
         compiler.report_error(stmt_list.ctx, "Missing 'return' statement")
         return
 
-    sm = compiler.init_node(StateMachineStmtNode(), Ctx.NONE)
-
-    sl = compiler.init_node(StmtListNode(), stmt_list.ctx)
-
     i = _skip_statements(stmt_list)
-    stmt_list.split_at(i, sl)
-    stmt_list.add_statement(sm)
 
-    _create_state(compiler, sm, sl, helper)
+    if i == 0:
+        ctx = stmt_list.ctx.start
+    else:
+        ctx = stmt_list.childs_statements[i - 1].ctx.stop
 
-    for each in sm.childs_states:
-        assert each.child_statement_list.is_closed_stmt()
+    sm = compiler.init_node(StateMachineStmtNode(), ctx)
+
+    stmt_list.insert_statement_at(i, sm)
+
+    v = _StatementsSplitterVisitor(stmt_list, i + 1, compiler, sm, helper)
+    v.create_state(None)
+    v.visit_each_stmt()
 
 
 def _skip_statements(stmt_list):
@@ -290,78 +290,22 @@ def _skip_statements(stmt_list):
     return len(stmt_list.childs_statements)
 
 
-def _create_state(compiler, state_machine, stmt_list, helper):
-    '''
-    Creates a new state
-    '''
-
-    st = compiler.init_node(StateNode(), Ctx.NONE)
-    st.set_statement_list(stmt_list)
-
-    # begin from 0
-    st.txt_id = str(len(state_machine.childs_states))
-    state_machine.add_state(st)
-
-    assert stmt_list.is_closed_stmt()
-    v = _StatementsSplitterVisitor(
-        stmt_list, compiler, state_machine, st, helper)
-    v.visit_each_stmt()
-
-    return st
-
-
 class _StatementsSplitterVisitor(NodeVisitor):
     '''
-    States are created by splitting statement lists, at blocking statements
-
-    Each statement can be 'open' or 'closed'.
-    A 'closed' statement means that execution flow will change.
-    'return' is a 'closed' statement.
-    An statement list will be 'closed' if it contains one closed statement.
-    Flow will certainly find a 'return' within it at some point.
-    An 'if else' statement will be closed only if both branches are closed.
-
-    When we create the state machine, we need to split code flow at certain
-    points.
-    Each time an statement list is split, we create a new state.
-    When we split an statement list, we must check if it is 'open' or 'closed'.
-    When it is 'closed' it means we can freely split it, without much
-    consequence, as flow reaching its end, will find a 'return' statement.
-    But when we split an 'open' statement list, we must create a 'merge' point,
-    where flow should continue after the end of the statement list.
-    To do so, we need two thing,
-    First we need to add a jump to the end of current statement list to
-    change flow back to the 'merge' point.
-    Second, we must create the 'merge' point.
-    Such point is the statement to be executed right after the flow falls down
-    the previously 'open' statement list.
-    To do so, we split the containing (or parent) statement list at such point.
-    If the containing statement list is not closed either,
-    splitting it will in turn need to create a new 'merge' point
-    at its containing statement list.
-    This will create a cascade effect that will go up the flow structure until
-    a 'closed' statement list if found.
-
-    The 'root' statement list is required to be 'closed'
-
-    When the 'merge' point is after the last statement of an statement list,
-    then actual split is not required (it would create an empty statement list)
-    and we can just propagate the merge to its containing statement list.
-
+    Here we insert goto's labels into the code
     '''
 
-    def __init__(self, stmt_list, compiler, state_machine, state, helper):
+    def __init__(self, stmt_list, index, compiler, state_machine, helper):
         '''
         Constructor
         '''
         self._c = compiler
         self._sm = state_machine
-        self._st = state
+        self._current_st = None
         self._h = helper
-        self.merges = []
 
         self._stmt_list = stmt_list
-        self._index = 0
+        self._index = index
 
     def default_visit(self, node):
         '''
@@ -370,8 +314,17 @@ class _StatementsSplitterVisitor(NodeVisitor):
         self._c.report_error(
             node.ctx, "Statement not supported")
 
-    def _create_state(self, stmt_list):
-        return _create_state(self._c, self._sm, stmt_list, self._h)
+    def create_state(self, wait_condition):
+        st = self._c.init_node(StateNode(), Ctx.NONE)
+
+        # begin from 0
+        st.txt_id = str(len(self._sm.childs_states))
+        st.wait_condition = wait_condition
+        self._sm.add_state(st)
+
+        self._current_st = st
+
+        return st
 
     def insert_before_current(self, stmt):
         '''
@@ -394,63 +347,27 @@ class _StatementsSplitterVisitor(NodeVisitor):
 
         self._index += 1
 
-    def split_after_current(self, wait, ctx):
+    def split_after_current(self, wait_condition, ctx):
         '''
         Splits current statement list after current statement
         There will be no more statements to visit at current statement list
         If statement list is not closed, then a jump is added at the end,
         to merge code flow back. Such merge will be left pending to complete
         '''
-        if not self._stmt_list.is_closed_stmt():
-            jmp = self._c.init_node(NextStateStmtNode(), ctx)
-            self._stmt_list.add_statement(jmp)
-            self.merges.append(jmp)
-
-        sl = self._c.init_node(StmtListNode(), ctx)
-        self._stmt_list.split_at(self._index + 1, sl)
 
         nxt = self._c.init_node(NextStateStmtNode(), ctx)
-        nxt.flag_wait = wait
-        nxt.ref_next_state = self._create_state(sl)
+        nxt.ref_next_state = self.create_state(wait_condition)
         self.insert_after_current(nxt)
-
-        return nxt.ref_next_state
-
-    def process_pending_merges(self, ctx):
-        '''
-        Process pending child merges, and propagate upwards if needed
-        '''
-        if len(self.merges) == 0:
-            # nothing to do
-            pass
-        elif len(self._stmt_list.childs_statements) == self._index + 1:
-            # This is the last statement, no need to make it here
-            # Propagate upward
-            pass
-        else:
-            # split_after_curret may create its own merge points
-            jumps = self.merges
-            self.merges = []
-
-#            ctx = self._stmt_list.childs_statements[-1].ctx
-            nxt = self.split_after_current(False, ctx)
-
-            for j in jumps:
-                j.ref_next_state = nxt
 
     def visit_stmt_list(self, stmt_list):
 
         assert isinstance(stmt_list, StmtListNode)
 
         v = _StatementsSplitterVisitor(
-            stmt_list, self._c, self._sm, self._st, self._h)
+            stmt_list, 0, self._c, self._sm, self._h)
         v.visit_each_stmt()
 
-        self.merges.extend(v.merges)
-
     def visit_each_stmt(self):
-
-        was_closed = self._stmt_list.is_closed_stmt()
 
         while self._index < len(self._stmt_list.childs_statements):
             stmt = self._stmt_list.childs_statements[self._index]
@@ -458,13 +375,8 @@ class _StatementsSplitterVisitor(NodeVisitor):
 
             self._index += 1
 
-        if was_closed:
-            assert len(self.merges) == 0
-
     def visit_StmtListNode(self, node):
-
         self.visit_stmt_list(node)
-        self.process_pending_merges(node.ctx)
 
     def visit_NopStmtNode(self, node):
         # Nothing to do here
@@ -472,7 +384,7 @@ class _StatementsSplitterVisitor(NodeVisitor):
 
     def visit_VariableDeclarationStmtNode(self, node):
 
-        self._h.add_var_decl(node, self._st)
+        self._h.add_var_decl(node, self._current_st)
         visit_node(self, node.child_initializer)
 
     def visit_ExpressionStmtNode(self, node):
@@ -482,7 +394,7 @@ class _StatementsSplitterVisitor(NodeVisitor):
 
         visit_node(self, node.child_expression)
 
-        self.split_after_current(True, node.ctx)
+        self.split_after_current(None, node.ctx)
 
     def visit_ReturnStmtNode(self, node):
 
@@ -500,12 +412,6 @@ class _StatementsSplitterVisitor(NodeVisitor):
         self.visit_stmt_list(node.child_if_branch)
         if node.child_else_branch is not None:
             self.visit_stmt_list(node.child_else_branch)
-
-        self.process_pending_merges(node.ctx)
-
-    def visit_NextStateStmtNode(self, node):
-        # Nothing to do here
-        pass
 
     def visit_DontCareExprNode(self, node):
         for each in node.childs_expressions:
@@ -527,7 +433,7 @@ class _StatementsSplitterVisitor(NodeVisitor):
         visit_node(self, node.child_expression)
 
     def visit_VariableExprNode(self, node):
-        self._h.add_var_expr(node, self._st)
+        self._h.add_var_expr(node, self._current_st)
 
     def visit_FunctionCallExprNode(self, node):
         visit_node(self, node.child_argument_list)
