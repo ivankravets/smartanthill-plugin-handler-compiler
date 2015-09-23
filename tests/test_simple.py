@@ -19,7 +19,8 @@ from smartanthill_phc import api
 def test_code_1():
 
     async = api.process_file(
-        'tests/test_code_1.c', 'my_plugin_handler', False)
+        'tests/test_code_1.c', 'my_plugin_handler', 'my_plugin_handler_init',
+        False)
 
     f = open('tests/test_code_1.async.c', 'r')
 
@@ -29,7 +30,8 @@ def test_code_1():
 def test_code_2():
 
     async = api.process_file(
-        'tests/test_code_2.c', 'my_plugin_handler', False)
+        'tests/test_code_2.c', 'my_plugin_handler', 'my_plugin_handler_init',
+        False)
 
     f = open('tests/test_code_2.async.c', 'r')
 

@@ -40,7 +40,7 @@ class _Helper(object):
         self.cparser = CParser.CParser(self.token_stream)
 
 
-def process_file(file_name, func_name, dump):
+def process_file(file_name, func_name, init_func_name, dump):
     '''
     Process a c input file, and returns an string with output text
     '''
@@ -66,7 +66,7 @@ def process_file(file_name, func_name, dump):
     check_all_nodes_reachables(c, root)
     process_syntax_tree(c, root)
 
-    create_states(c, root, func_name)
+    create_states(c, root, func_name, init_func_name)
 
     if dump:
         print

@@ -171,22 +171,3 @@ class StateDataStuctDeclarationNode(Node):
 
     def resolve(self, compiler):
         pass
-
-
-class StateDataCastStmtNode(StatementNode):
-
-    '''
-    Node class representing argument cast of state data
-    '''
-
-    def __init__(self):
-        '''
-        Constructor
-        '''
-        super(StateDataCastStmtNode, self).__init__()
-        self.txt_arg = None
-
-    def resolve(self, compiler):
-        # pylint: disable=no-self-use
-        # pylint: disable=unused-argument
-        assert False

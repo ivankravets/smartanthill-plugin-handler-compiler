@@ -136,6 +136,9 @@ class RewriteVisitor(NodeVisitor):
         if node.child_expression is not None:
             self._visit_expression(node.child_expression)
 
+        self._w.insertBeforeToken(
+            node.ctx.start, u"_sa_state->_sa_next = 0;")
+
     def visit_IfElseStmtNode(self, node):
         self._visit_expression(node.child_expression)
         visit_node(self, node.child_if_branch)
@@ -173,9 +176,10 @@ class RewriteVisitor(NodeVisitor):
 
     def visit_InitStateStmtNode(self, node):
 
-        self._w.insertBeforeToken(
-            node.ctx.start,
-            u"_sa_state->_sa_next = 0;")
+        txt = u"\nstruct _sa_state_t* _sa_state = (struct _sa_state_t*)%s;" %\
+            node.txt_arg
+        txt += u"\n_sa_state->_sa_next = 0;"
+        self._w.insertAfterToken(node.ctx, txt)
 
     def visit_StateDataCastStmtNode(self, node):
         self._w.insertAfterToken(

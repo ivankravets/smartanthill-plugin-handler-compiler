@@ -31,6 +31,8 @@ struct my_plugin_config { //constant structure filled with a configuration
 };
 
 byte my_plugin_handler_init(const void* plugin_config,void* plugin_state) {
+struct _sa_state_t* _sa_state = (struct _sa_state_t*)plugin_state;
+_sa_state->_sa_next = 0;
   const struct my_plugin_config* pc = (struct my_plugin_config*) plugin_config;
   zepto_set_pin(pc->request_pin_number,0);
 }

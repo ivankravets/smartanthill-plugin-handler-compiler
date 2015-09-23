@@ -13,7 +13,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from smartanthill_phc.c_node import TypeCastExprNode, StateDataCastStmtNode
+from smartanthill_phc.c_node import TypeCastExprNode
 from smartanthill_phc.common.compiler import Ctx
 from smartanthill_phc.common.expression import VariableExprNode
 from smartanthill_phc.common.node import Node, StmtListNode, StatementNode
@@ -22,11 +22,11 @@ from smartanthill_phc.common.visitor import NodeVisitor, visit_node
 from smartanthill_phc.root import NonBlockingData
 
 
-def create_states(compiler, root, func_name):
+def create_states(compiler, root, func_name, init_func_name):
     '''
     Creates state machine and state related nodes
     '''
-    visitor = StateMachineVisitor(compiler, func_name)
+    visitor = StateMachineVisitor(compiler, func_name, init_func_name)
     visit_node(visitor, root)
     nb = visitor.finish()
     root.get_scope(NonBlockingData).refs_moved_var_decls = nb
@@ -113,6 +113,20 @@ class StateNode(Node):
 #         compiler.resolve_node(self.child_statement_list)
 
 
+class StateDataCastStmtNode(StatementNode):
+
+    '''
+    Node class representing argument cast of state data
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(StateDataCastStmtNode, self).__init__()
+        self.txt_arg = None
+
+
 class NextStateStmtNode(StatementNode):
 
     '''
@@ -131,8 +145,7 @@ class NextStateStmtNode(StatementNode):
 class InitStateStmtNode(StatementNode):
 
     '''
-    Statement node class representing the end of state machine, next entry
-    should restart the state machine from the initial state
+    Statement node representing the initialization of state machine state
     '''
 
     def __init__(self):
@@ -140,20 +153,7 @@ class InitStateStmtNode(StatementNode):
         Constructor
         '''
         super(InitStateStmtNode, self).__init__()
-
-
-class LabelStmtNode(StatementNode):
-
-    '''
-    Statement node class representing a goto label
-    '''
-
-    def __init__(self):
-        '''
-        Constructor
-        '''
-        super(LabelStmtNode, self).__init__()
-        self.txt_label = None
+        self.txt_arg = None
 
 
 class DeclsHelper(object):
@@ -201,13 +201,15 @@ class DeclsHelper(object):
 
 class StateMachineVisitor(NodeVisitor):
 
-    def __init__(self, compiler, func_name):
+    def __init__(self, compiler, func_name, init_func_name):
         '''
         Constructor
         '''
         self._c = compiler
         self._func_name = func_name
+        self._init_name = init_func_name
         self._func_found = False
+        self._init_found = False
         self._h = DeclsHelper()
 
     def finish(self):
@@ -222,6 +224,9 @@ class StateMachineVisitor(NodeVisitor):
         if not self._func_found:
             self._c.report_error(
                 node.ctx, "Function '%s' not found" % self._func_name)
+        if not self._init_found:
+            self._c.report_error(
+                node.ctx, "Function '%s' not found" % self._init_name)
 
     def visit_DeclarationListNode(self, node):
         for each in node.childs_declarations:
@@ -232,20 +237,40 @@ class StateMachineVisitor(NodeVisitor):
 
     def visit_FunctionDeclNode(self, node):
         if node.txt_name == self._func_name:
+            if self._func_found:
+                self._c.report_error(node.ctx, "Function redefinition")
+
             self._func_found = True
-            d = self._c.init_node(
-                StateDataCastStmtNode(), node.child_statement_list.ctx.start)
+            ctx = node.child_statement_list.ctx.start
+
+            stmt = self._c.init_node(StateDataCastStmtNode(), ctx)
 
             args = node.child_argument_list.childs_declarations
             if len(args) >= 2:
-                d.txt_arg = args[1].txt_name
+                stmt.txt_arg = args[1].txt_name
             else:
                 self._c.report_error(node.ctx, "Too few arguments")
 
-            node.child_statement_list.insert_statement_at(0, d)
+            node.child_statement_list.insert_statement_at(0, stmt)
 
             _create_state_machine(
                 self._c, node.child_statement_list, self._h)
+        elif node.txt_name == self._init_name:
+            if self._init_found:
+                self._c.report_error(node.ctx, "Function redefinition")
+
+            self._init_found = True
+            ctx = node.child_statement_list.ctx.start
+
+            stmt = self._c.init_node(InitStateStmtNode(), ctx)
+
+            args = node.child_argument_list.childs_declarations
+            if len(args) >= 2:
+                stmt.txt_arg = args[1].txt_name
+            else:
+                self._c.report_error(node.ctx, "Too few arguments")
+
+            node.child_statement_list.insert_statement_at(0, stmt)
 
 
 def _create_state_machine(compiler, stmt_list, helper):
@@ -267,7 +292,7 @@ def _create_state_machine(compiler, stmt_list, helper):
 
     stmt_list.insert_statement_at(i, sm)
 
-    v = _StatementsSplitterVisitor(stmt_list, i + 1, compiler, sm, helper)
+    v = _StatementsVisitor(stmt_list, i + 1, compiler, sm, helper, None)
     v.create_state(None)
     v.visit_each_stmt()
 
@@ -290,22 +315,24 @@ def _skip_statements(stmt_list):
     return len(stmt_list.childs_statements)
 
 
-class _StatementsSplitterVisitor(NodeVisitor):
+class _StatementsVisitor(NodeVisitor):
     '''
     Here we insert goto's labels into the code
     '''
 
-    def __init__(self, stmt_list, index, compiler, state_machine, helper):
+    def __init__(self, stmt_list, index, compiler, state_machine, helper,
+                 current_state):
         '''
         Constructor
         '''
         self._c = compiler
         self._sm = state_machine
-        self._current_st = None
         self._h = helper
 
         self._stmt_list = stmt_list
         self._index = index
+
+        self._current_st = current_state
 
     def default_visit(self, node):
         '''
@@ -347,12 +374,9 @@ class _StatementsSplitterVisitor(NodeVisitor):
 
         self._index += 1
 
-    def split_after_current(self, wait_condition, ctx):
+    def _split_after_current(self, wait_condition, ctx):
         '''
-        Splits current statement list after current statement
-        There will be no more statements to visit at current statement list
-        If statement list is not closed, then a jump is added at the end,
-        to merge code flow back. Such merge will be left pending to complete
+        Adds state change after current statement
         '''
 
         nxt = self._c.init_node(NextStateStmtNode(), ctx)
@@ -363,8 +387,8 @@ class _StatementsSplitterVisitor(NodeVisitor):
 
         assert isinstance(stmt_list, StmtListNode)
 
-        v = _StatementsSplitterVisitor(
-            stmt_list, 0, self._c, self._sm, self._h)
+        v = _StatementsVisitor(
+            stmt_list, 0, self._c, self._sm, self._h, self._current_st)
         v.visit_each_stmt()
 
     def visit_each_stmt(self):
@@ -394,17 +418,11 @@ class _StatementsSplitterVisitor(NodeVisitor):
 
         visit_node(self, node.child_expression)
 
-        self.split_after_current(None, node.ctx)
+        self._split_after_current(None, node.ctx)
 
     def visit_ReturnStmtNode(self, node):
 
         visit_node(self, node.child_expression)
-
-        # this must be last statement
-        assert node == self._stmt_list.childs_statements[-1]
-
-        nxt = self._c.init_node(InitStateStmtNode(), node.ctx)
-        self.insert_before_current(nxt)
 
     def visit_IfElseStmtNode(self, node):
 

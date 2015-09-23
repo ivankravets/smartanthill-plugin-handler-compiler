@@ -28,6 +28,8 @@ byte _sa_next;
 
 
 byte my_plugin_handler_init(const void* plugin_config,void* plugin_state) {
+struct _sa_state_t* _sa_state = (struct _sa_state_t*)plugin_state;
+_sa_state->_sa_next = 0;
   const my_plugin_config* pc = (my_plugin_config*) plugin_config;
   zepto_set_pin(pc->request_pin_number,0);
 }
