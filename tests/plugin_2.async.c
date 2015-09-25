@@ -13,8 +13,6 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-#include <stdint.h>
-typedef uint8_t byte;
 
 struct my_plugin_config { //constant structure filled with a configuration
                       //  for specific 'ant body part'
@@ -23,45 +21,49 @@ struct my_plugin_config { //constant structure filled with a configuration
   byte ack_pin_number;//pin to wait for to see when sensor has provided the data
   byte reply_pin_numbers[4];//pins to read when ack_pin_number shows that the data is ready
 };
+struct sa_state_t {
+byte sa_next;
+};
+//#line 23
+
 
 byte my_plugin_handler_init(const void* plugin_config,void* plugin_state) {
-  const struct my_plugin_config* pc = (struct my_plugin_config*) plugin_config;
+struct sa_state_t* sa_state = (struct sa_state_t*)plugin_state;
+sa_state->sa_next = 0;
+  const my_plugin_config* pc = (my_plugin_config*) plugin_config;
   zepto_set_pin(pc->request_pin_number,0);
 }
 
 //TODO: reinit? (via deinit, or directly, or implicitly)
 
 byte my_plugin_handler(const void* plugin_config, void* plugin_state,
-  void* command, void* reply, void* waiting_for) {
-  const struct my_plugin_config* pc = (struct my_plugin_config*) plugin_config;
+  ZEPTO_PARSER* command, REPLY_HANDLE reply, WaitingFor* waiting_for) {
+struct sa_state_t* sa_state = (struct sa_state_t*)plugin_state;
+  const my_plugin_config* pc = (my_plugin_config*) plugin_config;
 
-  //requesting sensor to perform read, using pc->request_pin_number
-  zepto_set_pin(pc->request_pin_number,1);
-  do_something(pc->request_pin_number);
-  do_something_else();
+switch(sa_state->sa_next) {
+case 0: goto label_0;
+default: assert(0);
+}
+label_0:;
+//#line 34
 
-  byte some = 4;
-  //waiting for sensor to indicate that data is ready
-  zepto_wait_for_pin(pc->ack_pin_number,1);
-  zepto_read_from_pins(pc->reply_pin_numbers,4);
 
-  //waiting for sensor to indicate that data is ready
-  zepto_wait_for_pin(pc->ack_pin_number,some);
-  uint16_t data_read = zepto_read_from_pins2(pc->reply_pin_numbers,4);
-  if (data_read != 0) {
-    zepto_wait_for_pin(pc->ack_pin_number,some);
-    zepto_read_from_pins3(pc->reply_pin_numbers,4);
-  } else {
-      if (some != 0) {
-        zepto_wait_for_pin(pc->ack_pin_number,some);
-        zepto_reply_append_byte(reply,some);
-      }
-      else
-        zepto_reply_append_byte2(reply,0);
+  zepto_wait_for_pin(some0, 0);
+  uint16_t data_read = zepto_read_from_pins(some0, 0);
+  
+  if(codition) {
+    zepto_wait_for_pin(some1, 1);
+    zepto_read_from_pins1(some1, 1);
 
-      zepto_reply_append_byte3(reply,0);
+    if(cond2) {
+      zepto_wait_for_pin(some2, 2);
+      zepto_read_from_pins2(some2, 2);
+    }
+    zepto_reply_append_byte1(reply1,0);
   }
-  zepto_reply_append_byte4(reply,0);
+  
+  zepto_reply_append_byte1(reply1,0);
 
-  return 0;
+  sa_state->sa_next = 0;return 0;
 }

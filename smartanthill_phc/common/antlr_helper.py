@@ -14,12 +14,12 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-import antlr4.error.ErrorListener
 from antlr4.ParserRuleContext import ParserRuleContext
+import antlr4.error.ErrorListener
 from antlr4.tree.Tree import TerminalNodeImpl
 
 
-def get_token_text(compiler, token):
+def get_token_text(compiler, token, reserved_prefix):
     '''
     Returns the text of a parser token, checking for reserved names,
     and non-ascii characters
@@ -28,9 +28,9 @@ def get_token_text(compiler, token):
 
     txt = str(token.getText())
 
-    if txt.startswith('_zc_'):
+    if txt.startswith(reserved_prefix):
         compiler.report_error(token, "Name '%s' and all names starting with "
-                              "'_zc_' are reserved" % txt)
+                              "'%s' are reserved" % (txt, reserved_prefix))
 
     return txt
 

@@ -16,23 +16,21 @@
 from smartanthill_phc import api
 
 
-def test_code_1():
-
+def run_test(file):
     async = api.process_file(
-        'tests/test_code_1.c', 'my_plugin_handler', 'my_plugin_handler_init',
+        'tests/' + file + '.c', 'my_plugin_handler', 'my_plugin_handler_init',
         False)
 
-    f = open('tests/test_code_1.async.c', 'r')
+    f = open('tests/' + file + '.async.c', 'r')
 
     assert async == f.read()
 
 
-def test_code_2():
+def test_plugin_1():
 
-    async = api.process_file(
-        'tests/test_code_2.c', 'my_plugin_handler', 'my_plugin_handler_init',
-        False)
+    run_test('plugin_1')
 
-    f = open('tests/test_code_2.async.c', 'r')
 
-    assert async == f.read()
+def test_plugin_2():
+
+    run_test('plugin_2')

@@ -21,10 +21,12 @@ from smartanthill_phc import api
 
 def main():
 
-    async = api.process_file('test_code_2.c', 'my_plugin_handler',
-                             'my_plugin_handler_init', True)
+    file_name = "plugin_2"
 
-    f = open('test_code_2.async.c', 'wb')
+    async = api.process_file(file_name + ".c", "my_plugin_handler",
+                             "my_plugin_handler_init", True)
+
+    f = open(file_name + ".async.c", 'wb')
     f.write(async)
 
 

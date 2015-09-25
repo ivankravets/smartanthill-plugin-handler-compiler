@@ -24,8 +24,10 @@ from smartanthill_phc.common import statement
 from smartanthill_phc.common.antlr_helper import get_token_text
 from smartanthill_phc.common.expression import LiteralExprNode,\
     FunctionCallExprNode
-from smartanthill_phc.common.node import DeclarationListNode
+from smartanthill_phc.common.node import DeclarationListNode, StmtListNode
 from smartanthill_phc.root import PluginSourceNode
+
+_prefix = 'sa_'
 
 
 def c_parse_tree_to_syntax_tree(compiler, tree, non_blocking_data):
@@ -53,11 +55,21 @@ def c_parse_tree_to_syntax_tree(compiler, tree, non_blocking_data):
     return source
 
 
+_blocking_funcs = [
+    "papi_sleep",
+    "papi_wait_for_spi_send",
+    "papi_wait_for_i2c_send",
+    "papi_wait_for_spi_receive",
+    "papi_wait_for_i2c_receive",
+    "papi_wait_for_wait_handler"
+]
+
+
 def _is_blocking_api_function(name):
     '''
     Returns true if this name is in blocking api functions list
     '''
-    return name == 'zepto_wait_for_pin'
+    return name in _blocking_funcs
 
 
 def _get_direct_declarator_name(ctx):
@@ -114,7 +126,7 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
     def visitFunctionExpression(self, ctx):
 
         expr = self._c.init_node(expression.FunctionCallExprNode(), ctx)
-        expr.txt_name = get_token_text(self._c, ctx.Identifier())
+        expr.txt_name = get_token_text(self._c, ctx.Identifier(), _prefix)
 
         if ctx.argumentExpressionList() is not None:
             args = self.visit(ctx.argumentExpressionList())
@@ -133,7 +145,7 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
         tk = ctx.Identifier()
         member = self._c.init_node(expression.VariableExprNode(), tk)
-        member.txt_name = get_token_text(self._c, tk)
+        member.txt_name = get_token_text(self._c, tk, _prefix)
 
         expr.add_expression(member)
 
@@ -169,7 +181,7 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
         tk = ctx.Identifier()
         member = self._c.init_node(expression.VariableExprNode(), tk)
-        member.txt_name = get_token_text(self._c, tk)
+        member.txt_name = get_token_text(self._c, tk, _prefix)
 
         expr.add_expression(member)
 
@@ -192,7 +204,7 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
         tk = ctx.Identifier()
         expr = self._c.init_node(expression.VariableExprNode(), tk)
-        expr.txt_name = get_token_text(self._c, tk)
+        expr.txt_name = get_token_text(self._c, tk, _prefix)
 
         return expr
 
@@ -314,7 +326,7 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
         decl = self._c.init_node(statement.VariableDeclarationStmtNode(), ctx)
         decl_ctx = ctx.initDeclaratorList().initDeclarator(0).declarator()
         tk = get_declarator_name(decl_ctx)
-        decl.txt_name = get_token_text(self._c, tk)
+        decl.txt_name = get_token_text(self._c, tk, _prefix)
 
         init_ctx = ctx.initDeclaratorList().initDeclarator(0).initializer()
         if init_ctx is not None:
@@ -534,11 +546,22 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
         assert len(ctx.statement()) >= 1
         if_stmt = self.visit(ctx.statement()[0])
+
+        if not isinstance(if_stmt, StmtListNode):
+            self._c.report_error(
+                ctx.statement()[0],
+                "Single statement without curly braces not allowed")
+
         if_stmt = statement.make_statement_list(self._c, if_stmt)
         stmt.set_if_branch(if_stmt)
 
         if len(ctx.statement()) >= 2:
             else_stmt = self.visit(ctx.statement()[1])
+            if not isinstance(else_stmt, StmtListNode):
+                self._c.report_error(
+                    ctx.statement()[1],
+                    "Single statement without curly braces not allowed")
+
             else_stmt = statement.make_statement_list(self._c, else_stmt)
             stmt.set_else_branch(else_stmt)
 
@@ -598,7 +621,7 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
         dd = ctx.declarator().directDeclarator()
         if dd.directDeclarator() and dd.directDeclarator().Identifier():
             decl.txt_name = get_token_text(
-                self._c, dd.directDeclarator().Identifier())
+                self._c, dd.directDeclarator().Identifier(), _prefix)
 
             assert dd.parameterTypeList() is not None
 
@@ -609,7 +632,7 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
                 assert tk is not None
 
                 arg = self._c.init_node(ArgumentDeclNode(), tk)
-                arg.txt_name = get_token_text(self._c, tk)
+                arg.txt_name = get_token_text(self._c, tk, _prefix)
 
                 decl.child_argument_list.add_declaration(arg)
         else:
