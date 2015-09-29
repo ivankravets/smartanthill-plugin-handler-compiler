@@ -155,19 +155,3 @@ class BlockingCallStmtNode(StatementNode):
 
     def resolve(self, compiler):
         resolve_expression(compiler, self, 'child_expression')
-
-
-class StateDataStuctDeclarationNode(Node):
-
-    '''
-    Node class representing struct declaration for plugin data type
-    '''
-
-    def __init__(self):
-        '''
-        Constructor
-        '''
-        super(StateDataStuctDeclarationNode, self).__init__()
-
-    def resolve(self, compiler):
-        pass

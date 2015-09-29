@@ -21,13 +21,15 @@ from smartanthill_phc import api
 
 def main():
 
-    file_name = "plugin_2"
+    prefix = "my_1"
 
-    async = api.process_file(file_name + ".c", "my_plugin_handler",
-                             "my_plugin_handler_init", True)
+    async, header = api.process_file(prefix + ".c", prefix, True)
 
-    f = open(file_name + ".async.c", 'wb')
+    f = open(prefix + "_non_blocking.c", 'wb')
     f.write(async)
+
+    h = open(prefix + "_state.h", 'wb')
+    h.write(header)
 
 
 # temporary entrance

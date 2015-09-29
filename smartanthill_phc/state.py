@@ -22,11 +22,11 @@ from smartanthill_phc.common.visitor import NodeVisitor, visit_node
 from smartanthill_phc.root import NonBlockingData
 
 
-def create_states(compiler, root, func_name, init_func_name):
+def create_states(compiler, root, handler, exec_init):
     '''
     Creates state machine and state related nodes
     '''
-    visitor = StateMachineVisitor(compiler, func_name, init_func_name)
+    visitor = StateMachineVisitor(compiler, handler, exec_init)
     visit_node(visitor, root)
     nb = visitor.finish()
     root.get_scope(NonBlockingData).refs_moved_var_decls = nb
@@ -201,15 +201,15 @@ class DeclsHelper(object):
 
 class StateMachineVisitor(NodeVisitor):
 
-    def __init__(self, compiler, func_name, init_func_name):
+    def __init__(self, compiler, handler, exec_init):
         '''
         Constructor
         '''
         self._c = compiler
-        self._func_name = func_name
-        self._init_name = init_func_name
-        self._func_found = False
-        self._init_found = False
+        self._handler = handler
+        self._exec_init = exec_init
+        self._handler_found = False
+        self._exec_init_found = False
         self._h = DeclsHelper()
 
     def finish(self):
@@ -221,12 +221,12 @@ class StateMachineVisitor(NodeVisitor):
     def visit_PluginSourceNode(self, node):
         visit_node(self, node.child_declaration_list)
 
-        if not self._func_found:
+        if not self._handler_found:
             self._c.report_error(
-                node.ctx, "Function '%s' not found" % self._func_name)
-        if not self._init_found:
+                node.ctx, "Function '%s' not found" % self._handler)
+        if not self._exec_init_found:
             self._c.report_error(
-                node.ctx, "Function '%s' not found" % self._init_name)
+                node.ctx, "Function '%s' not found" % self._handler_init)
 
     def visit_DeclarationListNode(self, node):
         for each in node.childs_declarations:
@@ -236,11 +236,11 @@ class StateMachineVisitor(NodeVisitor):
         pass
 
     def visit_FunctionDeclNode(self, node):
-        if node.txt_name == self._func_name:
-            if self._func_found:
+        if node.txt_name == self._handler:
+            if self._handler_found:
                 self._c.report_error(node.ctx, "Function redefinition")
 
-            self._func_found = True
+            self._handler_found = True
             ctx = node.child_statement_list.ctx.start
 
             stmt = self._c.init_node(StateDataCastStmtNode(), ctx)
@@ -255,11 +255,11 @@ class StateMachineVisitor(NodeVisitor):
 
             _create_state_machine(
                 self._c, node.child_statement_list, self._h)
-        elif node.txt_name == self._init_name:
-            if self._init_found:
+        elif node.txt_name == self._exec_init:
+            if self._exec_init_found:
                 self._c.report_error(node.ctx, "Function redefinition")
 
-            self._init_found = True
+            self._exec_init_found = True
             ctx = node.child_statement_list.ctx.start
 
             stmt = self._c.init_node(InitStateStmtNode(), ctx)

@@ -17,25 +17,19 @@
 #include <stdbool.h>
 #include <assert.h>
 
-typedef uint8_t byte;
-
 //TODO add real types here
-typedef uint8_t ZEPTO_PARSER;
+typedef uint8_t parser_obj;
 typedef uint8_t REPLY_HANDLE;
-typedef uint8_t WAITING_FOR;
+typedef uint8_t MEMORY_HANDLE;
+typedef uint8_t waiting_for;
 typedef uint8_t SA_TIME_VAL;
 
-
-//plugin functions
-byte my_plugin_handler_init(const void* plugin_config, void* plugin_state);
-byte my_plugin_handler(const void* plugin_config, void* plugin_state,
-    ZEPTO_PARSER* command, REPLY_HANDLE reply, WAITING_FOR* waiting_for);
-
+#define PLUGIN_OK 0
 
 // Request parsing functions:
-uint8_t papi_parser_read_byte( ZEPTO_PARSER* po );
-uint16_t papi_parser_read_encoded_uint16( ZEPTO_PARSER* po );
-uint16_t papi_parser_read_encoded_signed_int16( ZEPTO_PARSER* po );
+uint8_t papi_parser_read_byte( parser_obj* po );
+uint16_t papi_parser_read_encoded_uint16( parser_obj* po );
+uint16_t papi_parser_read_encoded_signed_int16( parser_obj* po );
 //TODO: add vector-related functions
 
 //Writing functions:
@@ -45,9 +39,9 @@ void papi_reply_write_encoded_signed_int16( REPLY_HANDLE mem_h, int16_t sx );
 //TODO: add vector-related functions
 
 //Misc functions:
-void papi_init_parser_with_parser( ZEPTO_PARSER* po, const ZEPTO_PARSER* po_base );
-bool papi_parser_is_parsing_done( ZEPTO_PARSER* po );
-uint16_t papi_parser_get_remaining_size( ZEPTO_PARSER* po );
+void papi_init_parser_with_parser( parser_obj* po, const parser_obj* po_base );
+bool papi_parser_is_parsing_done( parser_obj* po );
+uint16_t papi_parser_get_remaining_size( parser_obj* po );
 
 //EEPROM access
 bool papi_eeprom_write( uint16_t plugin_id, const uint8_t* data );
@@ -83,20 +77,20 @@ void papi_wait_for_spi_send( uint8_t spi_id, uint16_t addr, uint8_t addr_sz, uin
 void papi_wait_for_i2c_send( uint8_t i2c_id, uint16_t addr, uint8_t addr_sz, uint16_t command, uint8_t command_sz );
 void papi_wait_for_spi_receive( uint8_t spi_id, uint16_t addr, uint8_t addr_sz, uint16_t* data );
 void papi_wait_for_i2c_receive( uint8_t i2c_id, uint16_t addr, uint8_t addr_sz, uint16_t* data );
-void papi_wait_for_wait_handler( WAITING_FOR* wf );
+void papi_wait_for_wait_handler( waiting_for* wf );
 
-//Helper functions to fill WAITING_FOR structure
-void papi_init_wait_handler( WAITING_FOR* wf );
-void papi_wait_handler_add_wait_for_spi_send( WAITING_FOR* wf, uint8_t spi_id );
-void papi_wait_handler_add_wait_for_i2c_send( WAITING_FOR* wf, uint8_t i2c_id );
-void papi_wait_handler_add_wait_for_spi_receive( WAITING_FOR* wf, uint8_t spi_id );
-void papi_wait_handler_add_wait_for_i2c_receive( WAITING_FOR* wf, uint8_t i2c_id );
-void papi_wait_handler_add_wait_for_timeout( WAITING_FOR* wf, SA_TIME_VAL tv );
-bool papi_wait_handler_is_waiting_for_spi_send( const WAITING_FOR* wf, uint8_t spi_id );
-bool papi_wait_handler_is_waiting_for_i2c_send( const WAITING_FOR* wf, uint8_t i2c_id );
-bool papi_wait_handler_is_waiting_for_spi_receive( const WAITING_FOR* wf, uint8_t spi_id );
-bool papi_wait_handler_is_waiting_for_i2c_receive( const WAITING_FOR* wf, uint8_t i2c_id );
-bool papi_wait_handler_is_waiting_for_timeout( SA_TIME_VAL* remaining, const WAITING_FOR* wf );
+//Helper functions to fill waiting_for structure
+void papi_init_wait_handler( waiting_for* wf );
+void papi_wait_handler_add_wait_for_spi_send( waiting_for* wf, uint8_t spi_id );
+void papi_wait_handler_add_wait_for_i2c_send( waiting_for* wf, uint8_t i2c_id );
+void papi_wait_handler_add_wait_for_spi_receive( waiting_for* wf, uint8_t spi_id );
+void papi_wait_handler_add_wait_for_i2c_receive( waiting_for* wf, uint8_t i2c_id );
+void papi_wait_handler_add_wait_for_timeout( waiting_for* wf, SA_TIME_VAL tv );
+bool papi_wait_handler_is_waiting_for_spi_send( const waiting_for* wf, uint8_t spi_id );
+bool papi_wait_handler_is_waiting_for_i2c_send( const waiting_for* wf, uint8_t i2c_id );
+bool papi_wait_handler_is_waiting_for_spi_receive( const waiting_for* wf, uint8_t spi_id );
+bool papi_wait_handler_is_waiting_for_i2c_receive( const waiting_for* wf, uint8_t i2c_id );
+bool papi_wait_handler_is_waiting_for_timeout( SA_TIME_VAL* remaining, const waiting_for* wf );
 //TODO: think about parameters
 
 //Yet unsorted calls

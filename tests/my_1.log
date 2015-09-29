@@ -1,0 +1,16 @@
+--- Build ---
+gcc -fno-exceptions -g -Os -Wall -ffunction-sections -fdata-sections -o my_1.exe test.c my_1_non_blocking.c
+
+my_1_non_blocking.c: In function 'my_1_plugin_exec_init':
+my_1_non_blocking.c:21:5: error: 'sa_state' undeclared (first use in this function)
+     sa_state->sa_next = 0;return PLUGIN_OK;
+     ^
+my_1_non_blocking.c:21:5: note: each undeclared identifier is reported only once for each function it appears in
+my_1_non_blocking.c: In function 'my_1_plugin_handler':
+my_1_non_blocking.c:53:5: warning: implicit declaration of function 'papi_wait_for_spi_send_non_blocking' [-Wimplicit-function-declaration]
+     papi_wait_for_spi_send_non_blocking(pc->ack_pin_number, 0x1010, 0x0a, 0x00ff, 0x04);
+     ^
+my_1_non_blocking.c:62:5: warning: implicit declaration of function 'papi_wait_for_spi_receive_non_blocking' [-Wimplicit-function-declaration]
+     papi_wait_for_spi_receive_non_blocking( pc->ack_pin_number,  0x1010, 0x0a, &(sa_state->response) );
+     ^
+Failed with code 1

@@ -19,12 +19,12 @@ from smartanthill_phc.parser import get_declarator_name
 from smartanthill_phc.root import NonBlockingData
 
 
-def rewrite_code(compiler, root, token_stream):
+def rewrite_code(compiler, root, token_stream, struct_name):
     '''
     Rewrites code tree
     '''
     rewriter = TokenStreamRewriter(token_stream)
-    visitor = RewriteVisitor(compiler, rewriter)
+    visitor = _RewriteVisitor(compiler, rewriter, struct_name)
     visit_node(visitor, root)
 
     text = rewriter.getText()
@@ -34,18 +34,60 @@ def rewrite_code(compiler, root, token_stream):
     return text
 
 
-class RewriteVisitor(NodeVisitor):
+def write_header(compiler, root, token_stream, struct_name, include_guard):
+    '''
+    Rewrites code tree
+    '''
+    nb = root.get_scope(NonBlockingData)
+    text = _write_header_file(token_stream, struct_name, include_guard, nb)
+
+    compiler.check_stage('header')
+
+    return text
+
+
+_header_file_banner = u"/* Add copyright banner here */\n\n\n"
+
+
+def _write_header_file(token_stream, struct_name, include_guard, nb):
+
+    txt = _header_file_banner
+
+    txt += u"#if !defined %s\n" % include_guard
+    txt += u"#define %s\n\n" % include_guard
+
+    txt += u"#include <stdint.h>\n\n\n"
+
+    txt += u"typedef struct _%s {\n" % struct_name
+    txt += u"uint8_t sa_next;\n"
+
+    for each in nb.refs_moved_var_decls:
+        start = each.ctx.declarationSpecifier(0).start
+        stop = each.ctx.initDeclaratorList().initDeclarator(
+            0).declarator().stop
+
+        txt += token_stream.getText((start.tokenIndex, stop.tokenIndex))
+        txt += u";\n"
+
+    txt += u"} %s;\n\n" % struct_name
+    txt += u"#endif // %s\n" % include_guard
+
+    return txt
+
+
+class _RewriteVisitor(NodeVisitor):
 
     '''
     Visitor class for plugin rewrite
     '''
 
-    def __init__(self, compiler, writer):
+    def __init__(self, compiler, writer, type_name):
         '''
         Constructor
         '''
         self._c = compiler
         self._w = writer
+        self._tn = type_name
         self._nb = None
 
     def default_visit(self, node):
@@ -73,23 +115,7 @@ class RewriteVisitor(NodeVisitor):
             visit_node(self, each)
 
     def visit_StateDataStuctDeclarationNode(self, node):
-
-        txt = u"\nstruct sa_state_t {"
-        txt += u"\nbyte sa_next;"
-
-        for each in self._nb.refs_moved_var_decls:
-            start = each.ctx.declarationSpecifier(0).start
-            stop = each.ctx.initDeclaratorList().initDeclarator(
-                0).declarator().stop
-
-            txt += u"\n"
-            txt += self._w.tokens.getText((start.tokenIndex, stop.tokenIndex))
-            txt += u";"
-
-        txt += u"\n};"
-        if node.ctx.stop.line is not None:
-            txt += u"\n//#line %s\n" % node.ctx.stop.line
-        self._w.insertAfterToken(node.ctx.stop, txt)
+        pass
 
     def visit_FunctionDeclNode(self, node):
         visit_node(self, node.child_statement_list)
@@ -176,16 +202,14 @@ class RewriteVisitor(NodeVisitor):
 
     def visit_InitStateStmtNode(self, node):
 
-        txt = u"\nstruct sa_state_t* sa_state = (struct sa_state_t*)%s;" %\
-            node.txt_arg
+        txt = u"\n%s* sa_state = (%s*)%s;" % (self._tn, self._tn, node.txt_arg)
         txt += u"\nsa_state->sa_next = 0;"
         self._w.insertAfterToken(node.ctx, txt)
 
     def visit_StateDataCastStmtNode(self, node):
         self._w.insertAfterToken(
             node.ctx,
-            u"\nstruct sa_state_t* sa_state = (struct sa_state_t*)%s;" %
-            node.txt_arg)
+            u"\n%s* sa_state = (%s*)%s;" % (self._tn, self._tn, node.txt_arg))
 
     def visit_DontCareExprNode(self, node):
         for each in node.childs_expressions:

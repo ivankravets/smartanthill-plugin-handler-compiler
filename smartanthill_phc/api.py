@@ -22,7 +22,7 @@ from smartanthill_phc.common.compiler import Compiler, Ctx, process_syntax_tree
 from smartanthill_phc.common.visitor import dump_tree,\
     check_all_nodes_reachables
 from smartanthill_phc.parser import c_parse_tree_to_syntax_tree
-from smartanthill_phc.rewrite import rewrite_code
+from smartanthill_phc.rewrite import rewrite_code, write_header
 from smartanthill_phc.root import RootNode, NonBlockingData
 from smartanthill_phc.state import create_states
 
@@ -32,20 +32,26 @@ class _Helper(object):
     Agregate class to hold parser related stuff
     '''
 
-    def __init__(self, file_name):
-        self.file_name = file_name
+    def __init__(self, prefix, file_name):
+
         self.file_stream = antlr4.FileStream(file_name)
         self.clexer = CLexer.CLexer(self.file_stream)
         self.token_stream = antlr4.CommonTokenStream(self.clexer)
         self.cparser = CParser.CParser(self.token_stream)
 
+        self.struct_name = prefix + "_plugin_state"
+        self.include_guard = "__SA_%s_PLUGIN_STATE_H__" % prefix.upper()
+        self.handler_name = prefix + "_plugin_handler"
+        self.handler_init_name = prefix + "_plugin_handler_init"
+        self.exec_init_name = prefix + "_plugin_exec_init"
 
-def process_file(file_name, func_name, init_func_name, dump):
+
+def process_file(prefix, file_name, dump):
     '''
     Process a c input file, and returns an string with output text
     '''
 
-    helper = _Helper(file_name)
+    helper = _Helper(file_name, prefix)
     ptree = helper.cparser.compilationUnit()
 
     if dump:
@@ -66,12 +72,14 @@ def process_file(file_name, func_name, init_func_name, dump):
     check_all_nodes_reachables(c, root)
     process_syntax_tree(c, root)
 
-    create_states(c, root, func_name, init_func_name)
+    create_states(c, root, helper.handler_name, helper.exec_init_name)
 
     if dump:
         print
         print '\n'.join(dump_tree(root))
 
-    async = rewrite_code(c, root, helper.token_stream)
+    async = rewrite_code(c, root, helper.token_stream, helper.struct_name)
+    header = write_header(
+        c, root, helper.token_stream, helper.struct_name, helper.include_guard)
 
-    return async
+    return (async, header)
