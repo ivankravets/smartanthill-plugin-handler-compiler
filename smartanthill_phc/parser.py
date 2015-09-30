@@ -60,8 +60,7 @@ _blocking_funcs = [
     "papi_wait_for_spi_send",
     "papi_wait_for_i2c_send",
     "papi_wait_for_spi_receive",
-    "papi_wait_for_i2c_receive",
-    "papi_wait_for_wait_handler"
+    "papi_wait_for_i2c_receive"
 ]
 
 

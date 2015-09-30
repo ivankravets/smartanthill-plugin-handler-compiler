@@ -17,15 +17,16 @@ from smartanthill_phc import api
 
 
 def run_test(prefix):
-    (async, header) = api.process_file('tests/' + file + '.c', prefix, False)
 
-    f = open('tests/' + file + '_async.c', 'r')
+    (async, header) = api.process_file('tests/' + prefix + '.c', prefix, False)
+
+    f = open('tests/' + prefix + '_non_blocking.c', 'r')
     assert async == f.read()
 
     h = open('tests/' + prefix + '_state.h', 'r')
     assert header == h.read()
 
 
-def test_plugin_1():
+def test_sleep():
 
-    run_test('my_1')
+    run_test('sleep')

@@ -25,6 +25,7 @@ typedef uint8_t waiting_for;
 typedef uint16_t SA_TIME_VAL;
 
 #define PLUGIN_OK 0
+#define PLUGIN_WAITING 1
 
 // Request parsing functions:
 uint8_t papi_parser_read_byte( parser_obj* po );

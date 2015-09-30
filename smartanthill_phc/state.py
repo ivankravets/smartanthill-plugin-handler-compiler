@@ -246,9 +246,6 @@ class StateMachineVisitor(NodeVisitor):
         for each in node.childs_declarations:
             visit_node(self, each)
 
-    def visit_StateDataStuctDeclarationNode(self, node):
-        pass
-
     def visit_FunctionDeclNode(self, node):
         if node.txt_name == self._handler:
             if self._handler_found:
@@ -260,15 +257,16 @@ class StateMachineVisitor(NodeVisitor):
             stmt = self._c.init_node(StateDataCastStmtNode(), ctx)
 
             args = node.child_argument_list.childs_declarations
-            if len(args) >= 2:
-                stmt.txt_arg = args[1].txt_name
+            if len(args) >= 6:
+                stmt.txt_arg = args[2].txt_name
+                ref_wf_arg = args[5]
             else:
                 self._c.report_error(node.ctx, "Too few arguments")
 
             node.child_statement_list.insert_statement_at(0, stmt)
 
             _create_state_machine(
-                self._c, node.child_statement_list, self._h)
+                self._c, node.child_statement_list, self._h, ref_wf_arg)
         elif node.txt_name == self._exec_init:
             if self._exec_init_found:
                 self._c.report_error(node.ctx, "Function redefinition")
@@ -287,7 +285,7 @@ class StateMachineVisitor(NodeVisitor):
             node.child_statement_list.insert_statement_at(0, stmt)
 
 
-def _create_state_machine(compiler, stmt_list, helper):
+def _create_state_machine(compiler, stmt_list, helper, ref_wf_arg):
     '''
     Creates an state machine
     '''
@@ -310,7 +308,8 @@ def _create_state_machine(compiler, stmt_list, helper):
 
     stmt_list.insert_statement_at(i, sm)
 
-    v = _StatementsVisitor(stmt_list, i + 1, compiler, sm, helper, None)
+    v = _StatementsVisitor(
+        stmt_list, i + 1, compiler, sm, helper, None, ref_wf_arg)
     v.create_state(None)
     v.visit_each_stmt()
 
@@ -339,7 +338,7 @@ class _StatementsVisitor(NodeVisitor):
     '''
 
     def __init__(self, stmt_list, index, compiler, state_machine, helper,
-                 current_state):
+                 current_state, ref_wf_arg):
         '''
         Constructor
         '''
@@ -351,6 +350,7 @@ class _StatementsVisitor(NodeVisitor):
         self._index = index
 
         self._current_st = current_state
+        self._ref_wf_arg = ref_wf_arg
 
     def default_visit(self, node):
         '''
@@ -365,6 +365,7 @@ class _StatementsVisitor(NodeVisitor):
         # begin from 0
         st.txt_id = str(len(self._sm.childs_states))
         st.wait_condition = wait_condition
+        st.ref_waitingfor_arg = self._ref_wf_arg
         self._sm.add_state(st)
 
         self._current_st = st
@@ -406,7 +407,8 @@ class _StatementsVisitor(NodeVisitor):
         assert isinstance(stmt_list, StmtListNode)
 
         v = _StatementsVisitor(
-            stmt_list, 0, self._c, self._sm, self._h, self._current_st)
+            stmt_list, 0, self._c, self._sm, self._h, self._current_st,
+            self._ref_wf_arg)
         v.visit_each_stmt()
 
     def visit_each_stmt(self):
@@ -436,7 +438,8 @@ class _StatementsVisitor(NodeVisitor):
 
         visit_node(self, node.child_expression)
 
-        self._split_after_current(None, node.ctx)
+        node.ref_waitingfor_arg = self._ref_wf_arg
+        self._split_after_current(node.child_expression, node.ctx)
 
     def visit_ReturnStmtNode(self, node):
 

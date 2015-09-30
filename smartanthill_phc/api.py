@@ -29,16 +29,28 @@ from smartanthill_phc.state import create_states
 
 class _Helper(object):
     '''
-    Agregate class to hold parser related stuff
+    Agregate helper class to create and hold parser related stuff
     '''
 
-    def __init__(self, prefix, file_name):
-
+    def __init__(self, file_name):
+        '''
+        Constructor
+        '''
         self.file_stream = antlr4.FileStream(file_name)
         self.clexer = CLexer.CLexer(self.file_stream)
         self.token_stream = antlr4.CommonTokenStream(self.clexer)
         self.cparser = CParser.CParser(self.token_stream)
 
+
+class NameHelper(object):
+    '''
+    Helper class to construct function and struct names from plugin prefix
+    '''
+
+    def __init__(self, prefix):
+        '''
+        Constructor
+        '''
         self.struct_name = prefix + "_plugin_state"
         self.include_guard = "__SA_%s_PLUGIN_STATE_H__" % prefix.upper()
         self.handler_name = prefix + "_plugin_handler"
@@ -46,12 +58,12 @@ class _Helper(object):
         self.exec_init_name = prefix + "_plugin_exec_init"
 
 
-def process_file(prefix, file_name, dump):
+def process_file(file_name, prefix, dump):
     '''
     Process a c input file, and returns an string with output text
     '''
 
-    helper = _Helper(file_name, prefix)
+    helper = _Helper(file_name)
     ptree = helper.cparser.compilationUnit()
 
     if dump:
@@ -72,14 +84,16 @@ def process_file(prefix, file_name, dump):
     check_all_nodes_reachables(c, root)
     process_syntax_tree(c, root)
 
-    create_states(c, root, helper.handler_name, helper.exec_init_name)
+    nh = NameHelper(prefix)
+
+    create_states(c, root, nh.handler_name, nh.exec_init_name)
 
     if dump:
         print
         print '\n'.join(dump_tree(root))
 
-    async = rewrite_code(c, root, helper.token_stream, helper.struct_name)
+    async = rewrite_code(c, root, helper.token_stream, nh.struct_name)
     header = write_header(
-        c, root, helper.token_stream, helper.struct_name, helper.include_guard)
+        c, root, helper.token_stream, nh.struct_name, nh.include_guard)
 
     return (async, header)

@@ -24,7 +24,7 @@ def rewrite_code(compiler, root, token_stream, struct_name):
     Rewrites code tree
     '''
     rewriter = TokenStreamRewriter(token_stream)
-    visitor = _RewriteVisitor(compiler, rewriter, struct_name)
+    visitor = _RewriteVisitor(compiler, rewriter, token_stream, struct_name)
     visit_node(visitor, root)
 
     text = rewriter.getText()
@@ -81,12 +81,13 @@ class _RewriteVisitor(NodeVisitor):
     Visitor class for plugin rewrite
     '''
 
-    def __init__(self, compiler, writer, type_name):
+    def __init__(self, compiler, writer, token_stream, type_name):
         '''
         Constructor
         '''
         self._c = compiler
         self._w = writer
+        self._tokens = token_stream
         self._tn = type_name
         self._nb = None
 
@@ -113,9 +114,6 @@ class _RewriteVisitor(NodeVisitor):
     def visit_DeclarationListNode(self, node):
         for each in node.childs_declarations:
             visit_node(self, each)
-
-    def visit_StateDataStuctDeclarationNode(self, node):
-        pass
 
     def visit_FunctionDeclNode(self, node):
         visit_node(self, node.child_statement_list)
@@ -152,11 +150,40 @@ class _RewriteVisitor(NodeVisitor):
 
     def visit_BlockingCallStmtNode(self, node):
 
-        self._w.replaceToken(
-            node.child_expression.ctx.Identifier().symbol,
-            u"%s_non_blocking" % node.child_expression.txt_name)
-
         self._visit_expression(node.child_expression)
+
+        n = node.child_expression.txt_name
+        wf = node.ref_waitingfor_arg.txt_name
+        args = node.child_expression.child_argument_list.childs_arguments
+        assert len(args) >= 1
+        arg0_ctx = args[0].ctx
+        arg0 = self._tokens.getText((arg0_ctx.start, arg0_ctx.stop))
+
+        if n == "papi_sleep":
+            txt = u"papi_wait_handler_add_wait_for_timeout( %s, %s );" % (
+                wf, arg0)
+            self._w.replaceTokens(node.ctx.start, node.ctx.stop, txt)
+        else:
+            if n == "papi_wait_for_spi_send":
+                f = u"papi_start_sending_spi_command_16"
+                w = u"spi_send"
+            elif n == "papi_wait_for_i2c_send":
+                f = u"papi_start_sending_i2c_command_16"
+                w = u"i2c_send"
+            elif n == "papi_wait_for_spi_receive":
+                f = u"papi_start_receiving_spi_data_16"
+                w = u"spi_receive"
+            elif n == "papi_wait_for_i2c_receive":
+                f = u"papi_start_receiving_i2c_data_16"
+                w = u"i2c_receive"
+            else:
+                assert False
+
+            self._w.replaceToken(
+                node.child_expression.ctx.Identifier().symbol, f)
+
+            txt = u"papi_wait_handler_add_wait_for_%s( %s, %s );" % (
+                w, wf, arg0)
 
     def visit_ReturnStmtNode(self, node):
         if node.child_expression is not None:
@@ -190,8 +217,36 @@ class _RewriteVisitor(NodeVisitor):
 
         nxt = node.ref_next_state.txt_id
         txt = u"\nsa_state->sa_next = %s;" % nxt
-        txt += u"\nreturn 1; /* WAIT */"
-        txt += u"\nlabel_%s:;" % nxt  # mb: add semicolon after label
+        txt += u"\nreturn PLUGIN_WAITING;"
+        txt += u"\nlabel_%s:" % nxt  # mb: add semicolon after label
+
+        if node.ref_next_state.wait_condition is None:
+            txt += u" /* nop */ ;"
+        else:
+            n = node.ref_next_state.wait_condition.txt_name
+            args = node.ref_next_state.wait_condition.\
+                child_argument_list.childs_arguments
+            assert len(args) >= 1
+            arg0_ctx = args[0].ctx
+            arg0 = self._tokens.getText((arg0_ctx.start, arg0_ctx.stop))
+
+            wf = node.ref_next_state.ref_waitingfor_arg.txt_name
+            if n == "papi_sleep":
+                f = u"timeout(%s, %s)" % (0, wf)
+            elif n == "papi_wait_for_spi_send":
+                f = u"spi_send(%s, %s)" % (wf, arg0)
+            elif n == "papi_wait_for_i2c_send":
+                f = u"i2c_send(%s, %s)" % (wf, arg0)
+            elif n == "papi_wait_for_spi_receive":
+                f = u"spi_receive(%s, %s)" % (wf, arg0)
+            elif n == "papi_wait_for_i2c_receive":
+                f = u"i2c_receive(%s, %s)" % (wf, arg0)
+            else:
+                assert False
+
+            txt += u" if(papi_wait_handler_is_waiting_for_%s)" % f
+            txt += u" return PLUGIN_WAITING;"
+
         if node.ctx.stop.line is not None:
             txt += u"\n//#line %s\n" % node.ctx.stop.line
 

@@ -35,7 +35,7 @@ uint8_t sleep_plugin_handler(const void* plugin_config,
     void* plugin_persistent_state, void* plugin_state, parser_obj* command,
     MEMORY_HANDLE reply, waiting_for* wf, uint8_t first_byte)
 {
-sleep_plugin_state* sa_state = (sleep_plugin_state*)plugin_persistent_state;
+sleep_plugin_state* sa_state = (sleep_plugin_state*)plugin_state;
 
 switch(sa_state->sa_next) {
 case 0: goto label_0;
@@ -45,10 +45,10 @@ default: assert(0);
 label_0:;
 //#line 35
 
-    papi_sleep_non_blocking( 10000 );
+    papi_wait_handler_add_wait_for_timeout( wf, 10000 );
 sa_state->sa_next = 1;
-return 1; /* WAIT */
-label_1:;
+return PLUGIN_WAITING;
+label_1: if(papi_wait_handler_is_waiting_for_timeout(0, wf)) return PLUGIN_WAITING;
 //#line 36
    
 
