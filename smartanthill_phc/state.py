@@ -156,6 +156,20 @@ class InitStateStmtNode(StatementNode):
         self.txt_arg = None
 
 
+class ReturnStateStmtNode(StatementNode):
+
+    '''
+    Statement node representing the re initialization of state machine
+    just before a return statement
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(ReturnStateStmtNode, self).__init__()
+
+
 class DeclsHelper(object):
 
     '''
@@ -284,6 +298,10 @@ def _create_state_machine(compiler, stmt_list, helper):
     i = _skip_statements(stmt_list)
 
     if i == 0:
+        assert False
+    if i == 1:
+        assert isinstance(
+            stmt_list.childs_statements[0], StateDataCastStmtNode)
         ctx = stmt_list.ctx.start
     else:
         ctx = stmt_list.childs_statements[i - 1].ctx.stop
@@ -423,6 +441,8 @@ class _StatementsVisitor(NodeVisitor):
     def visit_ReturnStmtNode(self, node):
 
         visit_node(self, node.child_expression)
+        stmt = self._c.init_node(ReturnStateStmtNode(), node.ctx)
+        self.insert_before_current(stmt)
 
     def visit_IfElseStmtNode(self, node):
 

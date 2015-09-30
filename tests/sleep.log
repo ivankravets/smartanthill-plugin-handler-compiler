@@ -1,0 +1,11 @@
+--- Build ---
+gcc -fno-exceptions -g -Os -Wall -ffunction-sections -fdata-sections -o sleep.exe test.c sleep_non_blocking.c
+
+sleep_non_blocking.c: In function 'sleep_plugin_handler':
+sleep_non_blocking.c:48:5: warning: implicit declaration of function 'papi_sleep_non_blocking' [-Wimplicit-function-declaration]
+     papi_sleep_non_blocking( 10000 );
+     ^
+C:\Users\marcos\AppData\Local\Temp\ccXFUcW3.o: In function `sleep_plugin_handler':
+C:\Projects\smartanthill\plugin-handler-compiler\tests/sleep_non_blocking.c:48: undefined reference to `papi_sleep_non_blocking'
+collect2.exe: error: ld returned 1 exit status
+Failed with code 1

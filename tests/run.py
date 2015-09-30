@@ -74,7 +74,7 @@ def _run(prefix):
 
 def main():
 
-    _run('my_1')
+    _run('sleep')
 
 # temporary entrance
 if __name__ == "__main__":

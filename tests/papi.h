@@ -22,7 +22,7 @@ typedef uint8_t parser_obj;
 typedef uint8_t REPLY_HANDLE;
 typedef uint8_t MEMORY_HANDLE;
 typedef uint8_t waiting_for;
-typedef uint8_t SA_TIME_VAL;
+typedef uint16_t SA_TIME_VAL;
 
 #define PLUGIN_OK 0
 

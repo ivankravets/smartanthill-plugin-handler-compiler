@@ -162,9 +162,6 @@ class _RewriteVisitor(NodeVisitor):
         if node.child_expression is not None:
             self._visit_expression(node.child_expression)
 
-        self._w.insertBeforeToken(
-            node.ctx.start, u"sa_state->sa_next = 0;")
-
     def visit_IfElseStmtNode(self, node):
         self._visit_expression(node.child_expression)
         visit_node(self, node.child_if_branch)
@@ -205,6 +202,11 @@ class _RewriteVisitor(NodeVisitor):
         txt = u"\n%s* sa_state = (%s*)%s;" % (self._tn, self._tn, node.txt_arg)
         txt += u"\nsa_state->sa_next = 0;"
         self._w.insertAfterToken(node.ctx, txt)
+
+    def visit_ReturnStateStmtNode(self, node):
+
+        txt = u"sa_state->sa_next = 0;"
+        self._w.insertBeforeToken(node.ctx.start, txt)
 
     def visit_StateDataCastStmtNode(self, node):
         self._w.insertAfterToken(

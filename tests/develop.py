@@ -21,7 +21,7 @@ from smartanthill_phc import api
 
 def main():
 
-    prefix = "my_1"
+    prefix = "sleep"
 
     async, header = api.process_file(prefix + ".c", prefix, True)
 
