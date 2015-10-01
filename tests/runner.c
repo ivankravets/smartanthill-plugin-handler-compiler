@@ -18,17 +18,18 @@
 
 #include "papi.h"
 
-#include "sleep.h"
-#include "sleep_state.h"
+#define PREFIX(name) _PREFIX(SA_PLUGIN_ID, name)
+#define _PREFIX(id, name) __PREFIX(id, name)
+#define __PREFIX(id, name) id##name
 
 
 int main(int argc, char *argv[]) {
 
-    sleep_plugin_config config;
-    sleep_plugin_persistent_state persist;
-    sleep_plugin_state state;
+    PREFIX(_plugin_config) config;
+    PREFIX(_plugin_persistent_state) persist;
+    PREFIX(_plugin_state) state;
     
-    uint8_t result = sleep_plugin_exec_init(&config, &state);
+    uint8_t result = PREFIX(_plugin_exec_init)(&config, &state);
     
     if (result != 0) {
         printf("Error, exec_init returned %d\n", result);
@@ -36,7 +37,7 @@ int main(int argc, char *argv[]) {
     }
     
     
-    result = sleep_plugin_handler_init(&config, &persist);
+    result = PREFIX(_plugin_handler_init)(&config, &persist);
     
     if (result != 0) {
         printf("Error, handler_init returned %d\n", result);
@@ -48,7 +49,7 @@ int main(int argc, char *argv[]) {
     waiting_for waiting = 0;
     
     do {
-        result = sleep_plugin_handler(&config, &persist, &state, &parser, reply, &waiting, 0);
+        result = PREFIX(_plugin_handler)(&config, &persist, &state, &parser, reply, &waiting, 0);
     } while (result == 1);
     
     if (result != 0) {

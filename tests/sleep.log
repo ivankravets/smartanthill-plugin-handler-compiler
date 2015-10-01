@@ -1,8 +1,15 @@
 --- Build ---
-gcc -fno-exceptions -g -Os -Wall -ffunction-sections -fdata-sections -o sleep.exe test.c sleep_non_blocking.c
-
+gcc -fno-exceptions -g -Os -Wall -ffunction-sections -fdata-sections -DSA_PLUGIN_ID=sleep -include sleep.h -include sleep_state.h -o sleep.exe runner.c sleep.c
 Ok
 
 ---  Run  ---
 Ok
 
+
+*** Non Blocking ***
+--- Build ---
+gcc -fno-exceptions -g -Os -Wall -ffunction-sections -fdata-sections -DSA_PLUGIN_ID=sleep -include sleep.h -include sleep_state.h -o sleep_non_blocking.exe runner.c sleep_non_blocking.c
+Ok
+
+---  Run  ---
+Ok

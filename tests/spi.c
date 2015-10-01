@@ -14,43 +14,39 @@
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 #include "papi.h"
-#include "sleep.h"
-#include "sleep_state.h"
+#include "spi.h"
+#include "spi_state.h"
 
-uint8_t sleep_plugin_exec_init(const void* plugin_config, void* plugin_state)
+uint8_t spi_plugin_exec_init(const void* plugin_config, void* plugin_state)
 {
-sleep_plugin_state* sa_state = (sleep_plugin_state*)plugin_state;
-sa_state->sa_next = 0;
     return PLUGIN_OK;
 }
 
-uint8_t sleep_plugin_handler_init(const void* plugin_config,
+uint8_t spi_plugin_handler_init(const void* plugin_config,
                                     void* plugin_persistent_state)
 {
     return PLUGIN_OK;
 }
 
 
-uint8_t sleep_plugin_handler(const void* plugin_config,
+uint8_t spi_plugin_handler(const void* plugin_config,
     void* plugin_persistent_state, void* plugin_state, parser_obj* command,
     MEMORY_HANDLE reply, waiting_for* wf, uint8_t first_byte)
 {
-sleep_plugin_state* sa_state = (sleep_plugin_state*)plugin_state;
+    const spi_plugin_config* pc = (const spi_plugin_config*) plugin_config;
+    
+    //send sensor message
+    uint16_t data = papi_parser_read_encoded_uint16( command );
+    papi_wait_for_spi_send(pc->spi_id, 0x0003, 0x08, data, 0x02);
 
-switch(sa_state->sa_next) {
-case 0: goto label_0;
-case 1: goto label_1;
-default: sa_state->sa_next = 0; return -1; /* TBD */
-}
-label_0:;
-//#line 35
+    // give sensor some time to process
+    papi_sleep( 1000 );   
 
-    papi_wait_handler_add_wait_for_timeout( wf, 10000 );
-sa_state->sa_next = 1;
-return PLUGIN_WAITING;
-label_1: if(papi_wait_handler_is_waiting_for_timeout(0, wf)) return PLUGIN_WAITING;
-//#line 36
-   
+    //waiting for sensor response
+    uint16_t response = 0;
+    papi_wait_for_spi_receive( pc->spi_id,  0x0000, 0x08, &response );
+    
+    papi_reply_write_encoded_uint16( reply, response );
 
-    sa_state->sa_next = 0;return PLUGIN_OK;
+    return PLUGIN_OK;
 }

@@ -30,3 +30,8 @@ def run_test(prefix):
 def test_sleep():
 
     run_test('sleep')
+
+
+def test_spi():
+
+    run_test('spi')

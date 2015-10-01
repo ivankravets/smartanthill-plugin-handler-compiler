@@ -205,7 +205,7 @@ class _RewriteVisitor(NodeVisitor):
             txt += u"\ncase %s: goto label_%s;" % (each.txt_id, each.txt_id)
 #            visit_node(self, each.child_statement_list)
 
-        txt += u"\ndefault: assert(0);"
+        txt += u"\ndefault: sa_state->sa_next = 0; return -1; /* TBD */"
         txt += u"\n}"
         txt += u"\nlabel_0:;"  # mb: add semicolon after label
         if node.ctx.line is not None:

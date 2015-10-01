@@ -16,32 +16,32 @@ Copyright (C) 2015 OLogN Technologies AG
 *******************************************************************************/
 
 
-#if !defined __SA_SLEEP_PLUGIN_H__
-#define __SA_SLEEP_PLUGIN_H__
+#if !defined __SA_SPI_PLUGIN_H__
+#define __SA_SPI_PLUGIN_H__
 
 #include "papi.h"
 
 //constant structure filled with a configuration for specific 'ant body part'
-typedef struct _sleep_plugin_config
+typedef struct _spi_plugin_config
 {
-    uint8_t bodypart_id;   //always present
-} sleep_plugin_config;
+    uint8_t spi_id;
+} spi_plugin_config;
 
-typedef struct _sleep_plugin_persistent_state
+typedef struct _spi_plugin_persistent_state
 {
-    uint16_t last_sent_id;
-} sleep_plugin_persistent_state;
+    uint8_t dummy;
+} spi_plugin_persistent_state;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-uint8_t sleep_plugin_handler_init( const void* plugin_config, void* plugin_persistent_state );
-uint8_t sleep_plugin_exec_init( const void* plugin_config, void* plugin_state );
-uint8_t sleep_plugin_handler( const void* plugin_config, void* plugin_persistent_state, void* plugin_state, parser_obj* command, MEMORY_HANDLE reply, waiting_for* wf, uint8_t first_byte );
+uint8_t spi_plugin_handler_init( const void* plugin_config, void* plugin_persistent_state );
+uint8_t spi_plugin_exec_init( const void* plugin_config, void* plugin_state );
+uint8_t spi_plugin_handler( const void* plugin_config, void* plugin_persistent_state, void* plugin_state, parser_obj* command, MEMORY_HANDLE reply, waiting_for* wf, uint8_t first_byte );
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // __SA_SLEEP_PLUGIN_H__
+#endif // __SA_SPI_PLUGIN_H__

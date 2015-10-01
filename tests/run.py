@@ -17,19 +17,27 @@ import os
 import subprocess
 import sys
 
+'''
+This python script needs to be run from with environment path for gcc to work.
+I use a shell script to set PATH for specific gcc instance to test,
+and then run this script
+'''
 
-def _build_and_run(f, exe_file, plugin_file):
+
+def _build_and_run(f, prefix, file_prefix):
 
     f.write('--- Build ---\n')
-    cmd = "gcc -fno-exceptions -g -Os -Wall -ffunction-sections -fdata-sections "\
-        "-o %s test.c %s" % (exe_file, plugin_file)
+    cmd = "gcc -fno-exceptions -g -Os -Wall -ffunction-sections "\
+        "-fdata-sections -DSA_PLUGIN_ID=%s -include %s.h -include %s_state.h "\
+        "-o %s.exe runner.c %s.c" % (prefix, prefix,
+                                     prefix, file_prefix, file_prefix)
     f.write("%s\n" % cmd)
     sp = subprocess.Popen(
         cmd,
         shell=False,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE)
-    f.write('\n'.join(sp.communicate()))
+        stderr=subprocess.STDOUT)
+    f.write(sp.communicate()[0])
     if sp.returncode != 0:
         f.write('Failed with code %d\n' % sp.returncode)
         return
@@ -38,43 +46,53 @@ def _build_and_run(f, exe_file, plugin_file):
 
     f.write('\n---  Run  ---\n')
     sp = subprocess.Popen(
-        exe_file,
+        file_prefix + ".exe",
         shell=False,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE)
+        stderr=subprocess.STDOUT)
 
-    f.write('\n'.join(sp.communicate()))
+    f.write(sp.communicate()[0])
     if sp.returncode != 0:
         f.write('Failed with code %d\n' % sp.returncode)
 
 
-def _run(prefix):
-    log_file = '%s.log' % prefix
-    exe_file = '%s.exe' % prefix
-#    plugin_file = '%s.c' % prefix
-    plugin_file = '%s_non_blocking.c' % prefix
+def _build_and_run2(f, prefix, file_prefix):
+
+    exe_file = file_prefix + '.exe'
 
     try:
         os.unlink(exe_file)
     except:
         pass
+
+    _build_and_run(f, prefix, file_prefix)
+
+    try:
+        os.unlink(exe_file)
+    except:
+        pass
+
+
+def build_and_run(prefix):
+
+    log_file = '%s.log' % prefix
+
     try:
         os.unlink(log_file)
     except:
         pass
 
     f = open(log_file, 'wb')
-    _build_and_run(f, exe_file, plugin_file)
+
+    _build_and_run2(f, prefix, prefix)
+    f.write('\n\n*** Non Blocking ***\n')
+    _build_and_run2(f, prefix, prefix + "_non_blocking")
     f.close()
-    try:
-        os.unlink(exe_file)
-    except:
-        pass
 
 
 def main():
 
-    _run('sleep')
+    build_and_run('spi')
 
 # temporary entrance
 if __name__ == "__main__":
