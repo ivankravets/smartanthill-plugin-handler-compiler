@@ -16,22 +16,25 @@
 from smartanthill_phc import api
 
 
-def run_test(prefix):
+def run_test(prefix, split_all):
 
-    (async, header) = api.process_file('tests/' + prefix + '.c', prefix, False)
+    c_file = "tests/%s.c" % prefix
+    nb_file = "tests/%s_non_blocking.c" % prefix
+    h_file = "tests/%s_state.h" % prefix
+    (async, header) = api.process_file(c_file, prefix, split_all, False)
 
-    f = open('tests/' + prefix + '_non_blocking.c', 'r')
+    f = open(nb_file, 'rb')
     assert async == f.read()
 
-    h = open('tests/' + prefix + '_state.h', 'r')
+    h = open(h_file, 'rb')
     assert header == h.read()
 
 
 def test_sleep():
 
-    run_test('sleep')
+    run_test('sleep', False)
 
 
 def test_spi():
 
-    run_test('spi')
+    run_test('spi', False)

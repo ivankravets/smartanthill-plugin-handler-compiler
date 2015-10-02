@@ -16,14 +16,16 @@
 
 *****************************************************************************/
 
-#if !defined __SA_SLEEP_PLUGIN_STATE_H__
-#define __SA_SLEEP_PLUGIN_STATE_H__
+#if !defined __SA_DEBUG_PLUGIN_STATE_H__
+#define __SA_DEBUG_PLUGIN_STATE_H__
 
 #include <stdint.h>
 
 
-typedef struct _sleep_plugin_state {
+typedef struct _debug_plugin_state {
 uint8_t sa_next;
-} sleep_plugin_state;
+uint16_t data;
+uint16_t response;
+} debug_plugin_state;
 
-#endif // __SA_SLEEP_PLUGIN_STATE_H__
+#endif // __SA_DEBUG_PLUGIN_STATE_H__

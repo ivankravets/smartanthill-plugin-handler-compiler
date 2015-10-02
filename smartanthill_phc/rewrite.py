@@ -13,6 +13,8 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+from datetime import date
+
 from smartanthill_phc.TokenStreamRewriter import TokenStreamRewriter
 from smartanthill_phc.common.visitor import NodeVisitor, visit_node
 from smartanthill_phc.parser import get_declarator_name
@@ -46,31 +48,48 @@ def write_header(compiler, root, token_stream, struct_name, include_guard):
     return text
 
 
-_header_file_banner = u"/* Add copyright banner here */\n\n\n"
+_header_file_banner = [
+    "Copyright (C) %s OLogN Technologies AG\n" % date.today().year,
+    "This program is free software; you can redistribute it and/or modify",
+    "it under the terms of the GNU General Public License version 2 as",
+    "published by the Free Software Foundation.\n",
+    "This program is distributed in the hope that it will be useful,",
+    "but WITHOUT ANY WARRANTY; without even the implied warranty of",
+    "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the",
+    "GNU General Public License for more details.\n",
+    "You should have received a copy of the GNU General Public License along",
+    "with this program; if not, write to the Free Software Foundation, Inc.,",
+    "51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA\n",
+]
 
 
 def _write_header_file(token_stream, struct_name, include_guard, nb):
 
-    txt = _header_file_banner
+    txt = "/*" + (76 * "*") + "\n"
+    for each in _header_file_banner:
+        txt += "    " + each + "\n"
 
-    txt += u"#if !defined %s\n" % include_guard
-    txt += u"#define %s\n\n" % include_guard
+    txt += (76 * "*") + "*/\n\n"
 
-    txt += u"#include <stdint.h>\n\n\n"
+    txt += "#if !defined %s\n" % include_guard
+    txt += "#define %s\n\n" % include_guard
 
-    txt += u"typedef struct _%s {\n" % struct_name
-    txt += u"uint8_t sa_next;\n"
+    txt += "#include <stdint.h>\n\n\n"
+
+    txt += "typedef struct _%s {\n" % struct_name
+    txt += "uint8_t sa_next;\n"
 
     for each in nb.refs_moved_var_decls:
         start = each.ctx.declarationSpecifier(0).start
         stop = each.ctx.initDeclaratorList().initDeclarator(
             0).declarator().stop
 
-        txt += token_stream.getText((start.tokenIndex, stop.tokenIndex))
-        txt += u";\n"
+        tk = token_stream.getText((start.tokenIndex, stop.tokenIndex))
+        txt += str(tk)
+        txt += ";\n"
 
-    txt += u"} %s;\n\n" % struct_name
-    txt += u"#endif // %s\n" % include_guard
+    txt += "} %s;\n\n" % struct_name
+    txt += "#endif // %s\n" % include_guard
 
     return txt
 
@@ -217,12 +236,18 @@ class _RewriteVisitor(NodeVisitor):
 
         nxt = node.ref_next_state.txt_id
         txt = u"\nsa_state->sa_next = %s;" % nxt
-        txt += u"\nreturn PLUGIN_WAITING;"
-        txt += u"\nlabel_%s:" % nxt  # mb: add semicolon after label
 
         if node.ref_next_state.wait_condition is None:
-            txt += u" /* nop */ ;"
+            txt += u"\nreturn PLUGIN_DEBUG;"
+            # we add a nop here, because C compiler will complain if next
+            # statement is a declaration.
+            # Only pure statements allowed right after a label
+            # Adding a NOP will silence it
+            txt += u"\nlabel_%s: /* nop */ ;" % nxt
         else:
+            txt += u"\nreturn PLUGIN_WAITING;"
+            txt += u"\nlabel_%s:" % nxt
+
             n = node.ref_next_state.wait_condition.txt_name
             args = node.ref_next_state.wait_condition.\
                 child_argument_list.childs_arguments

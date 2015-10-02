@@ -22,11 +22,11 @@ from smartanthill_phc.common.visitor import NodeVisitor, visit_node
 from smartanthill_phc.root import NonBlockingData
 
 
-def create_states(compiler, root, handler, exec_init):
+def create_states(compiler, root, handler, exec_init, split_all):
     '''
     Creates state machine and state related nodes
     '''
-    visitor = StateMachineVisitor(compiler, handler, exec_init)
+    visitor = StateMachineVisitor(compiler, handler, exec_init, split_all)
     visit_node(visitor, root)
     nb = visitor.finish()
     root.get_scope(NonBlockingData).refs_moved_var_decls = nb
@@ -215,7 +215,7 @@ class DeclsHelper(object):
 
 class StateMachineVisitor(NodeVisitor):
 
-    def __init__(self, compiler, handler, exec_init):
+    def __init__(self, compiler, handler, exec_init, split_all):
         '''
         Constructor
         '''
@@ -225,6 +225,7 @@ class StateMachineVisitor(NodeVisitor):
         self._handler_found = False
         self._exec_init_found = False
         self._h = DeclsHelper()
+        self._split_all = split_all
 
     def finish(self):
         return self._h.analyze_vars()
@@ -266,7 +267,8 @@ class StateMachineVisitor(NodeVisitor):
             node.child_statement_list.insert_statement_at(0, stmt)
 
             _create_state_machine(
-                self._c, node.child_statement_list, self._h, ref_wf_arg)
+                self._c, node.child_statement_list, self._h, ref_wf_arg,
+                self._split_all)
         elif node.txt_name == self._exec_init:
             if self._exec_init_found:
                 self._c.report_error(node.ctx, "Function redefinition")
@@ -285,7 +287,7 @@ class StateMachineVisitor(NodeVisitor):
             node.child_statement_list.insert_statement_at(0, stmt)
 
 
-def _create_state_machine(compiler, stmt_list, helper, ref_wf_arg):
+def _create_state_machine(compiler, stmt_list, helper, ref_wf_arg, split_all):
     '''
     Creates an state machine
     '''
@@ -309,7 +311,7 @@ def _create_state_machine(compiler, stmt_list, helper, ref_wf_arg):
     stmt_list.insert_statement_at(i, sm)
 
     v = _StatementsVisitor(
-        stmt_list, i + 1, compiler, sm, helper, None, ref_wf_arg)
+        stmt_list, i + 1, compiler, sm, helper, None, ref_wf_arg, split_all)
     v.create_state(None)
     v.visit_each_stmt()
 
@@ -336,9 +338,10 @@ class _StatementsVisitor(NodeVisitor):
     '''
     Here we insert goto's labels into the code
     '''
+    # pylint: disable=too-many-instance-attributes
 
     def __init__(self, stmt_list, index, compiler, state_machine, helper,
-                 current_state, ref_wf_arg):
+                 current_state, ref_wf_arg, split_all):
         '''
         Constructor
         '''
@@ -351,6 +354,7 @@ class _StatementsVisitor(NodeVisitor):
 
         self._current_st = current_state
         self._ref_wf_arg = ref_wf_arg
+        self._split_all = split_all
 
     def default_visit(self, node):
         '''
@@ -408,7 +412,7 @@ class _StatementsVisitor(NodeVisitor):
 
         v = _StatementsVisitor(
             stmt_list, 0, self._c, self._sm, self._h, self._current_st,
-            self._ref_wf_arg)
+            self._ref_wf_arg, self._split_all)
         v.visit_each_stmt()
 
     def visit_each_stmt(self):
@@ -431,8 +435,14 @@ class _StatementsVisitor(NodeVisitor):
         self._h.add_var_decl(node, self._current_st)
         visit_node(self, node.child_initializer)
 
+        if self._split_all:
+            self._split_after_current(None, node.ctx)
+
     def visit_ExpressionStmtNode(self, node):
         visit_node(self, node.child_expression)
+
+        if self._split_all:
+            self._split_after_current(None, node.ctx)
 
     def visit_BlockingCallStmtNode(self, node):
 

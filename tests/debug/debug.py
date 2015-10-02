@@ -13,27 +13,22 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-import cProfile
 import sys
+from tests import run
 
-from smartanthill_phc import api
+
+def test_debug():
+
+    run.run_test('debug', True)
 
 
 def main():
 
-    prefix = "sleep"
-
-    async, header = api.process_file(prefix + ".c", prefix, False, True)
-
-    f = open(prefix + "_non_blocking.c", 'wb')
-    f.write(async)
-
-    h = open(prefix + "_state.h", 'wb')
-    h.write(header)
+    run.make_non_blocking('debug', True)
+    run.build_and_run('debug')
 
 
 # temporary entrance
 if __name__ == "__main__":
-  #  cProfile.run("api()")
     main()
     sys.exit()

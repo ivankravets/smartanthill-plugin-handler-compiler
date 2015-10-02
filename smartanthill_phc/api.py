@@ -58,7 +58,7 @@ class NameHelper(object):
         self.exec_init_name = prefix + "_plugin_exec_init"
 
 
-def process_file(file_name, prefix, dump):
+def process_file(file_name, prefix, split_all, dump):
     '''
     Process a c input file, and returns an string with output text
     '''
@@ -86,7 +86,7 @@ def process_file(file_name, prefix, dump):
 
     nh = NameHelper(prefix)
 
-    create_states(c, root, nh.handler_name, nh.exec_init_name)
+    create_states(c, root, nh.handler_name, nh.exec_init_name, split_all)
 
     if dump:
         print

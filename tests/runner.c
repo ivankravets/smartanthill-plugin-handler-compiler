@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
     
     do {
         result = PREFIX(_plugin_handler)(&config, &persist, &state, &parser, reply, &waiting, 0);
-    } while (result == 1);
+    } while (result > 0);
     
     if (result != 0) {
         printf("Error, returned %d\n", result);
