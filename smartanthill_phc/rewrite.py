@@ -13,8 +13,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from datetime import date
-
+from smartanthill_phc import banner
 from smartanthill_phc.TokenStreamRewriter import TokenStreamRewriter
 from smartanthill_phc.common.visitor import NodeVisitor, visit_node
 from smartanthill_phc.parser import get_declarator_name
@@ -38,7 +37,7 @@ def rewrite_code(compiler, root, token_stream, struct_name):
 
 def write_header(compiler, root, token_stream, struct_name, include_guard):
     '''
-    Rewrites code tree
+    Write header file
     '''
     nb = root.get_scope(NonBlockingData)
     text = _write_header_file(token_stream, struct_name, include_guard, nb)
@@ -48,28 +47,11 @@ def write_header(compiler, root, token_stream, struct_name, include_guard):
     return text
 
 
-_header_file_banner = [
-    "Copyright (C) %s OLogN Technologies AG\n" % date.today().year,
-    "This program is free software; you can redistribute it and/or modify",
-    "it under the terms of the GNU General Public License version 2 as",
-    "published by the Free Software Foundation.\n",
-    "This program is distributed in the hope that it will be useful,",
-    "but WITHOUT ANY WARRANTY; without even the implied warranty of",
-    "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the",
-    "GNU General Public License for more details.\n",
-    "You should have received a copy of the GNU General Public License along",
-    "with this program; if not, write to the Free Software Foundation, Inc.,",
-    "51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA\n",
-]
-
-
 def _write_header_file(token_stream, struct_name, include_guard, nb):
 
-    txt = "/*" + (76 * "*") + "\n"
-    for each in _header_file_banner:
-        txt += "    " + each + "\n"
+    txt = banner.get_copyright_banner()
 
-    txt += (76 * "*") + "*/\n\n"
+    txt += "\n"
 
     txt += "#if !defined %s\n" % include_guard
     txt += "#define %s\n\n" % include_guard
