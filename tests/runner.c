@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
     uint8_t result = PREFIX(_plugin_exec_init)(&config, &state);
     
     if (result != 0) {
-        printf("Error, exec_init returned %d\n", result);
+        printf("Error, exec_init returned %d", result);
         return 1;
     }
     
@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
     result = PREFIX(_plugin_handler_init)(&config, &persist);
     
     if (result != 0) {
-        printf("Error, handler_init returned %d\n", result);
+        printf("Error, handler_init returned %d", result);
         return 1;
     }
     
@@ -53,10 +53,10 @@ int main(int argc, char *argv[]) {
     } while (result > 0);
     
     if (result != 0) {
-        printf("Error, returned %d\n", result);
+        printf("Error, handler returned %d", result);
         return 1;
     }
-    printf("Ok\n");
+    printf("Ok");
     return 0;
 }
 

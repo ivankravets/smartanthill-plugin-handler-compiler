@@ -14,18 +14,13 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 import sys
+
 from tests import run
-
-
-def test_debug():
-
-    run.run_test('debug', True)
 
 
 def main():
 
-    run.make_non_blocking('debug', True)
-    run.build_and_run('debug')
+    run.make_composer('write_digital_pin')
 
 
 # temporary entrance

@@ -15,33 +15,15 @@
 
 import os
 import subprocess
-import sys
+
 from smartanthill_phc import api
+from smartanthill_phc.parse_write import ZeptoPlugin, write_composer_file
 
 '''
 This python script needs to be run with environment path for gcc to work.
 I use a shell script to set PATH for specific gcc instance to test,
 and then run this script
 '''
-
-
-def main():
-
-    build_and_run('debug')
-
-
-def run_test(prefix, split_all):
-
-    c_file = "tests/%s/%s.c" % (prefix, prefix)
-    nb_file = "tests/%s/%s_non_blocking.c" % (prefix, prefix)
-    h_file = "tests/%s/%s_state.h" % (prefix, prefix)
-    code, header = api.process_file(c_file, prefix, split_all, False)
-
-    f = open(nb_file, 'rb')
-    assert code == f.read()
-
-    h = open(h_file, 'rb')
-    assert header == h.read()
 
 
 def make_non_blocking(prefix, split_all):
@@ -57,6 +39,17 @@ def make_non_blocking(prefix, split_all):
 
     h = open(h_file, 'wb')
     h.write(header)
+
+
+def make_composer(prefix):
+
+    plugin = ZeptoPlugin('manifest.xml')
+    h_file = "%s_parser.h" % prefix
+
+    code = write_composer_file(prefix, plugin)
+
+    f = open(h_file, 'wb')
+    f.write(code)
 
 
 def build_and_run(prefix):
@@ -122,11 +115,6 @@ def _build_and_run(f, prefix, file_prefix):
         stderr=subprocess.STDOUT)
 
     f.write(sp.communicate()[0])
+    f.write('\n')
     if sp.returncode != 0:
         f.write('Failed with code %d\n' % sp.returncode)
-
-
-# temporary entrance
-if __name__ == "__main__":
-    main()
-    sys.exit()

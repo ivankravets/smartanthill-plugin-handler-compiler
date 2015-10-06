@@ -14,27 +14,50 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 from smartanthill_phc import api
+from smartanthill_phc.parse_write import ZeptoPlugin, write_composer_file
 
 
-def run_test(prefix, split_all):
+def composer_test(prefix):
 
-    c_file = "tests/%s.c" % prefix
-    nb_file = "tests/%s_non_blocking.c" % prefix
-    h_file = "tests/%s_state.h" % prefix
-    (async, header) = api.process_file(c_file, prefix, split_all, False)
+    h_file = "tests/%s/%s_parser.h" % (prefix, prefix)
+    xml_file = "tests/%s/manifest.xml" % prefix
+    plugin = ZeptoPlugin(xml_file)
+
+    code = write_composer_file(prefix, plugin)
+
+    f = open(h_file, 'rb')
+    assert code == f.read()
+
+
+def non_blocking_test(prefix, split_all):
+
+    c_file = "tests/%s/%s.c" % (prefix, prefix)
+    nb_file = "tests/%s/%s_non_blocking.c" % (prefix, prefix)
+    h_file = "tests/%s/%s_state.h" % (prefix, prefix)
+    code, header = api.process_file(c_file, prefix, split_all, False)
 
     f = open(nb_file, 'rb')
-    assert async == f.read()
+    assert code == f.read()
 
     h = open(h_file, 'rb')
     assert header == h.read()
 
 
+def test_debug():
+
+    non_blocking_test('debug', True)
+
+
 def test_sleep():
 
-    run_test('sleep', False)
+    non_blocking_test('sleep', False)
 
 
 def test_spi():
 
-    run_test('spi', False)
+    non_blocking_test('spi', False)
+
+
+def test_write_digital_pin():
+
+    composer_test('write_digital_pin')

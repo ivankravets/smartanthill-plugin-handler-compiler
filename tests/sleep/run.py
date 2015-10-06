@@ -19,8 +19,8 @@ from tests import run
 
 def main():
 
-    run.make_non_blocking('debug', True)
-    run.build_and_run('debug')
+    run.make_non_blocking('sleep', True)
+    run.build_and_run('sleep')
 
 
 # temporary entrance
