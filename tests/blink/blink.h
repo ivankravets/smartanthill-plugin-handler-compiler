@@ -19,20 +19,18 @@ Copyright (C) 2015 OLogN Technologies AG
 #if !defined __SA_BLINK_PLUGIN_H__
 #define __SA_BLINK_PLUGIN_H__
 
-#include <simpleiot/siot_common.h>
-#include <simpleiot/siot_data_types.h>
-#include <simpleiot_hal/hal_waiting.h>
-#include "../../common/hapi_gpio.h"
+#include <stdint.h>
+#include "papi.h"
+
+//TODO there is a dependency issue, 'parser' must be over 'state' here 
+#include "blink_parser.h"
+#include "blink_state.h"
+
 
 typedef struct _blink_plugin_config
 {
-    hapi_gpio_t* pin_led;
+    uint16_t pin_led;
 } blink_plugin_config;
-
-typedef struct _blink_plugin_state
-{
-    uint8_t dummy_byte;
-} blink_plugin_state;
 
 typedef struct _blink_plugin_persistent_state
 {
@@ -45,7 +43,9 @@ extern "C" {
 
 uint8_t blink_plugin_handler_init( const void* plugin_config, void* plugin_state );
 uint8_t blink_plugin_exec_init( const void* plugin_config, void* plugin_state );
-uint8_t blink_plugin_handler( const void* plugin_config, void* plugin_persistent_state, void* plugin_state, parser_obj* command, MEMORY_HANDLE reply, waiting_for* wf, uint8_t first_byte );
+uint8_t blink_plugin_handler( const void* plugin_config, void* plugin_persistent_state,
+    void* plugin_state, ZEPTO_PARSER* command, MEMORY_HANDLE reply,
+    waiting_for* wf, uint8_t first_byte );
 
 #ifdef __cplusplus
 }

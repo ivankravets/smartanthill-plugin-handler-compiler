@@ -21,7 +21,7 @@ from tests import run
 def main():
 
     run.make_composer('blink')
-    run.make_non_blocking('blink', False)
+    run.make_non_blocking('blink', False, True)
     run.build_and_run('blink')
 
 

@@ -451,6 +451,12 @@ class _StatementsVisitor(NodeVisitor):
         node.ref_waitingfor_arg = self._ref_wf_arg
         self._split_after_current(node.child_expression, node.ctx)
 
+    def visit_LoopStmtNode(self, node):
+
+        visit_node(self, node.child_expression)
+
+        self.visit_stmt_list(node.child_statement_list)
+
     def visit_ReturnStmtNode(self, node):
 
         visit_node(self, node.child_expression)

@@ -144,7 +144,8 @@ class VariableDeclarationStmtNode(StatementNode, ResolutionHelper):
         self.get_scope(StatementListScope).add_variable(
             compiler, self.txt_name, self)
 
-        return self.child_initializer.get_type()
+        # return self.child_initializer.get_type()
+        return self.get_scope(RootScope).lookup_type('_zc_dont_care')
 
     def get_static_value(self):
         '''

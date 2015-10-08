@@ -13,6 +13,9 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+from antlr4.ParserRuleContext import ParserRuleContext
+from antlr4.tree.Tree import TerminalNodeImpl
+
 from smartanthill_phc import banner
 from smartanthill_phc.TokenStreamRewriter import TokenStreamRewriter
 from smartanthill_phc.common.visitor import NodeVisitor, visit_node
@@ -105,6 +108,17 @@ class _RewriteVisitor(NodeVisitor):
         '''
         visit_node(self, expr)
 
+    def _get_text(self, ctx):
+        '''
+        Helper method to create an expression visitor an call it
+        '''
+        if isinstance(ctx, TerminalNodeImpl):
+            return self._tokens.getText((ctx.symbol, ctx.symbol))
+        elif isinstance(ctx, ParserRuleContext):
+            return self._tokens.getText((ctx.start, ctx.stop))
+        else:
+            assert False
+
     def visit_RootNode(self, node):
         self._nb = node.get_scope(NonBlockingData)
         visit_node(self, node.child_source)
@@ -157,8 +171,7 @@ class _RewriteVisitor(NodeVisitor):
         wf = node.ref_waitingfor_arg.txt_name
         args = node.child_expression.child_argument_list.childs_arguments
         assert len(args) >= 1
-        arg0_ctx = args[0].ctx
-        arg0 = self._tokens.getText((arg0_ctx.start, arg0_ctx.stop))
+        arg0 = self._get_text(args[0].ctx)
 
         if n == "papi_sleep":
             txt = u"papi_wait_handler_add_wait_for_timeout( %s, %s );" % (
@@ -185,6 +198,10 @@ class _RewriteVisitor(NodeVisitor):
 
             txt = u"papi_wait_handler_add_wait_for_%s( %s, %s );" % (
                 w, wf, arg0)
+
+    def visit_LoopStmtNode(self, node):
+        self._visit_expression(node.child_expression)
+        visit_node(self, node.child_statement_list)
 
     def visit_ReturnStmtNode(self, node):
         if node.child_expression is not None:
@@ -234,8 +251,7 @@ class _RewriteVisitor(NodeVisitor):
             args = node.ref_next_state.wait_condition.\
                 child_argument_list.childs_arguments
             assert len(args) >= 1
-            arg0_ctx = args[0].ctx
-            arg0 = self._tokens.getText((arg0_ctx.start, arg0_ctx.stop))
+            arg0 = self._get_text(args[0].ctx)
 
             wf = node.ref_next_state.ref_waitingfor_arg.txt_name
             if n == "papi_sleep":

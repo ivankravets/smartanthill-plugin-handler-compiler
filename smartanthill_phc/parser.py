@@ -25,7 +25,9 @@ from smartanthill_phc.common.antlr_helper import get_token_text
 from smartanthill_phc.common.expression import LiteralExprNode,\
     FunctionCallExprNode
 from smartanthill_phc.common.node import DeclarationListNode, StmtListNode
+from smartanthill_phc.common.statement import ErrorStmtNode
 from smartanthill_phc.root import PluginSourceNode
+
 
 _prefix = 'sa_'
 
@@ -109,6 +111,21 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
         '''
         self._c = compiler
         self._s = source
+
+    def _get_stmt_list(self, ctx):
+        '''
+        Visits and returns an statement list
+        If child is a single statement without curly braces,
+        error is reported, 
+        '''
+        stmt = self.visit(ctx)
+
+        if not isinstance(stmt, StmtListNode):
+            self._c.report_error(
+                ctx, "Single statement without curly braces {} not allowed")
+
+        # make an statement list out of it, to avoid assert errors on setters
+        return statement.make_statement_list(self._c, stmt)
 
     def visitChildren(self, current):
         '''
@@ -548,7 +565,7 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
         if not isinstance(if_stmt, StmtListNode):
             self._c.report_error(
                 ctx.statement()[0],
-                "Single statement without curly braces not allowed")
+                "Single statement without curly braces {} not allowed")
 
         if_stmt = statement.make_statement_list(self._c, if_stmt)
         stmt.set_if_branch(if_stmt)
@@ -558,7 +575,7 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
             if not isinstance(else_stmt, StmtListNode):
                 self._c.report_error(
                     ctx.statement()[1],
-                    "Single statement without curly braces not allowed")
+                    "Single statement without curly braces {} not allowed")
 
             else_stmt = statement.make_statement_list(self._c, else_stmt)
             stmt.set_else_branch(else_stmt)
@@ -569,9 +586,56 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
     def visitSwitchStatement(self, ctx):
         return self.visitChildren(ctx)
 
-    # Visit a parse tree produced by CParser#iterationStatement.
-    def visitIterationStatement(self, ctx):
-        return self.visitChildren(ctx)
+    # Visit a parse tree produced by CParser#WhileStatement.
+    def visitWhileStatement(self, ctx):
+        stmt = self._c.init_node(c_node.LoopStmtNode(), ctx)
+
+        expr = self.visit(ctx.expression()[0])
+        stmt.set_expression(expr)
+
+        stmt_list = self._get_stmt_list(ctx.statement())
+        stmt.set_statement_list(stmt_list)
+
+        return stmt
+
+    # Visit a parse tree produced by CParser#DoWhileStatement.
+    def visitDoWhileStatement(self, ctx):
+        stmt = self._c.init_node(c_node.LoopStmtNode(), ctx)
+
+        expr = self.visit(ctx.expression()[0])
+        stmt.set_expression(expr)
+
+        stmt_list = self._get_stmt_list(ctx.statement())
+        stmt.set_statement_list(stmt_list)
+
+        return stmt
+
+    # Visit a parse tree produced by CParser#ForStatement.
+    def visitForStatement(self, ctx):
+
+        stmt = self._c.init_node(c_node.LoopStmtNode(), ctx)
+
+        expr = self._c.init_node(c_node.DontCareExprNode(), ctx)
+
+        # here we don't care too much about each expression
+        for each in ctx.expression():
+            e = self.visit(each)
+            expr.add_expression(e)
+
+        stmt.set_expression(expr)
+
+        stmt_list = self._get_stmt_list(ctx.statement())
+        stmt.set_statement_list(stmt_list)
+
+        return stmt
+
+    # Visit a parse tree produced by CParser#DeclForStatement.
+    def visitDeclForStatement(self, ctx):
+
+        self._c.report_error(
+            ctx, "Loop 'for' with declaration not allowed.")
+
+        return self._c.init_node(ErrorStmtNode(), ctx)
 
     # Visit a parse tree produced by CParser#ReturnStatement.
     def visitReturnStatement(self, ctx):

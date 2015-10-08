@@ -1,0 +1,18 @@
+--- Build ---
+gcc -fno-exceptions -g -Os -Wall -ffunction-sections -fdata-sections -I.. -DSA_PLUGIN_ID=blink -include blink.h -o blink.exe ../runner.c blink.c
+C:\Users\marcos\AppData\Local\Temp\ccXbge6o.o: In function `blink_plugin_parser_read':
+C:\Projects\smartanthill\plugin-handler-compiler\tests\blink/./blink_parser.h:33: multiple definition of `blink_plugin_parser_read'
+C:\Users\marcos\AppData\Local\Temp\ccE81Ylq.o:C:\Projects\smartanthill\plugin-handler-compiler\tests\blink/./blink_parser.h:33: first defined here
+collect2.exe: error: ld returned 1 exit status
+Failed with code 1
+
+
+*** Non Blocking ***
+--- Build ---
+gcc -fno-exceptions -g -Os -Wall -ffunction-sections -fdata-sections -I.. -DSA_PLUGIN_ID=blink -include blink.h -o blink_non_blocking.exe ../runner.c blink_non_blocking.c
+blink_non_blocking.c: In function 'blink_plugin_handler':
+blink_non_blocking.c:67:53: error: 'data' undeclared (first use in this function)
+         papi_wait_handler_add_wait_for_timeout( wf, data.delay_ms );
+                                                     ^
+blink_non_blocking.c:67:53: note: each undeclared identifier is reported only once for each function it appears in
+Failed with code 1

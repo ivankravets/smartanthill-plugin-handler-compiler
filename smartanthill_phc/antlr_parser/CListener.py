@@ -562,12 +562,39 @@ class CListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CParser#iterationStatement.
-    def enterIterationStatement(self, ctx):
+    # Enter a parse tree produced by CParser#WhileStatement.
+    def enterWhileStatement(self, ctx):
         pass
 
-    # Exit a parse tree produced by CParser#iterationStatement.
-    def exitIterationStatement(self, ctx):
+    # Exit a parse tree produced by CParser#WhileStatement.
+    def exitWhileStatement(self, ctx):
+        pass
+
+
+    # Enter a parse tree produced by CParser#DoWhileStatement.
+    def enterDoWhileStatement(self, ctx):
+        pass
+
+    # Exit a parse tree produced by CParser#DoWhileStatement.
+    def exitDoWhileStatement(self, ctx):
+        pass
+
+
+    # Enter a parse tree produced by CParser#ForStatement.
+    def enterForStatement(self, ctx):
+        pass
+
+    # Exit a parse tree produced by CParser#ForStatement.
+    def exitForStatement(self, ctx):
+        pass
+
+
+    # Enter a parse tree produced by CParser#DeclForStatement.
+    def enterDeclForStatement(self, ctx):
+        pass
+
+    # Exit a parse tree produced by CParser#DeclForStatement.
+    def exitDeclForStatement(self, ctx):
         pass
 
 

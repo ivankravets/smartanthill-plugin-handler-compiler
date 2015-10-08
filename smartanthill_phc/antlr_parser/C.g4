@@ -229,7 +229,7 @@ declarator
 
 directDeclarator
     :   Identifier
-    |   '(' declarator ')'
+//    |   '(' declarator ')'
     |   directDeclarator '[' typeQualifier* assignmentExpression? ']'
     |   directDeclarator '[' 'static' typeQualifier* assignmentExpression ']'
     |   directDeclarator '[' typeQualifier+ 'static' assignmentExpression ']'
@@ -354,10 +354,10 @@ selectionStatement
     ;
 
 iterationStatement
-    :   'while' '(' expression ')' statement
-    |   'do' statement 'while' '(' expression ')' ';'
-    |   'for' '(' expression? ';' expression? ';' expression? ')' statement
-    |   'for' '(' declaration expression? ';' expression? ')' statement
+    :   'while' '(' expression ')' statement # WhileStatement
+    |   'do' statement 'while' '(' expression ')' ';' # DoWhileStatement
+    |   'for' '(' expression? ';' expression? ';' expression? ')' statement # ForStatement
+    |   'for' '(' declaration expression? ';' expression? ')' statement # DeclForStatement
     ;
 
 jumpStatement
@@ -731,6 +731,11 @@ PragmaDirective
 
 IncludeDirective
     :   '#' Whitespace? 'include' Whitespace ~[\r\n]*
+        -> channel(HIDDEN)
+    ;
+
+DefineDirective
+    :   '#' Whitespace? 'define' Whitespace ~[\r\n]*
         -> channel(HIDDEN)
     ;
 

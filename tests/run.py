@@ -26,13 +26,13 @@ and then run this script
 '''
 
 
-def make_non_blocking(prefix, split_all):
+def make_non_blocking(prefix, split_all, debug_dump):
 
     c_file = "%s.c" % prefix
     nb_file = "%s_non_blocking.c" % prefix
     h_file = "%s_state.h" % prefix
 
-    code, header = api.process_file(c_file, prefix, split_all, False)
+    code, header = api.process_file(c_file, prefix, split_all, debug_dump)
 
     f = open(nb_file, 'wb')
     f.write(code)
@@ -91,9 +91,9 @@ def _build_and_run(f, prefix, file_prefix):
     f.write('--- Build ---\n')
     cmd = "gcc -fno-exceptions -g -Os -Wall -ffunction-sections "\
         "-fdata-sections -I.. -DSA_PLUGIN_ID=%s "\
-        "-include %s.h -include %s_state.h "\
+        "-include %s.h "\
         "-o %s.exe ../runner.c %s.c" % (prefix, prefix,
-                                        prefix, file_prefix, file_prefix)
+                                        file_prefix, file_prefix)
     f.write("%s\n" % cmd)
     sp = subprocess.Popen(
         cmd,

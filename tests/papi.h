@@ -19,6 +19,7 @@
 
 //TODO add real types here
 typedef uint8_t parser_obj;
+typedef uint8_t ZEPTO_PARSER;
 typedef uint8_t REPLY_HANDLE;
 typedef uint8_t MEMORY_HANDLE;
 typedef uint8_t waiting_for;
