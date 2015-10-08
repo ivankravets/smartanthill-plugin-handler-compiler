@@ -21,6 +21,8 @@ Copyright (C) 2015 OLogN Technologies AG
 
 #include "papi.h"
 
+#include "sleep_state.h"
+
 //constant structure filled with a configuration for specific 'ant body part'
 typedef struct _sleep_plugin_config
 {

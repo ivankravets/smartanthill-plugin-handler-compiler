@@ -4,6 +4,8 @@
 #  Copyright (c) 2012 Sam Harwell
 #  All rights reserved.
 #
+# Copyright (C) 2015 OLogN Technologies AG
+#
 #  Redistribution and use in source and binary forms, with or without
 #  modification, are permitted provided that the following conditions
 #  are met:
@@ -115,27 +117,13 @@ class TokenStreamRewriter(object):
         '''
         Define the rewrite operation hierarchy
         '''
-
-        def __init__(self, index, text=None):
-            # What index into rewrites List are we?
-            self.instructionIndex = -1
-            # Token buffer index.
-            self.index = index
-            self.text = text
-
-        def execute(self, buf, tokens):
-            '''
-            Execute the rewrite operation by possibly adding to the buffer.
-            Return the index of the next token to operate on.
-            '''
-            # pylint: disable=unused-argument
-            return self.index
+        pass
 
     class InsertBeforeOp(RewriteOperation):
 
         def __init__(self, index, text):
-            super(TokenStreamRewriter.InsertBeforeOp,
-                  self).__init__(index, text)
+            self.index = index
+            self.text = text
 
         # Override
         def execute(self, buf, tokens):
@@ -157,7 +145,8 @@ class TokenStreamRewriter(object):
     class ReplaceOp(RewriteOperation):
 
         def __init__(self, _from, to, text):
-            super(TokenStreamRewriter.ReplaceOp, self).__init__(_from, text)
+            self.index = _from
+            self.text = text
             self.lastIndex = to
 
         # Override
@@ -172,35 +161,20 @@ class TokenStreamRewriter(object):
             '''
             String representation
             '''
-            if self.index == self.to:
+            if self.index == self.lastIndex:
                 return "R.%s.'%s'" % (self.index, self.text)
             else:
-                return "R.%s-%s.'%s'" % (self.index, self.to, self.text)
+                return "R.%s-%s.'%s'" % (self.index, self.lastIndex, self.text)
 
     def __init__(self, tokens):
         self.tokens = tokens
         self.rewrites = []
 
     def _add_op(self, op):
-        op.instructionIndex = len(self.rewrites)
         self.rewrites.append(op)
 
     def _get_token_size(self):
         return len(self.tokens.tokens)
-
-    def rollback(self, instructionIndex):
-        '''
-        Rollback the instruction stream for a program so that
-        the indicated instruction (via instructionIndex) is no
-        longer in the stream. UNTESTED!
-        '''
-        self.rewrites = self.rewrites[0:instructionIndex]
-
-    def deleteProgram(self):
-        '''
-        Reset the program so that no instructions exist
-        '''
-        self.rollback(0)
 
     def insertAfterToken(self, t, text):
         self.insertAfter(t.tokenIndex, text)
@@ -242,9 +216,15 @@ class TokenStreamRewriter(object):
         Return the text from the original tokens altered per the
         instructions given to this rewriter in programName.
         '''
-        return self.getIntervalText(0, self._get_token_size() - 1)
+        return self._getIntervalText(0, self._get_token_size() - 1)
 
     def getIntervalText(self, start, stop):
+        '''
+        Use tokens instead of plain indexes
+        '''
+        return self._getIntervalText(start.tokenIndex, stop.tokenIndex)
+
+    def _getIntervalText(self, start, stop):
         '''
         Return the text associated with the tokens in the interval from the
         original token stream but with the alterations given to this rewriter.
@@ -269,14 +249,14 @@ class TokenStreamRewriter(object):
         buf = StringIO()
 
         # First, optimize instruction stream
-        rewrites = _reduceToSingleOperationPerIndex(self.rewrites[:])  # clone
+        _reduceToSingleOperationPerIndex(self.rewrites)
 
         indexToOp = {}
-        for op in rewrites:
-            if op.index in indexToOp:
-                assert False  # should only be one op per index
-
-            indexToOp[op.index] = op
+        for op in self.rewrites:
+            if op is not None:
+                # should only be one op per index
+                assert op.index not in indexToOp
+                indexToOp[op.index] = op
 
         # Walk buffer, executing instructions and emitting tokens
         i = start
@@ -362,34 +342,30 @@ def _reduceToSingleOperationPerIndex(rewrites):
     # System.out.println("rewrites="+rewrites);
 
     # WALK REPLACES
-    for i in range(0, len(rewrites)):
-        op = rewrites[i]
-        if op is None:
-            continue
-        if not isinstance(op, TokenStreamRewriter.ReplaceOp):
-            continue
-        rop = op
+    for i in _getReplaceOps(rewrites, len(rewrites)):
+
+        rop = rewrites[i]
         # Wipe prior inserts within range
-        inserts = _getInsertBeforeOps(rewrites, i)
-        for iop in inserts:
+        for iopi in _getInsertBeforeOps(rewrites, i):
+            iop = rewrites[iopi]
             if iop.index == rop.index:
                 # E.g., insert before 2, delete 2..2; update replace
                 # text to include insert before, kill insert
-                rewrites[iop.instructionIndex] = None
                 rop.text = iop.text + \
                     (rop.text if rop.text is not None else "")
+                rewrites[iopi] = None
 
             elif iop.index > rop.index and iop.index <= rop.lastIndex:
                 # delete insert as it's a no-op.
-                rewrites[iop.instructionIndex] = None
+                rewrites[iopi] = None
 
         # Drop any prior replaces contained within
-        prevReplaces = _getReplaceOps(rewrites, i)
-        for prevRop in prevReplaces:
+        for prevRopi in _getReplaceOps(rewrites, i):
+            prevRop = rewrites[prevRopi]
             if (prevRop.index >= rop.index and
                     prevRop.lastIndex <= rop.lastIndex):
                 # delete replace as it's a no-op.
-                rewrites[prevRop.instructionIndex] = None
+                rewrites[prevRopi] = None
                 continue
 
             # throw exception unless disjoint or identical
@@ -407,10 +383,10 @@ def _reduceToSingleOperationPerIndex(rewrites):
             if prevRop.text is None and rop.text is None and not disjoint:
                 # System.out.println("overlapping deletes: "+prevRop+", "+rop);
                 # kill first delete
-                rewrites[prevRop.instructionIndex] = None
                 rop.index = min(prevRop.index, rop.index)
                 rop.lastIndex = max(prevRop.lastIndex, rop.lastIndex)
-                print "new rop " + rop
+                # print "new rop " + rop
+                rewrites[prevRopi] = None
 
             elif not disjoint and not same:
                 raise RuntimeError(
@@ -418,27 +394,22 @@ def _reduceToSingleOperationPerIndex(rewrites):
                         rop, prevRop))
 
     # WALK INSERTS
-    for i in range(0, len(rewrites)):
-        op = rewrites[i]
-        if op is None:
-            continue
-        if not isinstance(op, TokenStreamRewriter.InsertBeforeOp):
-            continue
-        iop = op
+    for i in _getInsertBeforeOps(rewrites, len(rewrites)):
+        iop = rewrites[i]
         # combine current insert with prior if any at same index
-        prevInserts = _getInsertBeforeOps(rewrites, i)
-        for prevIop in prevInserts:
+        for prevIopi in _getInsertBeforeOps(rewrites, i):
+            prevIop = rewrites[prevIopi]
             if prevIop.index == iop.index:  # combine objects
                 # convert to strings...we're in process of toString'ing
                 # whole token buffer so no lazy eval issue with any
                 # templates
                 iop.text = _catOpText(prevIop.text, iop.text)
                 # delete redundant prior insert
-                rewrites[prevIop.instructionIndex] = None
+                rewrites[prevIopi] = None
 
         # look for replaces where iop.index is in range; error
-        prevReplaces = _getReplaceOps(rewrites, i)
-        for rop in prevReplaces:
+        for ropi in _getReplaceOps(rewrites, i):
+            rop = rewrites[ropi]
             if iop.index == rop.index:
                 rop.text = _catOpText(iop.text, rop.text)
                 rewrites[i] = None  # delete current insert
@@ -482,6 +453,6 @@ def _getKindOfOps(rewrites, kind, before):
         op = rewrites[i]
         # pylint: disable=unidiomatic-typecheck
         if op is not None and type(op) == kind:  # ignore deleted
-            ops.append(op)
+            ops.append(i)
 
     return ops

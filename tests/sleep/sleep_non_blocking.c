@@ -45,7 +45,8 @@ default: sa_state->sa_next = 0; return -1; /* TBD */
 label_0:;
 //#line 35
 
-    papi_wait_handler_add_wait_for_timeout( wf, 10000 );
+    
+papi_wait_handler_add_wait_for_timeout( wf, 10000 );
 sa_state->sa_next = 1;
 return PLUGIN_WAITING;
 label_1: if(papi_wait_handler_is_waiting_for_timeout(0, wf)) return PLUGIN_WAITING;

@@ -21,6 +21,8 @@ Copyright (C) 2015 OLogN Technologies AG
 
 #include "papi.h"
 
+#include "spi_state.h"
+
 //constant structure filled with a configuration for specific 'ant body part'
 typedef struct _spi_plugin_config
 {

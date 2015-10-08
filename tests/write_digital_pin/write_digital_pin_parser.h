@@ -23,14 +23,14 @@
 #include "papi.h"
 
 
-inline
+static inline
 uint8_t write_digital_pin_plugin_parser_read(ZEPTO_PARSER* po)
 {
 return papi_parser_read_byte(po);
 }
 
 
-inline
+static inline
 void write_digital_pin_plugin_reply_write(REPLY_HANDLE mem_h, uint8_t result)
 {
 papi_reply_write_byte(mem_h, result);

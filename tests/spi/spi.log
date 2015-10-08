@@ -1,5 +1,5 @@
 --- Build ---
-gcc -fno-exceptions -g -Os -Wall -ffunction-sections -fdata-sections -DSA_PLUGIN_ID=spi -include spi.h -include spi_state.h -o spi.exe runner.c spi.c
+gcc -fno-exceptions -g -Os -Wall -ffunction-sections -fdata-sections -I.. -DSA_PLUGIN_ID=spi -include spi.h -o spi.exe ../runner.c spi.c
 Ok
 
 ---  Run  ---
@@ -8,7 +8,7 @@ Ok
 
 *** Non Blocking ***
 --- Build ---
-gcc -fno-exceptions -g -Os -Wall -ffunction-sections -fdata-sections -DSA_PLUGIN_ID=spi -include spi.h -include spi_state.h -o spi_non_blocking.exe runner.c spi_non_blocking.c
+gcc -fno-exceptions -g -Os -Wall -ffunction-sections -fdata-sections -I.. -DSA_PLUGIN_ID=spi -include spi.h -o spi_non_blocking.exe ../runner.c spi_non_blocking.c
 Ok
 
 ---  Run  ---

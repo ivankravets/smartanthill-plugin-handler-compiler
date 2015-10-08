@@ -60,6 +60,7 @@ label_1: /* nop */ ;
 //#line 39
 
     papi_start_sending_spi_command_16(pc->spi_id, 0x0003, 0x08, (sa_state->data), 0x02);
+papi_wait_handler_add_wait_for_spi_send( wf, pc->spi_id );
 sa_state->sa_next = 2;
 return PLUGIN_WAITING;
 label_2: if(papi_wait_handler_is_waiting_for_spi_send(wf, pc->spi_id)) return PLUGIN_WAITING;
@@ -67,7 +68,8 @@ label_2: if(papi_wait_handler_is_waiting_for_spi_send(wf, pc->spi_id)) return PL
 
 
     // give sensor some time to process
-    papi_wait_handler_add_wait_for_timeout( wf, 1000 );
+    
+papi_wait_handler_add_wait_for_timeout( wf, 1000 );
 sa_state->sa_next = 3;
 return PLUGIN_WAITING;
 label_3: if(papi_wait_handler_is_waiting_for_timeout(0, wf)) return PLUGIN_WAITING;
@@ -82,6 +84,7 @@ label_4: /* nop */ ;
 //#line 46
 
     papi_start_receiving_spi_data_16( pc->spi_id,  0x0000, 0x08, &(sa_state->response) );
+papi_wait_handler_add_wait_for_spi_receive( wf, pc->spi_id );
 sa_state->sa_next = 5;
 return PLUGIN_WAITING;
 label_5: if(papi_wait_handler_is_waiting_for_spi_receive(wf, pc->spi_id)) return PLUGIN_WAITING;

@@ -116,7 +116,7 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
         '''
         Visits and returns an statement list
         If child is a single statement without curly braces,
-        error is reported, 
+        error is reported
         '''
         stmt = self.visit(ctx)
 

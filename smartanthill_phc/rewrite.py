@@ -28,7 +28,7 @@ def rewrite_code(compiler, root, token_stream, struct_name):
     Rewrites code tree
     '''
     rewriter = TokenStreamRewriter(token_stream)
-    visitor = _RewriteVisitor(compiler, rewriter, token_stream, struct_name)
+    visitor = _RewriteVisitor(compiler, rewriter, struct_name)
     visit_node(visitor, root)
 
     text = rewriter.getText()
@@ -85,13 +85,12 @@ class _RewriteVisitor(NodeVisitor):
     Visitor class for plugin rewrite
     '''
 
-    def __init__(self, compiler, writer, token_stream, type_name):
+    def __init__(self, compiler, writer, type_name):
         '''
         Constructor
         '''
         self._c = compiler
         self._w = writer
-        self._tokens = token_stream
         self._tn = type_name
         self._nb = None
 
@@ -113,9 +112,9 @@ class _RewriteVisitor(NodeVisitor):
         Helper method to create an expression visitor an call it
         '''
         if isinstance(ctx, TerminalNodeImpl):
-            return self._tokens.getText((ctx.symbol, ctx.symbol))
+            return self._w.getIntervalText(ctx.symbol, ctx.symbol)
         elif isinstance(ctx, ParserRuleContext):
-            return self._tokens.getText((ctx.start, ctx.stop))
+            return self._w.getIntervalText(ctx.start, ctx.stop)
         else:
             assert False
 
@@ -174,9 +173,8 @@ class _RewriteVisitor(NodeVisitor):
         arg0 = self._get_text(args[0].ctx)
 
         if n == "papi_sleep":
-            txt = u"papi_wait_handler_add_wait_for_timeout( %s, %s );" % (
-                wf, arg0)
-            self._w.replaceTokens(node.ctx.start, node.ctx.stop, txt)
+            w = u"timeout"
+            self._w.deleteTokens(node.ctx.start, node.ctx.stop)
         else:
             if n == "papi_wait_for_spi_send":
                 f = u"papi_start_sending_spi_command_16"
@@ -196,8 +194,9 @@ class _RewriteVisitor(NodeVisitor):
             self._w.replaceToken(
                 node.child_expression.ctx.Identifier().symbol, f)
 
-            txt = u"papi_wait_handler_add_wait_for_%s( %s, %s );" % (
-                w, wf, arg0)
+        txt = u"\npapi_wait_handler_add_wait_for_%s( %s, %s );" % (
+            w, wf, arg0)
+        self._w.insertAfterToken(node.ctx.stop, txt)
 
     def visit_LoopStmtNode(self, node):
         self._visit_expression(node.child_expression)
@@ -255,7 +254,7 @@ class _RewriteVisitor(NodeVisitor):
 
             wf = node.ref_next_state.ref_waitingfor_arg.txt_name
             if n == "papi_sleep":
-                f = u"timeout(%s, %s)" % (0, wf)
+                f = u"timeout(0, %s)" % wf
             elif n == "papi_wait_for_spi_send":
                 f = u"spi_send(%s, %s)" % (wf, arg0)
             elif n == "papi_wait_for_i2c_send":

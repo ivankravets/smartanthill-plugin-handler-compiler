@@ -28,7 +28,7 @@ uint16_t delay_ms;
 uint8_t total_blinks;
 } blink_plugin_data;
 
-inline
+static inline
 blink_plugin_data blink_plugin_parser_read(ZEPTO_PARSER* po)
 {
 blink_plugin_data sa_res;

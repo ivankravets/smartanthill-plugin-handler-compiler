@@ -64,14 +64,16 @@ label_0:;
     for (i = 0; i < (sa_state->data).total_blinks; i++)
     {
         papi_write_digital_pin(pc->pin_led, HAPI_GPIO_VALUE_HIGH);
-        papi_wait_handler_add_wait_for_timeout( wf, data.delay_ms );
+        
+papi_wait_handler_add_wait_for_timeout( wf, (sa_state->data).delay_ms );
 sa_state->sa_next = 1;
 return PLUGIN_WAITING;
 label_1: if(papi_wait_handler_is_waiting_for_timeout(0, wf)) return PLUGIN_WAITING;
 //#line 54
 
         papi_write_digital_pin(pc->pin_led, HAPI_GPIO_VALUE_LOW);
-        papi_wait_handler_add_wait_for_timeout( wf, data.delay_ms );
+        
+papi_wait_handler_add_wait_for_timeout( wf, (sa_state->data).delay_ms );
 sa_state->sa_next = 2;
 return PLUGIN_WAITING;
 label_2: if(papi_wait_handler_is_waiting_for_timeout(0, wf)) return PLUGIN_WAITING;

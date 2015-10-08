@@ -43,6 +43,12 @@ def non_blocking_test(prefix, split_all):
     assert header == h.read()
 
 
+def test_blink():
+
+    composer_test('blink')
+    non_blocking_test('blink', False)
+
+
 def test_debug():
 
     non_blocking_test('debug', True)

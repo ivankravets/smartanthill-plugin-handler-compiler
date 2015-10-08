@@ -23,6 +23,8 @@
 
 #include "papi.h"
 
+#include "debug_state.h"
+
 //constant structure filled with a configuration for specific 'ant body part'
 typedef struct _debug_plugin_config
 {

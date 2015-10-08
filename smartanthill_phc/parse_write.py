@@ -94,7 +94,7 @@ def _write_parser_func(struct_name, func_name, elements):
         return "/* empty parser */\n\n"
     elif len(elements) == 1:
 
-        txt = "inline\n"
+        txt = "static inline\n"
         txt += "%s %s(ZEPTO_PARSER* po)\n" % (elements[0].c_type, func_name)
         txt += "{\n"
         pn = _get_parser_func_name(elements[0].c_type)
@@ -111,7 +111,7 @@ def _write_parser_func(struct_name, func_name, elements):
 
         txt += "} %s;\n\n" % struct_name
 
-        txt += "inline\n"
+        txt += "static inline\n"
         txt += "%s %s(ZEPTO_PARSER* po)\n" % (struct_name, func_name)
         txt += "{\n"
 
@@ -131,7 +131,7 @@ def _write_composer_func(func_name, elements):
     if len(elements) == 0:
         return "/* empty composer */\n\n"
     else:
-        txt = "inline\n"
+        txt = "static inline\n"
         txt += "void %s(REPLY_HANDLE mem_h" % func_name
 
         for each in elements:
