@@ -25,6 +25,7 @@
 typedef struct _blink_plugin_state {
 uint8_t sa_next;
 blink_plugin_data data;
+uint8_t i;
 } blink_plugin_state;
 
 #endif // __SA_BLINK_PLUGIN_STATE_H__

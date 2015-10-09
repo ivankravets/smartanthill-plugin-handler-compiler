@@ -14,9 +14,8 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 from smartanthill_phc.c_node import TypeCastExprNode
-from smartanthill_phc.common.compiler import Ctx
 from smartanthill_phc.common.expression import VariableExprNode
-from smartanthill_phc.common.node import Node, StmtListNode, StatementNode
+from smartanthill_phc.common.node import StmtListNode, StatementNode
 from smartanthill_phc.common.statement import VariableDeclarationStmtNode
 from smartanthill_phc.common.visitor import NodeVisitor, visit_node
 from smartanthill_phc.root import NonBlockingData
@@ -45,72 +44,21 @@ class StateMachineStmtNode(StatementNode):
         Constructor
         '''
         super(StateMachineStmtNode, self).__init__()
-        self.childs_states = []
-        self.refs_moved_var_decls = []
-        self._decls = {}
+        self.int_last_state = 0
 
-    def add_state(self, child):
+    def increment_state(self):
         '''
-        statement list setter
+        Increments the state counter
         '''
-        assert isinstance(child, StateNode)
-        assert child is not None
-        child.set_parent(self)
-        self.childs_states.append(child)
+        self.int_last_state += 1
 
-    def add_var_decl(self, decl):
+        return self.get_last_state()
+
+    def get_last_state(self):
         '''
-        Adds a variable declaration
+        Returns the last added state
         '''
-        assert decl not in self._decls
-        assert len(self.childs_states) != 0
-        st = self.childs_states[-1]
-        self._decls[decl] = (st, [])
-
-    def add_var_expr(self, expr):
-        '''
-        Adds a reference (access) to a variable in certain state
-        '''
-        if expr.ref_decl is not None:
-            assert expr.ref_decl in self._decls
-            assert len(self.childs_states) != 0
-
-            st = self.childs_states[-1]
-            if st == self._decls[expr.ref_decl][0]:
-                return
-            elif st in self._decls[expr.ref_decl][1]:
-                return
-            else:
-                self._decls[expr.ref_decl][1].append(st)
-
-    def analyze_vars(self):
-
-        for (key, value) in self._decls.iteritems():
-            if len(value[1]) != 0:
-                self.refs_moved_var_decls.append(key)
-
-    def resolve(self, compiler):
-        # pylint: disable=no-self-use
-        # pylint: disable=unused-argument
-        assert False
-
-
-class StateNode(Node):
-
-    '''
-    Node class representing an state
-    '''
-
-    def __init__(self):
-        '''
-        Constructor
-        '''
-        super(StateNode, self).__init__()
-        self.txt_id = None
-        self.wait_condition = None
-
-#     def resolve(self, compiler):
-#         compiler.resolve_node(self.child_statement_list)
+        return self.int_last_state
 
 
 class StateDataCastStmtNode(StatementNode):
@@ -124,7 +72,8 @@ class StateDataCastStmtNode(StatementNode):
         Constructor
         '''
         super(StateDataCastStmtNode, self).__init__()
-        self.txt_arg = None
+        self.txt_arg2 = None
+        self.txt_arg5 = None
 
 
 class NextStateStmtNode(StatementNode):
@@ -139,7 +88,8 @@ class NextStateStmtNode(StatementNode):
         Constructor
         '''
         super(NextStateStmtNode, self).__init__()
-        self.ref_next_state = None
+        self.int_next_state = None
+        self.ref_waiting_for = None
 
 
 class InitStateStmtNode(StatementNode):
@@ -181,36 +131,51 @@ class DeclsHelper(object):
         Constructor
         '''
         self._decls = {}
+        self._decls2 = []
+        self._loop_stack = []
+        self._used_inside_loop = []
 
     def add_var_decl(self, decl, st):
         '''
         Adds a variable declaration
         '''
         assert decl not in self._decls
-        self._decls[decl] = (st, [])
+        self._decls[decl] = st
 
     def add_var_expr(self, expr, st):
         '''
         Adds a reference (access) to a variable in certain state
         '''
-        if expr.ref_decl is not None:
-            if expr.ref_decl in self._decls:
+        if expr.ref_decl is None:
+            return
 
-                if st == self._decls[expr.ref_decl][0]:
-                    return
-                elif st in self._decls[expr.ref_decl][1]:
-                    return
-                else:
-                    self._decls[expr.ref_decl][1].append(st)
+        if expr.ref_decl not in self._decls:
+            return
 
-    def analyze_vars(self):
+        if expr.ref_decl in self._decls2:
+            return
 
-        result = []
-        for (key, value) in self._decls.iteritems():
-            if len(value[1]) != 0:
-                result.append(key)
+        if self._decls[expr.ref_decl] != st:
+            self._decls2.append(expr.ref_decl)
+            return
 
-        return result
+        if len(self._loop_stack) != 0:
+            self._used_inside_loop.append(expr.ref_decl)
+
+    def begin_loop(self, st):
+        self._loop_stack.append(st)
+
+    def end_loop(self, st):
+        if self._loop_stack.pop() != st:
+            for each in self._used_inside_loop:
+                if each not in self._decls2:
+                    self._decls2.append(each)
+
+            self._used_inside_loop = []
+
+    def get_decls_to_be_moved(self):
+
+        return self._decls2
 
 
 class StateMachineVisitor(NodeVisitor):
@@ -228,7 +193,7 @@ class StateMachineVisitor(NodeVisitor):
         self._split_all = split_all
 
     def finish(self):
-        return self._h.analyze_vars()
+        return self._h.get_decls_to_be_moved()
 
     def visit_RootNode(self, node):
         visit_node(self, node.child_source)
@@ -259,16 +224,15 @@ class StateMachineVisitor(NodeVisitor):
 
             args = node.child_argument_list.childs_declarations
             if len(args) >= 6:
-                stmt.txt_arg = args[2].txt_name
-                ref_wf_arg = args[5]
+                stmt.txt_arg2 = args[2].txt_name
+                stmt.txt_arg5 = args[5].txt_name
             else:
                 self._c.report_error(node.ctx, "Too few arguments")
 
             node.child_statement_list.insert_statement_at(0, stmt)
 
             _create_state_machine(
-                self._c, node.child_statement_list, self._h, ref_wf_arg,
-                self._split_all)
+                self._c, node.child_statement_list, self._h, self._split_all)
         elif node.txt_name == self._exec_init:
             if self._exec_init_found:
                 self._c.report_error(node.ctx, "Function redefinition")
@@ -287,7 +251,7 @@ class StateMachineVisitor(NodeVisitor):
             node.child_statement_list.insert_statement_at(0, stmt)
 
 
-def _create_state_machine(compiler, stmt_list, helper, ref_wf_arg, split_all):
+def _create_state_machine(compiler, stmt_list, helper, split_all):
     '''
     Creates an state machine
     '''
@@ -310,10 +274,8 @@ def _create_state_machine(compiler, stmt_list, helper, ref_wf_arg, split_all):
 
     stmt_list.insert_statement_at(i, sm)
 
-    v = _StatementsVisitor(
-        stmt_list, i + 1, compiler, sm, helper, None, ref_wf_arg, split_all)
-    v.create_state(None)
-    v.visit_each_stmt()
+    v = _StatementsVisitor(compiler, sm, helper, split_all)
+    v.visit_stmt_list(stmt_list, i + 1)
 
 
 def _skip_statements(stmt_list):
@@ -336,25 +298,27 @@ def _skip_statements(stmt_list):
 
 class _StatementsVisitor(NodeVisitor):
     '''
-    Here we insert goto's labels into the code
-    '''
-    # pylint: disable=too-many-instance-attributes
+    Here we insert cut point into the code, to mark where each state ends
+    and the next one begins.
 
-    def __init__(self, stmt_list, index, compiler, state_machine, helper,
-                 current_state, ref_wf_arg, split_all):
+    Since we use goto to jump to the appropriate place into the source code,
+    the logic is very simple, just insert a cut point into the source code,
+    and give it an index to identify it
+    Once we finish we will have the same source code, but cut into logic
+    segments
+    '''
+
+    def __init__(self, compiler, state_machine, helper, split_all):
         '''
         Constructor
         '''
         self._c = compiler
         self._sm = state_machine
         self._h = helper
-
-        self._stmt_list = stmt_list
-        self._index = index
-
-        self._current_st = current_state
-        self._ref_wf_arg = ref_wf_arg
         self._split_all = split_all
+
+        self._stmt_list = []
+        self._index = []
 
     def default_visit(self, node):
         '''
@@ -363,19 +327,6 @@ class _StatementsVisitor(NodeVisitor):
         self._c.report_error(
             node.ctx, "Statement not supported")
 
-    def create_state(self, wait_condition):
-        st = self._c.init_node(StateNode(), Ctx.NONE)
-
-        # begin from 0
-        st.txt_id = str(len(self._sm.childs_states))
-        st.wait_condition = wait_condition
-        st.ref_waitingfor_arg = self._ref_wf_arg
-        self._sm.add_state(st)
-
-        self._current_st = st
-
-        return st
-
     def insert_before_current(self, stmt):
         '''
         Insert statement before current one
@@ -383,9 +334,9 @@ class _StatementsVisitor(NodeVisitor):
         Inserted statement will never be visited, because it will be inserted
         at a place visitor already did
         '''
-        self._stmt_list.insert_statement_at(self._index, stmt)
+        self._stmt_list[-1].insert_statement_at(self._index[-1], stmt)
 
-        self._index += 1
+        self._index[-1] += 1
 
     def insert_after_current(self, stmt):
         '''
@@ -393,9 +344,9 @@ class _StatementsVisitor(NodeVisitor):
         Index will be incremented to account for the extra statement
         and to avoid visitation of inserted statement
         '''
-        self._stmt_list.insert_statement_at(self._index + 1, stmt)
+        self._stmt_list[-1].insert_statement_at(self._index[-1] + 1, stmt)
 
-        self._index += 1
+        self._index[-1] += 1
 
     def _split_after_current(self, wait_condition, ctx):
         '''
@@ -403,25 +354,32 @@ class _StatementsVisitor(NodeVisitor):
         '''
 
         nxt = self._c.init_node(NextStateStmtNode(), ctx)
-        nxt.ref_next_state = self.create_state(wait_condition)
+        nxt.ref_waiting_for = wait_condition
+        nxt.int_next_state = self._sm.increment_state()
         self.insert_after_current(nxt)
 
-    def visit_stmt_list(self, stmt_list):
+    def visit_stmt_list(self, stmt_list, begin=0):
+        '''
+        Visit each statement in stmt_list starting from begin
+        Visiting an StmtListNode will call this method, so it is reentrant
+        And we also need access to current StmtListNode and index for statement
+        insertion, so we keep an stack of StmtListNode and the index on each
+        list we currently are
+        '''
 
         assert isinstance(stmt_list, StmtListNode)
 
-        v = _StatementsVisitor(
-            stmt_list, 0, self._c, self._sm, self._h, self._current_st,
-            self._ref_wf_arg, self._split_all)
-        v.visit_each_stmt()
+        self._stmt_list.append(stmt_list)
+        self._index.append(begin)
 
-    def visit_each_stmt(self):
-
-        while self._index < len(self._stmt_list.childs_statements):
-            stmt = self._stmt_list.childs_statements[self._index]
+        while self._index[-1] < len(self._stmt_list[-1].childs_statements):
+            stmt = self._stmt_list[-1].childs_statements[self._index[-1]]
             visit_node(self, stmt)
 
-            self._index += 1
+            self._index[-1] += 1
+
+        self._stmt_list.pop()
+        self._index.pop()
 
     def visit_StmtListNode(self, node):
         self.visit_stmt_list(node)
@@ -432,7 +390,7 @@ class _StatementsVisitor(NodeVisitor):
 
     def visit_VariableDeclarationStmtNode(self, node):
 
-        self._h.add_var_decl(node, self._current_st)
+        self._h.add_var_decl(node, self._sm.get_last_state())
         visit_node(self, node.child_initializer)
 
         if self._split_all:
@@ -448,14 +406,15 @@ class _StatementsVisitor(NodeVisitor):
 
         visit_node(self, node.child_expression)
 
-        node.ref_waitingfor_arg = self._ref_wf_arg
         self._split_after_current(node.child_expression, node.ctx)
 
     def visit_LoopStmtNode(self, node):
 
+        self._h.begin_loop(self._sm.get_last_state())
         visit_node(self, node.child_expression)
 
         self.visit_stmt_list(node.child_statement_list)
+        self._h.end_loop(self._sm.get_last_state())
 
     def visit_ReturnStmtNode(self, node):
 
@@ -490,7 +449,7 @@ class _StatementsVisitor(NodeVisitor):
         visit_node(self, node.child_expression)
 
     def visit_VariableExprNode(self, node):
-        self._h.add_var_expr(node, self._current_st)
+        self._h.add_var_expr(node, self._sm.get_last_state())
 
     def visit_FunctionCallExprNode(self, node):
         visit_node(self, node.child_argument_list)

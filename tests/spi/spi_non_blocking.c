@@ -36,45 +36,53 @@ uint8_t spi_plugin_handler(const void* plugin_config,
     MEMORY_HANDLE reply, waiting_for* wf, uint8_t first_byte)
 {
 spi_plugin_state* sa_state = (spi_plugin_state*)plugin_state;
+waiting_for* sa_wf = wf;
     const spi_plugin_config* pc = (const spi_plugin_config*) plugin_config;
 
 switch(sa_state->sa_next) {
-case 0: goto label_0;
+case 0: break;
 case 1: goto label_1;
 case 2: goto label_2;
 case 3: goto label_3;
-default: sa_state->sa_next = 0; return -1; /* TBD */
+default: sa_state->sa_next = 0; return -1; /* TBD, ZEPTO_ASSERT? */
 }
-label_0:;
+
+
 //#line 36
 
     
     //send sensor message
     uint16_t data = papi_parser_read_encoded_uint16( command );
     papi_start_sending_spi_command_16(pc->spi_id, 0x0003, 0x08, data, 0x02);
-papi_wait_handler_add_wait_for_spi_send( wf, pc->spi_id );
+papi_wait_handler_add_wait_for_spi_send(sa_wf, pc->spi_id);
 sa_state->sa_next = 1;
 return PLUGIN_WAITING;
-label_1: if(papi_wait_handler_is_waiting_for_spi_send(wf, pc->spi_id)) return PLUGIN_WAITING;
+
+label_1:
+if(papi_wait_handler_is_waiting_for_spi_send(sa_wf, pc->spi_id)) return PLUGIN_WAITING;
 //#line 40
 
 
     // give sensor some time to process
     
-papi_wait_handler_add_wait_for_timeout( wf, 1000 );
+papi_wait_handler_add_wait_for_timeout(sa_wf, 1000);
 sa_state->sa_next = 2;
 return PLUGIN_WAITING;
-label_2: if(papi_wait_handler_is_waiting_for_timeout(0, wf)) return PLUGIN_WAITING;
+
+label_2:
+if(papi_wait_handler_is_waiting_for_timeout(0, sa_wf)) return PLUGIN_WAITING;
 //#line 43
    
 
     //waiting for sensor response
     sa_state->response = 0;
     papi_start_receiving_spi_data_16( pc->spi_id,  0x0000, 0x08, &(sa_state->response) );
-papi_wait_handler_add_wait_for_spi_receive( wf, pc->spi_id );
+papi_wait_handler_add_wait_for_spi_receive(sa_wf, pc->spi_id);
 sa_state->sa_next = 3;
 return PLUGIN_WAITING;
-label_3: if(papi_wait_handler_is_waiting_for_spi_receive(wf, pc->spi_id)) return PLUGIN_WAITING;
+
+label_3:
+if(papi_wait_handler_is_waiting_for_spi_receive(sa_wf, pc->spi_id)) return PLUGIN_WAITING;
 //#line 47
 
     

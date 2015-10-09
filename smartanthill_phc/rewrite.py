@@ -167,7 +167,6 @@ class _RewriteVisitor(NodeVisitor):
         self._visit_expression(node.child_expression)
 
         n = node.child_expression.txt_name
-        wf = node.ref_waitingfor_arg.txt_name
         args = node.child_expression.child_argument_list.childs_arguments
         assert len(args) >= 1
         arg0 = self._get_text(args[0].ctx)
@@ -194,8 +193,7 @@ class _RewriteVisitor(NodeVisitor):
             self._w.replaceToken(
                 node.child_expression.ctx.Identifier().symbol, f)
 
-        txt = u"\npapi_wait_handler_add_wait_for_%s( %s, %s );" % (
-            w, wf, arg0)
+        txt = u"\npapi_wait_handler_add_wait_for_%s(sa_wf, %s);" % (w, arg0)
         self._w.insertAfterToken(node.ctx.stop, txt)
 
     def visit_LoopStmtNode(self, node):
@@ -214,17 +212,18 @@ class _RewriteVisitor(NodeVisitor):
 
     def visit_StateMachineStmtNode(self, node):
 
-        assert len(node.childs_states) != 0
-
         txt = u"\n\nswitch(sa_state->sa_next) {"
-        for each in node.childs_states:
 
-            txt += u"\ncase %s: goto label_%s;" % (each.txt_id, each.txt_id)
+        txt += u"\ncase 0: break;"
+        for i in range(1, node.get_last_state() + 1):
+
+            txt += u"\ncase %s: goto label_%s;" % (str(i), str(i))
 #            visit_node(self, each.child_statement_list)
 
-        txt += u"\ndefault: sa_state->sa_next = 0; return -1; /* TBD */"
-        txt += u"\n}"
-        txt += u"\nlabel_0:;"  # mb: add semicolon after label
+        txt += u"\ndefault: sa_state->sa_next = 0; return -1;"
+        txt += u" /* TBD, ZEPTO_ASSERT? */"
+        txt += u"\n}\n\n"
+
         if node.ctx.line is not None:
             txt += u"\n//#line %s\n" % node.ctx.line
 
@@ -232,10 +231,10 @@ class _RewriteVisitor(NodeVisitor):
 
     def visit_NextStateStmtNode(self, node):
 
-        nxt = node.ref_next_state.txt_id
+        nxt = str(node.int_next_state)
         txt = u"\nsa_state->sa_next = %s;" % nxt
 
-        if node.ref_next_state.wait_condition is None:
+        if node.ref_waiting_for is None:
             txt += u"\nreturn PLUGIN_DEBUG;"
             # we add a nop here, because C compiler will complain if next
             # statement is a declaration.
@@ -244,29 +243,27 @@ class _RewriteVisitor(NodeVisitor):
             txt += u"\nlabel_%s: /* nop */ ;" % nxt
         else:
             txt += u"\nreturn PLUGIN_WAITING;"
-            txt += u"\nlabel_%s:" % nxt
+            txt += u"\n\nlabel_%s:" % nxt
 
-            n = node.ref_next_state.wait_condition.txt_name
-            args = node.ref_next_state.wait_condition.\
-                child_argument_list.childs_arguments
+            n = node.ref_waiting_for.txt_name
+            args = node.ref_waiting_for.child_argument_list.childs_arguments
             assert len(args) >= 1
             arg0 = self._get_text(args[0].ctx)
 
-            wf = node.ref_next_state.ref_waitingfor_arg.txt_name
             if n == "papi_sleep":
-                f = u"timeout(0, %s)" % wf
+                f = u"timeout(0, sa_wf)"
             elif n == "papi_wait_for_spi_send":
-                f = u"spi_send(%s, %s)" % (wf, arg0)
+                f = u"spi_send(sa_wf, %s)" % arg0
             elif n == "papi_wait_for_i2c_send":
-                f = u"i2c_send(%s, %s)" % (wf, arg0)
+                f = u"i2c_send(sa_wf, %s)" % arg0
             elif n == "papi_wait_for_spi_receive":
-                f = u"spi_receive(%s, %s)" % (wf, arg0)
+                f = u"spi_receive(sa_wf, %s)" % arg0
             elif n == "papi_wait_for_i2c_receive":
-                f = u"i2c_receive(%s, %s)" % (wf, arg0)
+                f = u"i2c_receive(sa_wf, %s)" % arg0
             else:
                 assert False
 
-            txt += u" if(papi_wait_handler_is_waiting_for_%s)" % f
+            txt += u"\nif(papi_wait_handler_is_waiting_for_%s)" % f
             txt += u" return PLUGIN_WAITING;"
 
         if node.ctx.stop.line is not None:
@@ -286,9 +283,11 @@ class _RewriteVisitor(NodeVisitor):
         self._w.insertBeforeToken(node.ctx.start, txt)
 
     def visit_StateDataCastStmtNode(self, node):
-        self._w.insertAfterToken(
-            node.ctx,
-            u"\n%s* sa_state = (%s*)%s;" % (self._tn, self._tn, node.txt_arg))
+
+        txt = u"\n%s* sa_state = (%s*)%s;" % (self._tn,
+                                              self._tn, node.txt_arg2)
+        txt += u"\nwaiting_for* sa_wf = %s;" % node.txt_arg5
+        self._w.insertAfterToken(node.ctx, txt)
 
     def visit_DontCareExprNode(self, node):
         for each in node.childs_expressions:

@@ -36,20 +36,24 @@ uint8_t sleep_plugin_handler(const void* plugin_config,
     MEMORY_HANDLE reply, waiting_for* wf, uint8_t first_byte)
 {
 sleep_plugin_state* sa_state = (sleep_plugin_state*)plugin_state;
+waiting_for* sa_wf = wf;
 
 switch(sa_state->sa_next) {
-case 0: goto label_0;
+case 0: break;
 case 1: goto label_1;
-default: sa_state->sa_next = 0; return -1; /* TBD */
+default: sa_state->sa_next = 0; return -1; /* TBD, ZEPTO_ASSERT? */
 }
-label_0:;
+
+
 //#line 35
 
     
-papi_wait_handler_add_wait_for_timeout( wf, 10000 );
+papi_wait_handler_add_wait_for_timeout(sa_wf, 10000);
 sa_state->sa_next = 1;
 return PLUGIN_WAITING;
-label_1: if(papi_wait_handler_is_waiting_for_timeout(0, wf)) return PLUGIN_WAITING;
+
+label_1:
+if(papi_wait_handler_is_waiting_for_timeout(0, sa_wf)) return PLUGIN_WAITING;
 //#line 36
    
 
