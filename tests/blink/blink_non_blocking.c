@@ -63,7 +63,7 @@ default: sa_state->sa_next = 0; return -1; /* TBD, ZEPTO_ASSERT? */
     
     sa_state->data = blink_plugin_parser_read(command);
     sa_state->i = 0;
-    for ((sa_state->i) = 0; (sa_state->i) < (sa_state->data).total_blinks; (sa_state->i)++)
+    for (; (sa_state->i) < (sa_state->data).total_blinks; (sa_state->i)++)
     {
         papi_write_digital_pin(pc->pin_led, HAPI_GPIO_VALUE_HIGH);
         

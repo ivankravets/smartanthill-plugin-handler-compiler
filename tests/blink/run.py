@@ -13,6 +13,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+import cProfile
 import sys
 
 from tests import run
@@ -27,5 +28,5 @@ def main():
 
 # temporary entrance
 if __name__ == "__main__":
-    main()
+    cProfile.run("main()", sort="cumulative")
     sys.exit()

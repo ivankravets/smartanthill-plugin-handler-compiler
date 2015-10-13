@@ -163,6 +163,9 @@ class LoopStmtNode(StatementNode):
     a 'for' with expression and not declaration.
     So far we don't care too much about the specific type of loop,
     we only need a basic understanding of the code structure
+        for (i = 0;...) {...}
+        while(...) {...}
+        do {...} while(...);
     '''
 
     def __init__(self):

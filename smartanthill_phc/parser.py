@@ -14,19 +14,10 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-from smartanthill_phc import c_node
+from smartanthill_phc import c_node, root
 from smartanthill_phc.antlr_parser import CVisitor, CParser
-from smartanthill_phc.c_node import DontCareExprNode, FunctionDeclNode,\
-    TypeCastExprNode, ArgumentDeclNode
-from smartanthill_phc.common import expression
-from smartanthill_phc.common import node
-from smartanthill_phc.common import statement
+from smartanthill_phc.common import expression, statement, node
 from smartanthill_phc.common.antlr_helper import get_token_text
-from smartanthill_phc.common.expression import LiteralExprNode,\
-    FunctionCallExprNode
-from smartanthill_phc.common.node import DeclarationListNode, StmtListNode
-from smartanthill_phc.common.statement import ErrorStmtNode
-from smartanthill_phc.root import PluginSourceNode
 
 
 _prefix = 'sa_'
@@ -46,7 +37,7 @@ def c_parse_tree_to_syntax_tree(compiler, tree, non_blocking_data):
     assert isinstance(tree, CParser.CParser.CompilationUnitContext)
     assert non_blocking_data is not None
 
-    source = compiler.init_node(PluginSourceNode(), tree)
+    source = compiler.init_node(root.PluginSourceNode(), tree)
     ls = compiler.init_node(node.DeclarationListNode(), tree)
     source.set_declaration_list(ls)
     v = _CParseTreeVisitor(compiler, source)
@@ -120,7 +111,7 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
         '''
         stmt = self.visit(ctx)
 
-        if not isinstance(stmt, StmtListNode):
+        if not isinstance(stmt, node.StmtListNode):
             self._c.report_error(
                 ctx, "Single statement without curly braces {} not allowed")
 
@@ -155,7 +146,7 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
     # Visit a parse tree produced by CParser#DotExpression.
     def visitDotExpression(self, ctx):
 
-        expr = self._c.init_node(DontCareExprNode(), ctx)
+        expr = self._c.init_node(c_node.DontCareExprNode(), ctx)
         expr.add_expression(self.visit(ctx.unaryExpression()))
 
         tk = ctx.Identifier()
@@ -177,21 +168,21 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
     # Visit a parse tree produced by CParser#LiteralExpression.
     def visitLiteralExpression(self, ctx):
 
-        expr = self._c.init_node(LiteralExprNode(), ctx)
+        expr = self._c.init_node(expression.LiteralExprNode(), ctx)
         expr.txt_literal = str(ctx.Constant().getText())
 
         return expr
 
     # Visit a parse tree produced by CParser#PostIncrementExpression.
     def visitPostIncrementExpression(self, ctx):
-        expr = self._c.init_node(DontCareExprNode(), ctx)
+        expr = self._c.init_node(c_node.DontCareExprNode(), ctx)
         expr.add_expression(self.visit(ctx.unaryExpression()))
 
         return expr
 
     # Visit a parse tree produced by CParser#ArrowExpression.
     def visitArrowExpression(self, ctx):
-        expr = self._c.init_node(DontCareExprNode(), ctx)
+        expr = self._c.init_node(c_node.DontCareExprNode(), ctx)
         expr.add_expression(self.visit(ctx.unaryExpression()))
 
         tk = ctx.Identifier()
@@ -204,7 +195,7 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
     # Visit a parse tree produced by CParser#IndexExpression.
     def visitIndexExpression(self, ctx):
-        expr = self._c.init_node(DontCareExprNode(), ctx)
+        expr = self._c.init_node(c_node.DontCareExprNode(), ctx)
         expr.add_expression(self.visit(ctx.unaryExpression()))
         expr.add_expression(self.visit(ctx.expression()))
 
@@ -212,7 +203,7 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
     # Visit a parse tree produced by CParser#SizeOfTypeExpression.
     def visitSizeOfTypeExpression(self, ctx):
-        return self._c.init_node(DontCareExprNode(), ctx)
+        return self._c.init_node(c_node.DontCareExprNode(), ctx)
 
     # Visit a parse tree produced by CParser#IdentifierExpression.
     def visitIdentifierExpression(self, ctx):
@@ -225,29 +216,29 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
     # Visit a parse tree produced by CParser#UnaryOperatorExpression.
     def visitUnaryOperatorExpression(self, ctx):
-        expr = self._c.init_node(DontCareExprNode(), ctx)
+        expr = self._c.init_node(c_node.DontCareExprNode(), ctx)
         expr.add_expression(self.visit(ctx.castExpression()))
 
         return expr
 
     # Visit a parse tree produced by CParser#AlignOfTypeExpression.
     def visitAlignOfTypeExpression(self, ctx):
-        return self._c.init_node(DontCareExprNode(), ctx)
+        return self._c.init_node(c_node.DontCareExprNode(), ctx)
 
     # Visit a parse tree produced by CParser#SizeOfExpression.
     def visitSizeOfExpression(self, ctx):
-        expr = self._c.init_node(DontCareExprNode(), ctx)
+        expr = self._c.init_node(c_node.DontCareExprNode(), ctx)
         expr.add_expression(self.visit(ctx.unaryExpression()))
 
         return expr
 
     # Visit a parse tree produced by CParser#StringLiteralExpression.
     def visitStringLiteralExpression(self, ctx):
-        return self._c.init_node(DontCareExprNode(), ctx)
+        return self._c.init_node(c_node.DontCareExprNode(), ctx)
 
     # Visit a parse tree produced by CParser#PreIncrementExpression.
     def visitPreIncrementExpression(self, ctx):
-        expr = self._c.init_node(DontCareExprNode(), ctx)
+        expr = self._c.init_node(c_node.DontCareExprNode(), ctx)
         expr.add_expression(self.visit(ctx.unaryExpression()))
 
         return expr
@@ -269,7 +260,7 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
         if ctx.unaryExpression() is not None:
             return self.visit(ctx.unaryExpression())
         else:
-            expr = self._c.init_node(TypeCastExprNode(), ctx)
+            expr = self._c.init_node(c_node.TypeCastExprNode(), ctx)
             expr.set_expression(self.visit(ctx.castExpression()))
 
             return expr
@@ -280,7 +271,7 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
         if ctx.castExpression() is not None:
             return self.visit(ctx.castExpression())
         else:
-            expr = self._c.init_node(DontCareExprNode(), ctx)
+            expr = self._c.init_node(c_node.DontCareExprNode(), ctx)
             expr.add_expression(self.visit(ctx.logicalOrExpression(0)))
             expr.add_expression(self.visit(ctx.logicalOrExpression(1)))
 
@@ -293,7 +284,7 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
             return self.visit(ctx.logicalOrExpression())
         else:
-            expr = self._c.init_node(DontCareExprNode(), ctx)
+            expr = self._c.init_node(c_node.DontCareExprNode(), ctx)
             expr.add_expression(self.visit(ctx.logicalOrExpression()))
             expr.add_expression(self.visit(ctx.expression()))
             expr.add_expression(self.visit(ctx.conditionalExpression()))
@@ -305,7 +296,7 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
         if ctx.conditionalExpression() is not None:
             return self.visit(ctx.conditionalExpression())
         else:
-            expr = self._c.init_node(DontCareExprNode(), ctx)
+            expr = self._c.init_node(c_node.DontCareExprNode(), ctx)
             expr.add_expression(self.visit(ctx.unaryExpression()))
             expr.add_expression(self.visit(ctx.assignmentExpression()))
 
@@ -316,7 +307,7 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
         if len(ctx.assignmentExpression()) == 1:
             return self.visit(ctx.assignmentExpression(0))
         else:
-            expr = self._c.init_node(DontCareExprNode(), ctx)
+            expr = self._c.init_node(c_node.DontCareExprNode(), ctx)
             for each in ctx.assignmentExpression():
                 expr.add_expression(self.visit(each))
 
@@ -541,7 +532,7 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
         if ctx.expression():
             expr = self.visit(ctx.expression())
-            if isinstance(expr, FunctionCallExprNode) and\
+            if isinstance(expr, expression.FunctionCallExprNode) and\
                     _is_blocking_api_function(expr.txt_name):
                 stmt = self._c.init_node(c_node.BlockingCallStmtNode(), ctx)
                 stmt.set_expression(expr)
@@ -562,7 +553,7 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
         assert len(ctx.statement()) >= 1
         if_stmt = self.visit(ctx.statement()[0])
 
-        if not isinstance(if_stmt, StmtListNode):
+        if not isinstance(if_stmt, node.StmtListNode):
             self._c.report_error(
                 ctx.statement()[0],
                 "Single statement without curly braces {} not allowed")
@@ -572,7 +563,7 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
         if len(ctx.statement()) >= 2:
             else_stmt = self.visit(ctx.statement()[1])
-            if not isinstance(else_stmt, StmtListNode):
+            if not isinstance(else_stmt, node.StmtListNode):
                 self._c.report_error(
                     ctx.statement()[1],
                     "Single statement without curly braces {} not allowed")
@@ -632,10 +623,27 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
     # Visit a parse tree produced by CParser#DeclForStatement.
     def visitDeclForStatement(self, ctx):
 
-        self._c.report_error(
-            ctx, "Loop 'for' with declaration not allowed.")
+        stmt_list = self._c.init_node(node.StmtListNode(), ctx)
+        for each in self.visit(ctx.declaration()):
+            stmt_list.add_statement(each)
 
-        return self._c.init_node(ErrorStmtNode(), ctx)
+        loop = self._c.init_node(c_node.LoopStmtNode(), ctx)
+
+        expr = self._c.init_node(c_node.DontCareExprNode(), ctx)
+
+        # here we don't care too much about each expression
+        for each in ctx.expression():
+            e = self.visit(each)
+            expr.add_expression(e)
+
+        loop.set_expression(expr)
+
+        child_stmt_list = self._get_stmt_list(ctx.statement())
+        loop.set_statement_list(child_stmt_list)
+
+        stmt_list.add_statement(loop)
+
+        return stmt_list
 
     # Visit a parse tree produced by CParser#ReturnStatement.
     def visitReturnStatement(self, ctx):
@@ -670,9 +678,9 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
     # Visit a parse tree produced by CParser#functionDefinition.
     def visitFunctionDefinition(self, ctx):
 
-        decl = self._c.init_node(FunctionDeclNode(), ctx)
+        decl = self._c.init_node(c_node.FunctionDeclNode(), ctx)
 
-        al = self._c.init_node(DeclarationListNode(), ctx)
+        al = self._c.init_node(node.DeclarationListNode(), ctx)
         decl.set_argument_list(al)
 
         dd = ctx.declarator().directDeclarator()
@@ -688,7 +696,7 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
                 tk = each.declarator().directDeclarator().Identifier()
                 assert tk is not None
 
-                arg = self._c.init_node(ArgumentDeclNode(), tk)
+                arg = self._c.init_node(c_node.ArgumentDeclNode(), tk)
                 arg.txt_name = get_token_text(self._c, tk, _prefix)
 
                 decl.child_argument_list.add_declaration(arg)

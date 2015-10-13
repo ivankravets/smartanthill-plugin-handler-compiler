@@ -48,7 +48,7 @@ uint8_t blink_plugin_handler( const void* plugin_config, void* plugin_persistent
     
     blink_plugin_data data = blink_plugin_parser_read(command);
     uint8_t i = 0;
-    for (i = 0; i < data.total_blinks; i++)
+    for (; i < data.total_blinks; i++)
     {
         papi_write_digital_pin(pc->pin_led, HAPI_GPIO_VALUE_HIGH);
         papi_sleep(data.delay_ms);
