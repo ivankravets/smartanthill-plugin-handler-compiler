@@ -66,12 +66,10 @@ def _write_header_file(token_stream, struct_name, include_guard, nb):
 
     for each in nb.refs_moved_var_decls:
         start = each.ctx.declarationSpecifier(0).start
-        stop = each.ctx.initDeclaratorList().initDeclarator(
-            0).declarator().stop
+        stop = each.ctx.declarationSpecifier(0).stop
 
         tk = token_stream.getText((start.tokenIndex, stop.tokenIndex))
-        txt += str(tk)
-        txt += ";\n"
+        txt += "%s %s;\n" % (str(tk), each.txt_name)
 
     txt += "} %s;\n\n" % struct_name
     txt += "#endif // %s\n" % include_guard
@@ -306,7 +304,7 @@ class _RewriteVisitor(NodeVisitor):
             if self._nb.is_moved_var_decl(node.ref_decl):
                 self._w.replaceToken(
                     node.ctx.symbol,
-                    u"(sa_state->%s)" % node.txt_name)
+                    u"(sa_state->%s)" % node.ref_decl.txt_name)
 
     def visit_FunctionCallExprNode(self, node):
         visit_node(self, node.child_argument_list)

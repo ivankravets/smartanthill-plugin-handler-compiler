@@ -1,0 +1,15 @@
+--- Build ---
+gcc -fno-exceptions -g -Os -Wall -ffunction-sections -fdata-sections -std=c99 -I.. -DSA_PLUGIN_ID=loop -include loop.h -o loop.exe ../runner.c loop.c
+Ok
+
+---  Run  ---
+Ok
+
+
+*** Non Blocking ***
+--- Build ---
+gcc -fno-exceptions -g -Os -Wall -ffunction-sections -fdata-sections -std=c99 -I.. -DSA_PLUGIN_ID=loop -include loop.h -o loop_non_blocking.exe ../runner.c loop_non_blocking.c
+Ok
+
+---  Run  ---
+Ok

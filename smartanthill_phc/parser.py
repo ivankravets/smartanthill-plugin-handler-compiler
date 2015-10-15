@@ -581,7 +581,7 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
     def visitWhileStatement(self, ctx):
         stmt = self._c.init_node(c_node.LoopStmtNode(), ctx)
 
-        expr = self.visit(ctx.expression()[0])
+        expr = self.visit(ctx.expression())
         stmt.set_expression(expr)
 
         stmt_list = self._get_stmt_list(ctx.statement())
@@ -593,7 +593,7 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
     def visitDoWhileStatement(self, ctx):
         stmt = self._c.init_node(c_node.LoopStmtNode(), ctx)
 
-        expr = self.visit(ctx.expression()[0])
+        expr = self.visit(ctx.expression())
         stmt.set_expression(expr)
 
         stmt_list = self._get_stmt_list(ctx.statement())

@@ -140,7 +140,22 @@ class DeclsHelper(object):
         Adds a variable declaration
         '''
         assert decl not in self._decls
+
+        name = decl.txt_name
+        i = 0
+        while self._has_decl_with_name(name):
+            i += 1
+            name = decl.txt_name + str(i)
+
+        decl.txt_name = name  # TODO improve
         self._decls[decl] = st
+
+    def _has_decl_with_name(self, name):
+
+        for each in self._decls:
+            if each.txt_name == name:
+                return True
+        return False
 
     def add_var_expr(self, expr, st):
         '''

@@ -90,7 +90,7 @@ def _build_and_run(f, prefix, file_prefix):
 
     f.write('--- Build ---\n')
     cmd = "gcc -fno-exceptions -g -Os -Wall -ffunction-sections "\
-        "-fdata-sections -I.. -DSA_PLUGIN_ID=%s "\
+        "-fdata-sections -std=c99 -I.. -DSA_PLUGIN_ID=%s "\
         "-include %s.h "\
         "-o %s.exe ../runner.c %s.c" % (prefix, prefix,
                                         file_prefix, file_prefix)
