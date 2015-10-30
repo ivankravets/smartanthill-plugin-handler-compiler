@@ -126,7 +126,7 @@ class _RewriteVisitor(NodeVisitor):
         if self._sm.is_main_machine():
             return u"\nreturn %s;" % txt_result
         else:
-            return u"\nsa_state->sa_result = %s; return;" % txt_result
+            return u"\n{sa_state->sa_result = %s; return;}" % txt_result
 
     def visit_RootNode(self, node):
         self._nb = node.get_scope(NonBlockingData)
@@ -254,7 +254,7 @@ class _RewriteVisitor(NodeVisitor):
     def visit_NextStateStmtNode(self, node):
 
         nxt = str(node.int_next_state)
-        txt = u"\nsa_state->sa_next = %s;" % nxt
+        txt = u"\nsa_state->%s = %s;" % (self._sm.get_name(), nxt)
 
         if node.ref_waiting_for is None:
             txt += self._format_result_return("PLUGIN_DEBUG")

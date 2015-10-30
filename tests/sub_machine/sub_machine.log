@@ -1,0 +1,15 @@
+--- Build ---
+gcc -fno-exceptions -g -Os -Wall -ffunction-sections -fdata-sections -std=c99 -I.. -DSA_PLUGIN_ID=sub_machine -include sub_machine.h -o sub_machine.exe ../runner.c sub_machine.c
+Ok
+
+---  Run  ---
+Ok
+
+
+*** Non Blocking ***
+--- Build ---
+gcc -fno-exceptions -g -Os -Wall -ffunction-sections -fdata-sections -std=c99 -I.. -DSA_PLUGIN_ID=sub_machine -include sub_machine.h -o sub_machine_non_blocking.exe ../runner.c sub_machine_non_blocking.c
+Ok
+
+---  Run  ---
+Ok
