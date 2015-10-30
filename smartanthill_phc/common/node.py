@@ -311,7 +311,7 @@ def resolve_expression(compiler, parent, child_name):
     '''
 
     expr = getattr(parent, child_name)
-    if expr:
+    if expr is not None:
         compiler.resolve_node(expr)
         replacement = compiler.release_replacement()
         if replacement is not None:

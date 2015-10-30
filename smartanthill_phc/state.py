@@ -21,14 +21,17 @@ from smartanthill_phc.common.visitor import NodeVisitor, visit_node
 from smartanthill_phc.root import NonBlockingData
 
 
-def create_states(compiler, root, handler, exec_init, split_all):
+def create_states(compiler, root, handler, exec_init, handler_init, split_all):
     '''
     Creates state machine and state related nodes
     '''
-    visitor = StateMachineVisitor(compiler, handler, exec_init, split_all)
+    visitor = StateMachineVisitor(
+        compiler, handler, exec_init, handler_init, split_all)
     visit_node(visitor, root)
-    nb = visitor.finish()
-    root.get_scope(NonBlockingData).refs_moved_var_decls = nb
+
+    nb = root.get_scope(NonBlockingData)
+    nb.refs_moved_var_decls = visitor.get_moved_decls()
+    nb.refs_state_machines = visitor.get_state_machines()
 
     compiler.check_stage('state')
 
@@ -45,6 +48,7 @@ class StateMachineStmtNode(StatementNode):
         '''
         super(StateMachineStmtNode, self).__init__()
         self.int_last_state = 0
+        self.int_machine_index = 0
 
     def increment_state(self):
         '''
@@ -52,13 +56,34 @@ class StateMachineStmtNode(StatementNode):
         '''
         self.int_last_state += 1
 
-        return self.get_last_state()
+        return self.int_last_state
 
     def get_last_state(self):
         '''
         Returns the last added state
         '''
         return self.int_last_state
+
+    def has_states(self):
+        '''
+        Returns where this state machine really has states
+        '''
+        return self.int_last_state != 0
+
+    def get_name(self):
+        '''
+        Returns the name of the variable with the state of this machine
+        '''
+        if self.int_machine_index == 0:
+            return "sa_next"
+        else:
+            return "sa_next%s" % str(self.int_machine_index)
+
+    def is_main_machine(self):
+        '''
+        Returns True if this is the main state machine
+        '''
+        return self.int_machine_index == 0
 
 
 class StateDataCastStmtNode(StatementNode):
@@ -92,6 +117,34 @@ class NextStateStmtNode(StatementNode):
         self.ref_waiting_for = None
 
 
+class BeforeSubStmtNode(StatementNode):
+
+    '''
+    Statement node class to be placed before an statement with sub states
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(BeforeSubStmtNode, self).__init__()
+        self.int_next_state = None
+
+
+class AfterSubStmtNode(StatementNode):
+
+    '''
+    Statement node class to be placed after an statement with sub states
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(AfterSubStmtNode, self).__init__()
+        self.ref_sub_machine = None
+
+
 class InitStateStmtNode(StatementNode):
 
     '''
@@ -106,7 +159,7 @@ class InitStateStmtNode(StatementNode):
         self.txt_arg = None
 
 
-class ReturnStateStmtNode(StatementNode):
+class BeforeReturnStmtNode(StatementNode):
 
     '''
     Statement node representing the re initialization of state machine
@@ -117,7 +170,8 @@ class ReturnStateStmtNode(StatementNode):
         '''
         Constructor
         '''
-        super(ReturnStateStmtNode, self).__init__()
+        super(BeforeReturnStmtNode, self).__init__()
+        self.ref_state_machine = None
 
 
 class DeclsHelper(object):
@@ -134,6 +188,16 @@ class DeclsHelper(object):
         self._decls2 = []
         self._loop_stack = []
         self._used_inside_loop = []
+        self._funcs_with_sub_states = {}
+        self.int_last_machine = 0
+
+    def increment_state_machine(self):
+        '''
+        Increments the state counter
+        '''
+        self.int_last_machine += 1
+
+        return self.int_last_machine
 
     def add_var_decl(self, decl, st):
         '''
@@ -192,23 +256,42 @@ class DeclsHelper(object):
 
         return self._decls2
 
+    def add_function_with_sub_states(self, txt_name, machine):
+
+        self._funcs_with_sub_states[txt_name] = machine
+
+    def has_sub_states(self, txt_name):
+
+        return txt_name in self._funcs_with_sub_states
+
+    def get_sub_machine(self, txt_name):
+
+        assert txt_name in self._funcs_with_sub_states
+        return self._funcs_with_sub_states[txt_name]
+
+    def get_state_machines(self):
+
+        return self._funcs_with_sub_states.values()
+
 
 class StateMachineVisitor(NodeVisitor):
 
-    def __init__(self, compiler, handler, exec_init, split_all):
+    def __init__(self, compiler, handler, exec_init, handler_init, split_all):
         '''
         Constructor
         '''
         self._c = compiler
         self._handler = handler
         self._exec_init = exec_init
-        self._handler_found = False
-        self._exec_init_found = False
+        self._handler_init = handler_init
         self._h = DeclsHelper()
         self._split_all = split_all
 
-    def finish(self):
+    def get_moved_decls(self):
         return self._h.get_decls_to_be_moved()
+
+    def get_state_machines(self):
+        return self._h.get_state_machines()
 
     def visit_RootNode(self, node):
         visit_node(self, node.child_source)
@@ -216,12 +299,12 @@ class StateMachineVisitor(NodeVisitor):
     def visit_PluginSourceNode(self, node):
         visit_node(self, node.child_declaration_list)
 
-        if not self._handler_found:
-            self._c.report_error(
-                node.ctx, "Function '%s' not found" % self._handler)
-        if not self._exec_init_found:
-            self._c.report_error(
-                node.ctx, "Function '%s' not found" % self._handler_init)
+#         if not self._handler_found:
+#             self._c.report_error(
+#                 node.ctx, "Function '%s' not found" % self._handler)
+#         if not self._exec_init_found:
+#             self._c.report_error(
+#                 node.ctx, "Function '%s' not found" % self._handler_init)
 
     def visit_DeclarationListNode(self, node):
         for each in node.childs_declarations:
@@ -229,10 +312,7 @@ class StateMachineVisitor(NodeVisitor):
 
     def visit_FunctionDeclNode(self, node):
         if node.txt_name == self._handler:
-            if self._handler_found:
-                self._c.report_error(node.ctx, "Function redefinition")
 
-            self._handler_found = True
             ctx = node.child_statement_list.ctx.start
 
             stmt = self._c.init_node(StateDataCastStmtNode(), ctx)
@@ -249,10 +329,7 @@ class StateMachineVisitor(NodeVisitor):
             _create_state_machine(
                 self._c, node.child_statement_list, self._h, self._split_all)
         elif node.txt_name == self._exec_init:
-            if self._exec_init_found:
-                self._c.report_error(node.ctx, "Function redefinition")
 
-            self._exec_init_found = True
             ctx = node.child_statement_list.ctx.start
 
             stmt = self._c.init_node(InitStateStmtNode(), ctx)
@@ -264,6 +341,42 @@ class StateMachineVisitor(NodeVisitor):
                 self._c.report_error(node.ctx, "Too few arguments")
 
             node.child_statement_list.insert_statement_at(0, stmt)
+        elif node.txt_name == self._handler_init:
+            pass
+        else:
+            _create_sub_state_machine(
+                self._c, node.txt_name, node.child_statement_list, self._h,
+                self._split_all)
+
+
+def _create_sub_state_machine(compiler, name, stmt_list, helper, split_all):
+    '''
+    Creates a sub-state machine
+
+    '''
+
+    i = _skip_statements(stmt_list)
+
+    if i == 0:
+        ctx = stmt_list.ctx.start
+    elif i == 1:
+        assert isinstance(
+            stmt_list.childs_statements[0], StateDataCastStmtNode)
+        ctx = stmt_list.ctx.start
+    else:
+        ctx = stmt_list.childs_statements[i - 1].ctx.stop
+
+    sm = compiler.init_node(StateMachineStmtNode(), ctx)
+    sm.int_machine_index = helper.increment_state_machine()
+    stmt_list.insert_statement_at(i, sm)
+
+    v = _StatementsVisitor(compiler, sm, helper, split_all)
+    v.visit_stmt_list(stmt_list, i + 1)
+
+    if sm.has_states():
+        helper.add_function_with_sub_states(name, sm)
+        if not stmt_list.is_closed_stmt():
+            compiler.report_error(stmt_list.ctx, "Missing 'return' statement")
 
 
 def _create_state_machine(compiler, stmt_list, helper, split_all):
@@ -291,6 +404,8 @@ def _create_state_machine(compiler, stmt_list, helper, split_all):
 
     v = _StatementsVisitor(compiler, sm, helper, split_all)
     v.visit_stmt_list(stmt_list, i + 1)
+
+    helper.add_function_with_sub_states("", sm)
 
 
 def _skip_statements(stmt_list):
@@ -373,6 +488,18 @@ class _StatementsVisitor(NodeVisitor):
         nxt.int_next_state = self._sm.increment_state()
         self.insert_after_current(nxt)
 
+    def _split_around_current_substates(self, subm, ctx):
+        '''
+        Adds before and after statements for sub states function calls
+        '''
+        bef = self._c.init_node(BeforeSubStmtNode(), ctx)
+        bef.int_next_state = self._sm.increment_state()
+        self.insert_before_current(bef)
+
+        aft = self._c.init_node(AfterSubStmtNode(), ctx)
+        aft.ref_sub_machine = subm
+        self.insert_after_current(aft)
+
     def visit_stmt_list(self, stmt_list, begin=0):
         '''
         Visit each statement in stmt_list starting from begin
@@ -417,11 +544,18 @@ class _StatementsVisitor(NodeVisitor):
         if self._split_all:
             self._split_after_current(None, node.ctx)
 
-    def visit_BlockingCallStmtNode(self, node):
+    def visit_FunctionCallStmtNode(self, node):
 
-        visit_node(self, node.child_expression)
+        visit_node(self, node.child_expression.child_argument_list)
 
-        self._split_after_current(node.child_expression, node.ctx)
+        if self._h.has_sub_states(node.child_expression.txt_name):
+            node.flg_has_sub_states = True
+            sub = self._h.get_sub_machine(node.child_expression.txt_name)
+            self._split_around_current_substates(sub, node.ctx)
+        elif node.flg_is_blocking:
+            self._split_after_current(node.child_expression, node.ctx)
+        elif self._split_all:
+            self._split_after_current(None, node.ctx)
 
     def visit_LoopStmtNode(self, node):
 
@@ -432,9 +566,10 @@ class _StatementsVisitor(NodeVisitor):
         self._h.end_loop(self._sm.get_last_state())
 
     def visit_ReturnStmtNode(self, node):
-
-        visit_node(self, node.child_expression)
-        stmt = self._c.init_node(ReturnStateStmtNode(), node.ctx)
+        if node.child_expression is not None:
+            visit_node(self, node.child_expression)
+        stmt = self._c.init_node(BeforeReturnStmtNode(), node.ctx)
+        stmt.ref_state_machine = self._sm
         self.insert_before_current(stmt)
 
     def visit_IfElseStmtNode(self, node):

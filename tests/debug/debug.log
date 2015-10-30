@@ -1,5 +1,5 @@
 --- Build ---
-gcc -fno-exceptions -g -Os -Wall -ffunction-sections -fdata-sections -I.. -DSA_PLUGIN_ID=debug -include debug.h -o debug.exe ../runner.c debug.c
+gcc -fno-exceptions -g -Os -Wall -ffunction-sections -fdata-sections -std=c99 -I.. -DSA_PLUGIN_ID=debug -include debug.h -o debug.exe ../runner.c debug.c
 Ok
 
 ---  Run  ---
@@ -8,7 +8,7 @@ Ok
 
 *** Non Blocking ***
 --- Build ---
-gcc -fno-exceptions -g -Os -Wall -ffunction-sections -fdata-sections -I.. -DSA_PLUGIN_ID=debug -include debug.h -o debug_non_blocking.exe ../runner.c debug_non_blocking.c
+gcc -fno-exceptions -g -Os -Wall -ffunction-sections -fdata-sections -std=c99 -I.. -DSA_PLUGIN_ID=debug -include debug.h -o debug_non_blocking.exe ../runner.c debug_non_blocking.c
 Ok
 
 ---  Run  ---

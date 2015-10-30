@@ -62,7 +62,12 @@ def _write_header_file(token_stream, struct_name, include_guard, nb):
     txt += "#include <stdint.h>\n\n\n"
 
     txt += "typedef struct _%s {\n" % struct_name
-    txt += "uint8_t sa_next;\n"
+
+    if nb.has_sub_machines():
+        txt += "uint8_t sa_result;\n"
+
+    for each in nb.refs_state_machines:
+        txt += "uint8_t %s;\n" % each.get_name()
 
     for each in nb.refs_moved_var_decls:
         start = each.ctx.declarationSpecifier(0).start
@@ -91,6 +96,7 @@ class _RewriteVisitor(NodeVisitor):
         self._w = writer
         self._tn = type_name
         self._nb = None
+        self._sm = None
 
     def default_visit(self, node):
         '''
@@ -116,12 +122,25 @@ class _RewriteVisitor(NodeVisitor):
         else:
             assert False
 
+    def _format_result_return(self, txt_result):
+        if self._sm.is_main_machine():
+            return u"\nreturn %s;" % txt_result
+        else:
+            return u"\nsa_state->sa_result = %s; return;" % txt_result
+
     def visit_RootNode(self, node):
         self._nb = node.get_scope(NonBlockingData)
         visit_node(self, node.child_source)
 
     def visit_PluginSourceNode(self, node):
         visit_node(self, node.child_declaration_list)
+
+        if self._nb.has_sub_machines():
+            ctx = node.child_declaration_list.childs_declarations[0].ctx
+            txt = u"\nstatic %s* sa_state = 0;" % self._tn
+            txt += u"\nstatic waiting_for* sa_wf = 0;"
+            txt += u"\n\n"
+            self._w.insertBeforeToken(ctx.start, txt)
 
     def visit_DeclarationListNode(self, node):
         for each in node.childs_declarations:
@@ -160,39 +179,41 @@ class _RewriteVisitor(NodeVisitor):
     def visit_ExpressionStmtNode(self, node):
         self._visit_expression(node.child_expression)
 
-    def visit_BlockingCallStmtNode(self, node):
+    def visit_FunctionCallStmtNode(self, node):
 
         self._visit_expression(node.child_expression)
 
-        n = node.child_expression.txt_name
-        args = node.child_expression.child_argument_list.childs_arguments
-        assert len(args) >= 1
-        arg0 = self._get_text(args[0].ctx)
+        if node.flg_is_blocking:
+            n = node.child_expression.txt_name
+            args = node.child_expression.child_argument_list.childs_arguments
+            assert len(args) >= 1
+            arg0 = self._get_text(args[0].ctx)
 
-        if n == "papi_sleep":
-            w = u"timeout"
-            self._w.deleteTokens(node.ctx.start, node.ctx.stop)
-        else:
-            if n == "papi_wait_for_spi_send":
-                f = u"papi_start_sending_spi_command_16"
-                w = u"spi_send"
-            elif n == "papi_wait_for_i2c_send":
-                f = u"papi_start_sending_i2c_command_16"
-                w = u"i2c_send"
-            elif n == "papi_wait_for_spi_receive":
-                f = u"papi_start_receiving_spi_data_16"
-                w = u"spi_receive"
-            elif n == "papi_wait_for_i2c_receive":
-                f = u"papi_start_receiving_i2c_data_16"
-                w = u"i2c_receive"
+            if n == "papi_sleep":
+                w = u"timeout"
+                self._w.deleteTokens(node.ctx.start, node.ctx.stop)
             else:
-                assert False
+                if n == "papi_wait_for_spi_send":
+                    f = u"papi_start_sending_spi_command_16"
+                    w = u"spi_send"
+                elif n == "papi_wait_for_i2c_send":
+                    f = u"papi_start_sending_i2c_command_16"
+                    w = u"i2c_send"
+                elif n == "papi_wait_for_spi_receive":
+                    f = u"papi_start_receiving_spi_data_16"
+                    w = u"spi_receive"
+                elif n == "papi_wait_for_i2c_receive":
+                    f = u"papi_start_receiving_i2c_data_16"
+                    w = u"i2c_receive"
+                else:
+                    assert False
 
-            self._w.replaceToken(
-                node.child_expression.ctx.Identifier().symbol, f)
+                self._w.replaceToken(
+                    node.child_expression.ctx.Identifier().symbol, f)
 
-        txt = u"\npapi_wait_handler_add_wait_for_%s(sa_wf, %s);" % (w, arg0)
-        self._w.insertAfterToken(node.ctx.stop, txt)
+            txt = u"\npapi_wait_handler_add_wait_for_%s(sa_wf, %s);" % (
+                w, arg0)
+            self._w.insertAfterToken(node.ctx.stop, txt)
 
     def visit_LoopStmtNode(self, node):
         self._visit_expression(node.child_expression)
@@ -210,22 +231,25 @@ class _RewriteVisitor(NodeVisitor):
 
     def visit_StateMachineStmtNode(self, node):
 
-        txt = u"\n\nswitch(sa_state->sa_next) {"
+        self._sm = node
 
-        txt += u"\ncase 0: break;"
-        for i in range(1, node.get_last_state() + 1):
+        if node.has_states():
 
-            txt += u"\ncase %s: goto label_%s;" % (str(i), str(i))
-#            visit_node(self, each.child_statement_list)
+            txt = u"\n\nswitch(sa_state->%s) {" % node.get_name()
 
-        txt += u"\ndefault: sa_state->sa_next = 0; return -1;"
-        txt += u" /* TBD, ZEPTO_ASSERT? */"
-        txt += u"\n}\n\n"
+            txt += u"\ncase 0: break;"
+            for i in range(1, node.get_last_state() + 1):
 
-        if node.ctx.line is not None:
-            txt += u"\n//#line %s\n" % node.ctx.line
+                txt += u"\ncase %s: goto label_%s;" % (str(i), str(i))
+    #            visit_node(self, each.child_statement_list)
 
-        self._w.insertAfterToken(node.ctx, txt)
+            txt += u"\ndefault: ZEPTO_ASSERT(0);"
+            txt += u"\n}\n\n"
+
+            if node.ctx.line is not None:
+                txt += u"\n//#line %s\n" % node.ctx.line
+
+            self._w.insertAfterToken(node.ctx, txt)
 
     def visit_NextStateStmtNode(self, node):
 
@@ -233,14 +257,17 @@ class _RewriteVisitor(NodeVisitor):
         txt = u"\nsa_state->sa_next = %s;" % nxt
 
         if node.ref_waiting_for is None:
-            txt += u"\nreturn PLUGIN_DEBUG;"
+            txt += self._format_result_return("PLUGIN_DEBUG")
+
             # we add a nop here, because C compiler will complain if next
             # statement is a declaration.
             # Only pure statements allowed right after a label
             # Adding a NOP will silence it
             txt += u"\nlabel_%s: /* nop */ ;" % nxt
+
         else:
-            txt += u"\nreturn PLUGIN_WAITING;"
+            txt += self._format_result_return("PLUGIN_WAITING")
+
             txt += u"\n\nlabel_%s:" % nxt
 
             n = node.ref_waiting_for.txt_name
@@ -262,29 +289,60 @@ class _RewriteVisitor(NodeVisitor):
                 assert False
 
             txt += u"\nif(papi_wait_handler_is_waiting_for_%s)" % f
-            txt += u" return PLUGIN_WAITING;"
+            txt += self._format_result_return("PLUGIN_WAITING")
 
         if node.ctx.stop.line is not None:
             txt += u"\n//#line %s\n" % node.ctx.stop.line
 
         self._w.insertAfterToken(node.ctx.stop, txt)
 
+    def visit_BeforeSubStmtNode(self, node):
+
+        nxt = str(node.int_next_state)
+        txt = u"\nsa_state->%s = %s;" % (self._sm.get_name(), nxt)
+        txt += u"\nlabel_%s: " % nxt
+
+        self._w.insertBeforeToken(node.ctx.start, txt)
+
+    def visit_AfterSubStmtNode(self, node):
+
+        txt = u"\nif(sa_state->%s != 0)" % node.ref_sub_machine.get_name()
+
+        if self._sm.is_main_machine():
+            txt += u" return sa_state->sa_result;"
+        else:
+            txt += u" return;"
+
+        self._w.insertAfterToken(node.ctx.stop, txt)
+
     def visit_InitStateStmtNode(self, node):
 
         txt = u"\n%s* sa_state = (%s*)%s;" % (self._tn, self._tn, node.txt_arg)
-        txt += u"\nsa_state->sa_next = 0;"
+
+        if self._nb.has_sub_machines():
+            txt += u"\nsa_state->sa_result = PLUGIN_OK;"
+
+        for each in self._nb.refs_state_machines:
+            txt += u"\nsa_state->%s = 0;" % each.get_name()
+
         self._w.insertAfterToken(node.ctx, txt)
 
-    def visit_ReturnStateStmtNode(self, node):
+    def visit_BeforeReturnStmtNode(self, node):
 
-        txt = u"sa_state->sa_next = 0;"
-        self._w.insertBeforeToken(node.ctx.start, txt)
+        if node.ref_state_machine.has_states():
+            txt = u"sa_state->%s = 0;" % node.ref_state_machine.get_name()
+            self._w.insertBeforeToken(node.ctx.start, txt)
 
     def visit_StateDataCastStmtNode(self, node):
 
-        txt = u"\n%s* sa_state = (%s*)%s;" % (self._tn,
-                                              self._tn, node.txt_arg2)
-        txt += u"\nwaiting_for* sa_wf = %s;" % node.txt_arg5
+        if self._nb.has_sub_machines():
+            txt = u"\nsa_state = (%s*)%s;" % (self._tn, node.txt_arg2)
+            txt += u"\nsa_wf = %s;" % node.txt_arg5
+        else:
+            txt = u"\n%s* sa_state = (%s*)%s;" % (self._tn,
+                                                  self._tn, node.txt_arg2)
+            txt += u"\nwaiting_for* sa_wf = %s;" % node.txt_arg5
+
         self._w.insertAfterToken(node.ctx, txt)
 
     def visit_DontCareExprNode(self, node):

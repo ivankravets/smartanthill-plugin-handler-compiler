@@ -131,7 +131,7 @@ class ArgumentDeclNode(Node):
         pass
 
 
-class BlockingCallStmtNode(StatementNode):
+class FunctionCallStmtNode(StatementNode):
 
     '''
     Node class representing a blocking function call statement
@@ -141,8 +141,9 @@ class BlockingCallStmtNode(StatementNode):
         '''
         Constructor
         '''
-        super(BlockingCallStmtNode, self).__init__()
+        super(FunctionCallStmtNode, self).__init__()
         self.child_expression = None
+        self.flg_is_blocking = False
 
     def set_expression(self, child):
         '''

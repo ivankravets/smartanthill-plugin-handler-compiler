@@ -29,6 +29,8 @@ typedef uint16_t SA_TIME_VAL;
 #define PLUGIN_WAITING 1
 #define PLUGIN_DEBUG 2
 
+void ZEPTO_ASSERT(int);
+
 // Request parsing functions:
 uint8_t papi_parser_read_byte( parser_obj* po );
 uint16_t papi_parser_read_encoded_uint16( parser_obj* po );

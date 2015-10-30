@@ -60,6 +60,8 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
+void ZEPTO_ASSERT(int a) {assert(a);}
+
 
 // Request parsing functions:
 uint8_t papi_parser_read_byte( parser_obj* po ) {return 0;}

@@ -532,10 +532,14 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
         if ctx.expression():
             expr = self.visit(ctx.expression())
-            if isinstance(expr, expression.FunctionCallExprNode) and\
-                    _is_blocking_api_function(expr.txt_name):
-                stmt = self._c.init_node(c_node.BlockingCallStmtNode(), ctx)
+            if isinstance(expr, expression.FunctionCallExprNode):
+
+                stmt = self._c.init_node(c_node.FunctionCallStmtNode(), ctx)
                 stmt.set_expression(expr)
+
+                if _is_blocking_api_function(expr.txt_name):
+                    stmt.flg_is_blocking = True
+
                 return stmt
             else:
                 stmt = self._c.init_node(statement.ExpressionStmtNode(), ctx)
@@ -688,18 +692,18 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
             decl.txt_name = get_token_text(
                 self._c, dd.directDeclarator().Identifier(), _prefix)
 
-            assert dd.parameterTypeList() is not None
+            if dd.parameterTypeList() is not None:
 
-            for each in dd.parameterTypeList().parameterDeclaration():
-                assert each.declarator() is not None
+                for each in dd.parameterTypeList().parameterDeclaration():
+                    assert each.declarator() is not None
 
-                tk = each.declarator().directDeclarator().Identifier()
-                assert tk is not None
+                    tk = each.declarator().directDeclarator().Identifier()
+                    assert tk is not None
 
-                arg = self._c.init_node(c_node.ArgumentDeclNode(), tk)
-                arg.txt_name = get_token_text(self._c, tk, _prefix)
+                    arg = self._c.init_node(c_node.ArgumentDeclNode(), tk)
+                    arg.txt_name = get_token_text(self._c, tk, _prefix)
 
-                decl.child_argument_list.add_declaration(arg)
+                    decl.child_argument_list.add_declaration(arg)
         else:
             self._c.report_error(ctx, "Unsupported function declaration")
 

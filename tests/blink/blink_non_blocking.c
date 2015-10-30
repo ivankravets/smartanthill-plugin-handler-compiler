@@ -54,7 +54,7 @@ switch(sa_state->sa_next) {
 case 0: break;
 case 1: goto label_1;
 case 2: goto label_2;
-default: sa_state->sa_next = 0; return -1; /* TBD, ZEPTO_ASSERT? */
+default: ZEPTO_ASSERT(0);
 }
 
 
@@ -72,7 +72,8 @@ sa_state->sa_next = 1;
 return PLUGIN_WAITING;
 
 label_1:
-if(papi_wait_handler_is_waiting_for_timeout(0, sa_wf)) return PLUGIN_WAITING;
+if(papi_wait_handler_is_waiting_for_timeout(0, sa_wf))
+return PLUGIN_WAITING;
 //#line 54
 
         papi_write_digital_pin(pc->pin_led, HAPI_GPIO_VALUE_LOW);
@@ -82,7 +83,8 @@ sa_state->sa_next = 2;
 return PLUGIN_WAITING;
 
 label_2:
-if(papi_wait_handler_is_waiting_for_timeout(0, sa_wf)) return PLUGIN_WAITING;
+if(papi_wait_handler_is_waiting_for_timeout(0, sa_wf))
+return PLUGIN_WAITING;
 //#line 56
 
     }

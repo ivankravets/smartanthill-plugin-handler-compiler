@@ -52,13 +52,20 @@ class NonBlockingData(object):
         '''
         Constructor
         '''
-        self.refs_moved_var_decls = []
+        self.refs_moved_var_decls = None
+        self.refs_state_machines = None
 
     def is_moved_var_decl(self, decl):
         '''
         Checks if a declaration was moved because of non-blocking modifications
         '''
         return decl in self.refs_moved_var_decls
+
+    def has_sub_machines(self):
+        '''
+        Checks if a declaration was moved because of non-blocking modifications
+        '''
+        return len(self.refs_state_machines) > 1
 
 
 class RootNode(Node):

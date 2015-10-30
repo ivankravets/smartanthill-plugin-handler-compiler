@@ -86,7 +86,9 @@ def process_file(file_name, prefix, split_all, dump):
 
     nh = NameHelper(prefix)
 
-    create_states(c, root, nh.handler_name, nh.exec_init_name, split_all)
+    create_states(
+        c, root, nh.handler_name, nh.exec_init_name, nh.handler_init_name,
+        split_all)
 
     if dump:
         print

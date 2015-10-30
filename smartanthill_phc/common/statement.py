@@ -110,8 +110,13 @@ class ReturnStmtNode(StatementNode):
     def resolve(self, compiler):
         resolve_expression(compiler, self, 'child_expression')
 
+        if self.child_expression is not None:
+            t = self.child_expression.get_type()
+        else:
+            t = self.get_scope(RootScope).lookup_type('_zc_void')
+
         self.get_scope(ReturnStmtScope).add_return_stmt(
-            compiler, self.ctx, self.child_expression.get_type())
+            compiler, self.ctx, t)
 
 
 class VariableDeclarationStmtNode(StatementNode, ResolutionHelper):
