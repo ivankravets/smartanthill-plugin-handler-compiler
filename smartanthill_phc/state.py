@@ -101,7 +101,7 @@ class StateDataCastStmtNode(StatementNode):
         self.txt_arg5 = None
 
 
-class NextStateStmtNode(StatementNode):
+class WaitStateStmtNode(StatementNode):
 
     '''
     Statement node class representing state to be processed next time we enter
@@ -112,9 +112,24 @@ class NextStateStmtNode(StatementNode):
         '''
         Constructor
         '''
-        super(NextStateStmtNode, self).__init__()
+        super(WaitStateStmtNode, self).__init__()
         self.int_next_state = None
         self.ref_waiting_for = None
+
+
+class DebugStateStmtNode(StatementNode):
+
+    '''
+    Statement node class representing state to be processed next time we enter
+    this function
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(DebugStateStmtNode, self).__init__()
+        self.int_next_state = None
 
 
 class BeforeSubStmtNode(StatementNode):
@@ -171,7 +186,6 @@ class BeforeReturnStmtNode(StatementNode):
         Constructor
         '''
         super(BeforeReturnStmtNode, self).__init__()
-        self.ref_state_machine = None
 
 
 class DeclsHelper(object):
@@ -376,7 +390,9 @@ def _create_sub_state_machine(compiler, name, stmt_list, helper, split_all):
     if sm.has_states():
         helper.add_function_with_sub_states(name, sm)
         if not stmt_list.is_closed_stmt():
-            compiler.report_error(stmt_list.ctx, "Missing 'return' statement")
+            stmt = compiler.init_node(
+                BeforeReturnStmtNode(), stmt_list.ctx.stop)
+            stmt_list.add_statement(stmt)
 
 
 def _create_state_machine(compiler, stmt_list, helper, split_all):
@@ -478,17 +494,24 @@ class _StatementsVisitor(NodeVisitor):
 
         self._index[-1] += 1
 
-    def _split_after_current(self, wait_condition, ctx):
+    def _wait_after_current(self, wait_condition, ctx):
         '''
-        Adds state change after current statement
+        Adds 'PLUGIN_WAITING' state change after current statement
         '''
-
-        nxt = self._c.init_node(NextStateStmtNode(), ctx)
+        nxt = self._c.init_node(WaitStateStmtNode(), ctx)
         nxt.ref_waiting_for = wait_condition
         nxt.int_next_state = self._sm.increment_state()
         self.insert_after_current(nxt)
 
-    def _split_around_current_substates(self, subm, ctx):
+    def _debug_after_current(self, ctx):
+        '''
+        Adds 'PLUGIN_DEBUG' state change after current statement
+        '''
+        nxt = self._c.init_node(DebugStateStmtNode(), ctx)
+        nxt.int_next_state = self._sm.increment_state()
+        self.insert_after_current(nxt)
+
+    def _substates_around_current(self, subm, ctx):
         '''
         Adds before and after statements for sub states function calls
         '''
@@ -536,26 +559,25 @@ class _StatementsVisitor(NodeVisitor):
         visit_node(self, node.child_initializer)
 
         if self._split_all:
-            self._split_after_current(None, node.ctx)
+            self._debug_after_current(node.ctx)
 
     def visit_ExpressionStmtNode(self, node):
         visit_node(self, node.child_expression)
 
         if self._split_all:
-            self._split_after_current(None, node.ctx)
+            self._debug_after_current(node.ctx)
 
     def visit_FunctionCallStmtNode(self, node):
 
         visit_node(self, node.child_expression.child_argument_list)
 
         if self._h.has_sub_states(node.child_expression.txt_name):
-            node.flg_has_sub_states = True
             sub = self._h.get_sub_machine(node.child_expression.txt_name)
-            self._split_around_current_substates(sub, node.ctx)
+            self._substates_around_current(sub, node.ctx)
         elif node.flg_is_blocking:
-            self._split_after_current(node.child_expression, node.ctx)
+            self._wait_after_current(node.child_expression, node.ctx)
         elif self._split_all:
-            self._split_after_current(None, node.ctx)
+            self._debug_after_current(node.ctx)
 
     def visit_LoopStmtNode(self, node):
 
@@ -568,9 +590,15 @@ class _StatementsVisitor(NodeVisitor):
     def visit_ReturnStmtNode(self, node):
         if node.child_expression is not None:
             visit_node(self, node.child_expression)
-        stmt = self._c.init_node(BeforeReturnStmtNode(), node.ctx)
-        stmt.ref_state_machine = self._sm
-        self.insert_before_current(stmt)
+
+        if self._sm.has_states():  # Only needed if we already have states
+            stmt = self._c.init_node(BeforeReturnStmtNode(), node.ctx.start)
+            self.insert_before_current(stmt)
+
+    def visit_ImplicitReturnStmtNode(self, node):
+        if self._sm.has_states():  # Only needed if we already have states
+            stmt = self._c.init_node(BeforeReturnStmtNode(), node.ctx.stop)
+            self.insert_before_current(stmt)
 
     def visit_IfElseStmtNode(self, node):
 

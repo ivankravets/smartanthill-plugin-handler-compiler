@@ -100,9 +100,7 @@ label_2: /* nop */ ;
 sa_state->sa_next3 = 3;
 label_3: helper_func_1();
 if(sa_state->sa_next2 != 0) return;
-
-    sa_state->sa_next3 = 0;return;
-}
+sa_state->sa_next3 = 0;}
 
 uint8_t sub_machine_plugin_handler(const void* plugin_config,
     void* plugin_persistent_state, void* plugin_state, parser_obj* command,
@@ -122,13 +120,13 @@ default: ZEPTO_ASSERT(0);
 }
 
 
-//#line 59
+//#line 57
 
     helper_func_0();
 sa_state->sa_next = 1;
 return PLUGIN_DEBUG;
 label_1: /* nop */ ;
-//#line 60
+//#line 58
 
     /* waiting function */
     
@@ -139,14 +137,14 @@ return PLUGIN_WAITING;
 label_2:
 if(papi_wait_handler_is_waiting_for_timeout(0, sa_wf))
 return PLUGIN_WAITING;
-//#line 62
+//#line 60
 
     
     helper_func_0();
 sa_state->sa_next = 3;
 return PLUGIN_DEBUG;
 label_3: /* nop */ ;
-//#line 64
+//#line 62
 
     
 sa_state->sa_next = 4;

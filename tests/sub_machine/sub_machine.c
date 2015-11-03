@@ -49,8 +49,6 @@ void helper_func_2()
     helper_func_1();
     helper_func_0();
     helper_func_1();
-
-    return;
 }
 
 uint8_t sub_machine_plugin_handler(const void* plugin_config,
