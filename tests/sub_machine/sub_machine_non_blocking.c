@@ -17,17 +17,9 @@
 #include "sub_machine.h"
 #include "sub_machine_state.h"
 
-
-static sub_machine_plugin_state* sa_state = 0;
-static waiting_for* sa_wf = 0;
-
 uint8_t sub_machine_plugin_exec_init(const void* plugin_config, void* plugin_state)
 {
-sub_machine_plugin_state* sa_state = (sub_machine_plugin_state*)plugin_state;
-sa_state->sa_result = PLUGIN_OK;
-sa_state->sa_next = 0;
-sa_state->sa_next2 = 0;
-sa_state->sa_next3 = 0;
+*(uint8_t*)plugin_state = 0;
     return PLUGIN_OK;
 }
 
@@ -43,10 +35,11 @@ void helper_func_0()
     /* nop */;
 }
 
-void helper_func_1()
+void helper_func_1(void* sa_state0, waiting_for* sa_wf, uint8_t* sa_result)
 {
+sub_machine_plugin_state1* sa_state = (sub_machine_plugin_state1*)sa_state0;
 
-switch(sa_state->sa_next2) {
+switch(sa_state->sa_next) {
 case 0: break;
 case 1: goto label_1;
 default: ZEPTO_ASSERT(0);
@@ -58,22 +51,23 @@ default: ZEPTO_ASSERT(0);
     /* this function has two states */
     
 papi_wait_handler_add_wait_for_timeout(sa_wf, 100);
-sa_state->sa_next2 = 1;
-{sa_state->sa_result = PLUGIN_WAITING; return;}
+sa_state->sa_next = 1;
+{*sa_result = PLUGIN_WAITING; return;}
 
 label_1:
 if(papi_wait_handler_is_waiting_for_timeout(0, sa_wf))
-{sa_state->sa_result = PLUGIN_WAITING; return;}
+{*sa_result = PLUGIN_WAITING; return;}
 //#line 40
 
     
-    sa_state->sa_next2 = 0;return;
+    sa_state->sa_next = 0;return;
 }
 
-void helper_func_2()
+void helper_func_2(void* sa_state0, waiting_for* sa_wf, uint8_t* sa_result)
 {
+sub_machine_plugin_state2* sa_state = (sub_machine_plugin_state2*)sa_state0;
 
-switch(sa_state->sa_next3) {
+switch(sa_state->sa_next) {
 case 0: break;
 case 1: goto label_1;
 case 2: goto label_2;
@@ -87,27 +81,31 @@ default: ZEPTO_ASSERT(0);
     /* this function call another function with states */
 
     
-sa_state->sa_next3 = 1;
-label_1: helper_func_1();
-if(sa_state->sa_next2 != 0) return;
+*(uint8_t*)(sa_state + 1) = 0;
+sa_state->sa_next = 1;
+label_1: helper_func_1((void*)sa_state + 1, sa_wf, sa_result);
+if(*(uint8_t*)(sa_state + 1) != 0) return;
     helper_func_0();
-sa_state->sa_next3 = 2;
-{sa_state->sa_result = PLUGIN_DEBUG; return;}
+sa_state->sa_next = 2;
+{*sa_result = PLUGIN_DEBUG; return;}
 label_2: /* nop */ ;
 //#line 50
 
     
-sa_state->sa_next3 = 3;
-label_3: helper_func_1();
-if(sa_state->sa_next2 != 0) return;
-sa_state->sa_next3 = 0;}
+*(uint8_t*)(sa_state + 1) = 0;
+sa_state->sa_next = 3;
+label_3: helper_func_1((void*)sa_state + 1, sa_wf, sa_result);
+if(*(uint8_t*)(sa_state + 1) != 0) return;
+sa_state->sa_next = 0;}
 
 uint8_t sub_machine_plugin_handler(const void* plugin_config,
     void* plugin_persistent_state, void* plugin_state, parser_obj* command,
     MEMORY_HANDLE reply, waiting_for* wf, uint8_t first_byte)
 {
-sa_state = (sub_machine_plugin_state*)plugin_state;
-sa_wf = wf;
+sub_machine_plugin_state* sa_state = (sub_machine_plugin_state*)plugin_state;
+waiting_for* sa_wf = wf;
+uint8_t sa_result0 = PLUGIN_OK;
+uint8_t* sa_result = &sa_result0;
 
 switch(sa_state->sa_next) {
 case 0: break;
@@ -147,13 +145,15 @@ label_3: /* nop */ ;
 //#line 62
 
     
+*(uint8_t*)(sa_state + 1) = 0;
 sa_state->sa_next = 4;
-label_4: helper_func_1();
-if(sa_state->sa_next2 != 0) return sa_state->sa_result;
+label_4: helper_func_1((void*)sa_state + 1, sa_wf, sa_result);
+if(*(uint8_t*)(sa_state + 1) != 0) return *sa_result;
     
+*(uint8_t*)(sa_state + 1) = 0;
 sa_state->sa_next = 5;
-label_5: helper_func_2();
-if(sa_state->sa_next3 != 0) return sa_state->sa_result;
+label_5: helper_func_2((void*)sa_state + 1, sa_wf, sa_result);
+if(*(uint8_t*)(sa_state + 1) != 0) return *sa_result;
 
     sa_state->sa_next = 0;return PLUGIN_OK;
 }

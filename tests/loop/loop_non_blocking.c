@@ -34,8 +34,7 @@ uint8_t loop_plugin_handler_init( const void* plugin_config, void* plugin_state 
 
 uint8_t loop_plugin_exec_init( const void* plugin_config, void* plugin_state )
 {
-loop_plugin_state* sa_state = (loop_plugin_state*)plugin_state;
-sa_state->sa_next = 0;
+*(uint8_t*)plugin_state = 0;
     loop_plugin_config* pc = (loop_plugin_config*)plugin_config;
     hapi_gpio_init(pc->pin_led);
     hapi_gpio_set_mode(pc->pin_led, HAPI_GPIO_TYPE_OUTPUT);

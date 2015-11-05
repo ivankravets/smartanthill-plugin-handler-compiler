@@ -134,12 +134,14 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
         expr = self._c.init_node(expression.FunctionCallExprNode(), ctx)
         expr.txt_name = get_token_text(self._c, ctx.Identifier(), _prefix)
 
+        args = self._c.init_node(node.ArgumentListNode(), ctx.getChild(1))
+
         if ctx.argumentExpressionList() is not None:
-            args = self.visit(ctx.argumentExpressionList())
-            expr.set_argument_list(args)
-        else:
-            args = self._c.init_node(node.ArgumentListNode(), ctx)
-            expr.set_argument_list(args)
+            for each in ctx.argumentExpressionList().assignmentExpression():
+                arg = self.visit(each)
+                args.add_argument(arg)
+
+        expr.set_argument_list(args)
 
         return expr
 
@@ -684,10 +686,11 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
         decl = self._c.init_node(c_node.FunctionDeclNode(), ctx)
 
-        al = self._c.init_node(node.DeclarationListNode(), ctx)
+        dd = ctx.declarator().directDeclarator()
+
+        al = self._c.init_node(node.DeclarationListNode(), dd.getChild(1))
         decl.set_argument_list(al)
 
-        dd = ctx.declarator().directDeclarator()
         if dd.directDeclarator() and dd.directDeclarator().Identifier():
             decl.txt_name = get_token_text(
                 self._c, dd.directDeclarator().Identifier(), _prefix)

@@ -27,9 +27,9 @@ int main(int argc, char *argv[]) {
 
     PREFIX(_plugin_config) config;
     PREFIX(_plugin_persistent_state) persist;
-    PREFIX(_plugin_state) state;
+    char state_buffer[1024];
     
-    uint8_t result = PREFIX(_plugin_exec_init)(&config, &state);
+    uint8_t result = PREFIX(_plugin_exec_init)(&config, state_buffer);
     
     if (result != 0) {
         printf("Error, exec_init returned %d", result);
@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
     waiting_for waiting = 0;
     
     do {
-        result = PREFIX(_plugin_handler)(&config, &persist, &state, &parser, reply, &waiting, 0);
+        result = PREFIX(_plugin_handler)(&config, &persist, state_buffer, &parser, reply, &waiting, 0);
     } while (result > 0);
     
     if (result != 0) {

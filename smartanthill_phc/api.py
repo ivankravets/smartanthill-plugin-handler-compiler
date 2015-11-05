@@ -42,22 +42,6 @@ class _Helper(object):
         self.cparser = CParser.CParser(self.token_stream)
 
 
-class NameHelper(object):
-    '''
-    Helper class to construct function and struct names from plugin prefix
-    '''
-
-    def __init__(self, prefix):
-        '''
-        Constructor
-        '''
-        self.struct_name = prefix + "_plugin_state"
-        self.include_guard = "__SA_%s_PLUGIN_STATE_H__" % prefix.upper()
-        self.handler_name = prefix + "_plugin_handler"
-        self.handler_init_name = prefix + "_plugin_handler_init"
-        self.exec_init_name = prefix + "_plugin_exec_init"
-
-
 def process_file(file_name, prefix, split_all, dump):
     '''
     Process a c input file, and returns an string with output text
@@ -84,18 +68,13 @@ def process_file(file_name, prefix, split_all, dump):
     check_all_nodes_reachables(c, root)
     process_syntax_tree(c, root)
 
-    nh = NameHelper(prefix)
-
-    create_states(
-        c, root, nh.handler_name, nh.exec_init_name, nh.handler_init_name,
-        split_all)
+    create_states(c, root, prefix, split_all)
 
     if dump:
         print
         print '\n'.join(dump_tree(root))
 
-    async = rewrite_code(c, root, helper.token_stream, nh.struct_name)
-    header = write_header(
-        c, root, helper.token_stream, nh.struct_name, nh.include_guard)
+    async = rewrite_code(c, root, helper.token_stream)
+    header = write_header(c, root, helper.token_stream)
 
     return (async, header)

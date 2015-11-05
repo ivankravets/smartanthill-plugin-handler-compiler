@@ -22,11 +22,16 @@
 #include <stdint.h>
 
 
-typedef struct _sub_machine_plugin_state {
-uint8_t sa_result;
+typedef struct _sub_machine_plugin_state1 {
 uint8_t sa_next;
-uint8_t sa_next2;
-uint8_t sa_next3;
+} sub_machine_plugin_state1;
+
+typedef struct _sub_machine_plugin_state2 {
+uint8_t sa_next;
+} sub_machine_plugin_state2;
+
+typedef struct _sub_machine_plugin_state {
+uint8_t sa_next;
 } sub_machine_plugin_state;
 
 #endif // __SA_SUB_MACHINE_PLUGIN_STATE_H__

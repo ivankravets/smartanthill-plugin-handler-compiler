@@ -23,12 +23,12 @@ from smartanthill_phc.parser import get_declarator_name
 from smartanthill_phc.root import NonBlockingData
 
 
-def rewrite_code(compiler, root, token_stream, struct_name):
+def rewrite_code(compiler, root, token_stream):
     '''
     Rewrites code tree
     '''
     rewriter = TokenStreamRewriter(token_stream)
-    visitor = _RewriteVisitor(compiler, rewriter, struct_name)
+    visitor = _RewriteVisitor(compiler, rewriter)
     visit_node(visitor, root)
 
     text = rewriter.getText()
@@ -38,46 +38,45 @@ def rewrite_code(compiler, root, token_stream, struct_name):
     return text
 
 
-def write_header(compiler, root, token_stream, struct_name, include_guard):
+def write_header(compiler, root, token_stream):
     '''
     Write header file
     '''
     nb = root.get_scope(NonBlockingData)
-    text = _write_header_file(token_stream, struct_name, include_guard, nb)
+    text = _write_header_file(token_stream, nb)
 
     compiler.check_stage('header')
 
     return text
 
 
-def _write_header_file(token_stream, struct_name, include_guard, nb):
+def _write_header_file(token_stream, nb):
 
     txt = banner.get_copyright_banner()
 
     txt += "\n"
 
-    txt += "#if !defined %s\n" % include_guard
-    txt += "#define %s\n\n" % include_guard
+    txt += "#if !defined %s\n" % nb.include_guard
+    txt += "#define %s\n\n" % nb.include_guard
 
     txt += "#include <stdint.h>\n\n\n"
 
-    txt += "typedef struct _%s {\n" % struct_name
+    for f in nb.functions_with_states:
 
-    if nb.has_sub_machines():
-        txt += "uint8_t sa_result;\n"
+        txt += "typedef struct _%s {\n" % f.txt_struct_name
 
-    for each in nb.refs_state_machines:
-        txt += "uint8_t %s;\n" % each.get_name()
+        txt += "uint8_t sa_next;\n"
 
-    for each in nb.refs_moved_var_decls:
-        start = each.ctx.declarationSpecifier(0).start
-        stop = each.ctx.declarationSpecifier(0).stop
+        for v in f.refs_moved_var_decls:
+            start = v.ctx.declarationSpecifier(0).start
+            stop = v.ctx.declarationSpecifier(0).stop
 
-        tk = token_stream.getText((start.tokenIndex, stop.tokenIndex))
-        txt += "%s %s;\n" % (str(tk), each.txt_name)
+            tk = token_stream.getText((start.tokenIndex, stop.tokenIndex))
+            txt += "%s %s;\n" % (str(tk), v.txt_name)
 
-    txt += "} %s;\n\n" % struct_name
-    txt += "#endif // %s\n" % include_guard
+        txt += "} %s;\n\n" % f.txt_struct_name
+
+    txt += "#endif // %s\n" % nb.include_guard
 
     return txt
 
@@ -88,13 +87,12 @@ class _RewriteVisitor(NodeVisitor):
     Visitor class for plugin rewrite
     '''
 
-    def __init__(self, compiler, writer, type_name):
+    def __init__(self, compiler, writer):
         '''
         Constructor
         '''
         self._c = compiler
         self._w = writer
-        self._tn = type_name
         self._nb = None
         self._sm = None
 
@@ -123,10 +121,10 @@ class _RewriteVisitor(NodeVisitor):
             assert False
 
     def _format_result_return(self, txt_result):
-        if self._sm.is_main_machine():
+        if self._sm.ref_state_machine.is_main_machine():
             return u"\nreturn %s;" % txt_result
         else:
-            return u"\n{sa_state->sa_result = %s; return;}" % txt_result
+            return u"\n{*sa_result = %s; return;}" % txt_result
 
     def visit_RootNode(self, node):
         self._nb = node.get_scope(NonBlockingData)
@@ -135,19 +133,24 @@ class _RewriteVisitor(NodeVisitor):
     def visit_PluginSourceNode(self, node):
         visit_node(self, node.child_declaration_list)
 
-        if self._nb.has_sub_machines():
-            ctx = node.child_declaration_list.childs_declarations[0].ctx
-            txt = u"\nstatic %s* sa_state = 0;" % self._tn
-            txt += u"\nstatic waiting_for* sa_wf = 0;"
-            txt += u"\n\n"
-            self._w.insertBeforeToken(ctx.start, txt)
-
     def visit_DeclarationListNode(self, node):
         for each in node.childs_declarations:
             visit_node(self, each)
 
     def visit_FunctionDeclNode(self, node):
+
+        self._sm = self._nb.get_state_machine_data(node)
         visit_node(self, node.child_statement_list)
+
+        if self._sm is not None:
+            if not self._sm.ref_state_machine.is_main_machine():
+                txt = u"void* sa_state0"
+                txt += u", waiting_for* sa_wf, uint8_t* sa_result"
+                if len(node.child_argument_list.childs_declarations) >= 1:
+                    txt += u", "
+
+                self._w.insertAfterToken(
+                    node.child_argument_list.ctx.symbol, txt)
 
     def visit_StmtListNode(self, node):
         for each in node.childs_statements:
@@ -159,22 +162,24 @@ class _RewriteVisitor(NodeVisitor):
 
     def visit_VariableDeclarationStmtNode(self, node):
 
-        if self._nb.is_moved_var_decl(node):
+        if self._sm is not None:
+            if self._sm.is_moved_var_decl(node):
 
-            decl_list = node.ctx.initDeclaratorList()
-            assert decl_list is not None
-            assert len(decl_list.initDeclarator()) == 1
-            tk = get_declarator_name(decl_list.initDeclarator(0).declarator())
+                decl_list = node.ctx.initDeclaratorList()
+                assert decl_list is not None
+                assert len(decl_list.initDeclarator()) == 1
+                tk = get_declarator_name(
+                    decl_list.initDeclarator(0).declarator())
+
+                if node.child_initializer is not None:
+                    self._w.replaceTokens(
+                        node.ctx.start, tk.symbol,
+                        u"sa_state->%s" % node.txt_name)
+                else:
+                    self._w.deleteTokens(node.ctx.start, node.ctx.stop)
 
             if node.child_initializer is not None:
-                self._w.replaceTokens(
-                    node.ctx.start, tk.symbol,
-                    u"sa_state->%s" % node.txt_name)
-            else:
-                self._w.deleteTokens(node.ctx.start, node.ctx.stop)
-
-        if node.child_initializer is not None:
-            self._visit_expression(node.child_initializer)
+                self._visit_expression(node.child_initializer)
 
     def visit_ExpressionStmtNode(self, node):
         self._visit_expression(node.child_expression)
@@ -183,7 +188,15 @@ class _RewriteVisitor(NodeVisitor):
 
         self._visit_expression(node.child_expression)
 
-        if node.flg_is_blocking:
+        if self._nb.has_states(node.child_expression.txt_name):
+            args = node.child_expression.child_argument_list
+            txt = u"(void*)sa_state + 1, sa_wf, sa_result"
+            if len(args.childs_arguments) >= 1:
+                txt += u", "
+
+            self._w.insertAfterToken(args.ctx.symbol, txt)
+
+        elif node.flg_is_blocking:
             n = node.child_expression.txt_name
             args = node.child_expression.child_argument_list.childs_arguments
             assert len(args) >= 1
@@ -231,11 +244,9 @@ class _RewriteVisitor(NodeVisitor):
 
     def visit_StateMachineStmtNode(self, node):
 
-        self._sm = node
-
         if node.has_states():
 
-            txt = u"\n\nswitch(sa_state->%s) {" % node.get_name()
+            txt = u"\n\nswitch(sa_state->sa_next) {"
 
             txt += u"\ncase 0: break;"
             for i in range(1, node.get_last_state() + 1):
@@ -254,7 +265,7 @@ class _RewriteVisitor(NodeVisitor):
     def visit_WaitStateStmtNode(self, node):
 
         nxt = str(node.int_next_state)
-        txt = u"\nsa_state->%s = %s;" % (self._sm.get_name(), nxt)
+        txt = u"\nsa_state->sa_next = %s;" % nxt
 
         txt += self._format_result_return("PLUGIN_WAITING")
 
@@ -289,7 +300,7 @@ class _RewriteVisitor(NodeVisitor):
     def visit_DebugStateStmtNode(self, node):
 
         nxt = str(node.int_next_state)
-        txt = u"\nsa_state->%s = %s;" % (self._sm.get_name(), nxt)
+        txt = u"\nsa_state->sa_next = %s;" % nxt
 
         txt += self._format_result_return("PLUGIN_DEBUG")
 
@@ -307,48 +318,49 @@ class _RewriteVisitor(NodeVisitor):
     def visit_BeforeSubStmtNode(self, node):
 
         nxt = str(node.int_next_state)
-        txt = u"\nsa_state->%s = %s;" % (self._sm.get_name(), nxt)
+        txt = u"\n*(uint8_t*)(sa_state + 1) = 0;"
+        txt += u"\nsa_state->sa_next = %s;" % nxt
         txt += u"\nlabel_%s: " % nxt
 
         self._w.insertBeforeToken(node.ctx.start, txt)
 
     def visit_AfterSubStmtNode(self, node):
 
-        txt = u"\nif(sa_state->%s != 0)" % node.ref_sub_machine.get_name()
+        txt = u"\nif(*(uint8_t*)(sa_state + 1) != 0)"
 
-        if self._sm.is_main_machine():
-            txt += u" return sa_state->sa_result;"
+        if self._sm.ref_state_machine.is_main_machine():
+            txt += u" return *sa_result;"
         else:
             txt += u" return;"
 
         self._w.insertAfterToken(node.ctx.stop, txt)
 
-    def visit_InitStateStmtNode(self, node):
+    def visit_InitFirstStmtNode(self, node):
 
-        txt = u"\n%s* sa_state = (%s*)%s;" % (self._tn, self._tn, node.txt_arg)
-
-        if self._nb.has_sub_machines():
-            txt += u"\nsa_state->sa_result = PLUGIN_OK;"
-
-        for each in self._nb.refs_state_machines:
-            txt += u"\nsa_state->%s = 0;" % each.get_name()
-
+        txt = u"\n*(uint8_t*)%s = 0;" % node.txt_arg1
         self._w.insertAfterToken(node.ctx, txt)
 
     def visit_BeforeReturnStmtNode(self, node):
 
-        txt = u"sa_state->%s = 0;" % self._sm.get_name()
+        txt = u"sa_state->sa_next = 0;"
         self._w.insertBeforeToken(node.ctx, txt)
 
-    def visit_StateDataCastStmtNode(self, node):
+    def visit_MainFirstStmtNode(self, node):
+
+        txt = u"\n%s* sa_state = (%s*)%s;" % (
+            self._sm.txt_struct_name, self._sm.txt_struct_name, node.txt_arg2)
+        txt += u"\nwaiting_for* sa_wf = %s;" % node.txt_arg5
 
         if self._nb.has_sub_machines():
-            txt = u"\nsa_state = (%s*)%s;" % (self._tn, node.txt_arg2)
-            txt += u"\nsa_wf = %s;" % node.txt_arg5
-        else:
-            txt = u"\n%s* sa_state = (%s*)%s;" % (self._tn,
-                                                  self._tn, node.txt_arg2)
-            txt += u"\nwaiting_for* sa_wf = %s;" % node.txt_arg5
+            txt += u"\nuint8_t sa_result0 = PLUGIN_OK;"
+            txt += u"\nuint8_t* sa_result = &sa_result0;"
+
+        self._w.insertAfterToken(node.ctx, txt)
+
+    def visit_SubFirstStmtNode(self, node):
+
+        txt = u"\n%s* sa_state = (%s*)sa_state0;" % (
+            self._sm.txt_struct_name, self._sm.txt_struct_name)
 
         self._w.insertAfterToken(node.ctx, txt)
 
@@ -366,10 +378,11 @@ class _RewriteVisitor(NodeVisitor):
     def visit_VariableExprNode(self, node):
 
         if node.ref_decl is not None:
-            if self._nb.is_moved_var_decl(node.ref_decl):
-                self._w.replaceToken(
-                    node.ctx.symbol,
-                    u"(sa_state->%s)" % node.ref_decl.txt_name)
+            if self._sm is not None:
+                if self._sm.is_moved_var_decl(node.ref_decl):
+                    self._w.replaceToken(
+                        node.ctx.symbol,
+                        u"(sa_state->%s)" % node.ref_decl.txt_name)
 
     def visit_FunctionCallExprNode(self, node):
         visit_node(self, node.child_argument_list)

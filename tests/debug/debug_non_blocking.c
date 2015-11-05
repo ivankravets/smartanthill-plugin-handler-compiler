@@ -19,8 +19,7 @@
 
 uint8_t debug_plugin_exec_init(const void* plugin_config, void* plugin_state)
 {
-debug_plugin_state* sa_state = (debug_plugin_state*)plugin_state;
-sa_state->sa_next = 0;
+*(uint8_t*)plugin_state = 0;
     return PLUGIN_OK;
 }
 

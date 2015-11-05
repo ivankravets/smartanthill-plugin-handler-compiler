@@ -37,10 +37,10 @@ def non_blocking_test(prefix, split_all):
     code, header = api.process_file(c_file, prefix, split_all, False)
 
     f = open(nb_file, 'rb')
-    assert code == f.read()
+    assert code.splitlines() == f.read().splitlines()
 
     h = open(h_file, 'rb')
-    assert header == h.read()
+    assert header.splitlines() == h.read().splitlines()
 
 
 def test_blink():

@@ -42,6 +42,28 @@ class PluginSourceNode(Node):
         compiler.resolve_node(self.child_declaration_list)
 
 
+class StateMachineData(object):
+
+    '''
+    Helper container for state machine related info
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        self.ref_function_decl = None
+        self.refs_moved_var_decls = None
+        self.ref_state_machine = None
+        self.txt_struct_name = None
+
+    def is_moved_var_decl(self, decl):
+        '''
+        Checks if a declaration was moved because of non-blocking modifications
+        '''
+        return decl in self.refs_moved_var_decls
+
+
 class NonBlockingData(object):
 
     '''
@@ -52,20 +74,63 @@ class NonBlockingData(object):
         '''
         Constructor
         '''
-        self.refs_moved_var_decls = None
-        self.refs_state_machines = None
+        self.functions_with_states = []
+        self.state_name = None
+        self.include_guard = None
+        self.handler_name = None
+        self.handler_init_name = None
+        self.exec_init_name = None
 
-    def is_moved_var_decl(self, decl):
-        '''
-        Checks if a declaration was moved because of non-blocking modifications
-        '''
-        return decl in self.refs_moved_var_decls
+    def set_prefix(self, prefix):
+
+        self.state_name = prefix + "_plugin_state"
+        self.include_guard = "__SA_%s_PLUGIN_STATE_H__" % prefix.upper()
+        self.handler_name = prefix + "_plugin_handler"
+        self.handler_init_name = prefix + "_plugin_handler_init"
+        self.exec_init_name = prefix + "_plugin_exec_init"
 
     def has_sub_machines(self):
         '''
-        Checks if a declaration was moved because of non-blocking modifications
+        Returns true if there are more than one function with states
         '''
-        return len(self.refs_state_machines) > 1
+        return len(self.functions_with_states) > 1
+
+    def get_state_machine_data(self, func):
+        '''
+        Returns the state machine data of a function
+        '''
+        for each in self.functions_with_states:
+            if each.ref_function_decl == func:
+                return each
+
+        return None
+
+    def has_states(self, txt_name):
+        '''
+        Returns true if function has states
+        '''
+
+        for each in self.functions_with_states:
+            if each.ref_function_decl.txt_name == txt_name:
+                return True
+
+        return False
+
+    def add_function_with_states(self, func, sm, moved_vars):
+
+        tmp = StateMachineData()
+        tmp.ref_function_decl = func
+        tmp.refs_moved_var_decls = moved_vars
+        tmp.ref_state_machine = sm
+
+        tmp.txt_struct_name = self.state_name
+
+        if func.txt_name != self.handler_name:
+            tmp.txt_struct_name += str(
+                len(self.functions_with_states) + 1)
+
+        assert not self.has_states(func.txt_name)
+        self.functions_with_states.append(tmp)
 
 
 class RootNode(Node):
