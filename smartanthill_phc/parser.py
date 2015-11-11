@@ -710,6 +710,19 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
         else:
             self._c.report_error(ctx, "Unsupported function declaration")
 
+        for each in ctx.declarationSpecifier():
+            ts = each.typeSpecifier()
+            if ts is not None:
+                t = self._c.init_node(c_node.SimpleTypeNode(), ts)
+                t.txt_name = get_token_text(self._c, ts, _prefix)
+                decl.set_return_type(t)
+                break
+
+        if decl.child_return_type is None:
+            t = self._c.init_node(c_node.SimpleTypeNode(), ctx)
+            t.txt_name = '_zc_dont_care'
+            decl.set_return_type(t)
+
         sl = self.visit(ctx.compoundStatement())
         decl.set_statement_list(sl)
 

@@ -83,7 +83,7 @@ default: ZEPTO_ASSERT(0);
     
 *(uint8_t*)(sa_state + 1) = 0;
 sa_state->sa_next = 1;
-label_1: helper_func_1((void*)sa_state + 1, sa_wf, sa_result);
+label_1: helper_func_1((void*)(sa_state + 1), sa_wf, sa_result);
 if(*(uint8_t*)(sa_state + 1) != 0) return;
     helper_func_0();
 sa_state->sa_next = 2;
@@ -94,7 +94,7 @@ label_2: /* nop */ ;
     
 *(uint8_t*)(sa_state + 1) = 0;
 sa_state->sa_next = 3;
-label_3: helper_func_1((void*)sa_state + 1, sa_wf, sa_result);
+label_3: helper_func_1((void*)(sa_state + 1), sa_wf, sa_result);
 if(*(uint8_t*)(sa_state + 1) != 0) return;
 sa_state->sa_next = 0;}
 
@@ -147,12 +147,12 @@ label_3: /* nop */ ;
     
 *(uint8_t*)(sa_state + 1) = 0;
 sa_state->sa_next = 4;
-label_4: helper_func_1((void*)sa_state + 1, sa_wf, sa_result);
+label_4: helper_func_1((void*)(sa_state + 1), sa_wf, sa_result);
 if(*(uint8_t*)(sa_state + 1) != 0) return *sa_result;
     
 *(uint8_t*)(sa_state + 1) = 0;
 sa_state->sa_next = 5;
-label_5: helper_func_2((void*)sa_state + 1, sa_wf, sa_result);
+label_5: helper_func_2((void*)(sa_state + 1), sa_wf, sa_result);
 if(*(uint8_t*)(sa_state + 1) != 0) return *sa_result;
 
     sa_state->sa_next = 0;return PLUGIN_OK;

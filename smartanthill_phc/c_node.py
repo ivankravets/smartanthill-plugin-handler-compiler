@@ -17,7 +17,8 @@ from smartanthill_phc.common.lookup import RootScope, ReturnStmtScope,\
     StatementListScope
 from smartanthill_phc.common.node import ExpressionNode,\
     resolve_expression_list, Node, StmtListNode,\
-    StatementNode, resolve_expression, DeclarationListNode
+    StatementNode, resolve_expression, DeclarationListNode, TypeDeclNode,\
+    TypeNode
 
 
 class DontCareExprNode(ExpressionNode):
@@ -88,11 +89,20 @@ class FunctionDeclNode(Node):
         Constructor
         '''
         super(FunctionDeclNode, self).__init__()
+        self.child_return_type = None
         self.child_statement_list = None
         self.child_argument_list = None
         self.txt_name = None
         self.add_scope(ReturnStmtScope, ReturnStmtScope(self))
         self.add_scope(StatementListScope, None)
+
+    def set_return_type(self, child):
+        '''
+        statement list setter
+        '''
+        assert isinstance(child, TypeNode)
+        child.set_parent(self)
+        self.child_return_type = child
 
     def set_statement_list(self, child):
         '''
@@ -111,6 +121,7 @@ class FunctionDeclNode(Node):
         self.child_argument_list = child
 
     def resolve(self, compiler):
+        compiler.resolve_node(self.child_return_type)
         compiler.resolve_node(self.child_statement_list)
 
 
@@ -196,3 +207,67 @@ class LoopStmtNode(StatementNode):
     def resolve(self, compiler):
         resolve_expression(compiler, self, 'child_expression')
         compiler.resolve_node(self.child_statement_list)
+
+
+class BasicTypeDeclNode(TypeDeclNode):
+
+    '''
+    Basic, built-in types are implemented using this class
+    '''
+
+    def __init__(self, type_name):
+        '''
+        Constructor
+        '''
+        super(BasicTypeDeclNode, self).__init__(type_name)
+
+
+class VoidTypeDeclNode(TypeDeclNode):
+
+    '''
+    void pseudotype is implemented using this class
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(VoidTypeDeclNode, self).__init__('void')
+
+
+class IntTypeDeclNode(TypeDeclNode):
+
+    '''
+    Basic integral built-in types are implemented using this class
+    '''
+
+    def __init__(self, type_name):
+        '''
+        Constructor
+        '''
+        super(IntTypeDeclNode, self).__init__(type_name)
+
+
+class SimpleTypeNode(TypeNode):
+
+    '''
+    Node class representing a type
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(SimpleTypeNode, self).__init__()
+        self.txt_name = None
+
+    def resolve_type(self, compiler):
+        '''
+        Type resolution
+        '''
+        # pylint: disable=unused-argument
+        t = self.get_scope(RootScope).lookup_type(self.txt_name)
+        if t is not None:
+            return t
+        else:
+            return self.get_scope(RootScope).lookup_type('_zc_dont_care')

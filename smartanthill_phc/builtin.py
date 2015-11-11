@@ -13,7 +13,9 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from smartanthill_phc.common.node import BasicTypeDeclNode, DeclarationListNode
+from smartanthill_phc.c_node import VoidTypeDeclNode, IntTypeDeclNode,\
+    BasicTypeDeclNode
+from smartanthill_phc.common.node import DeclarationListNode
 
 
 def create_builtins(compiler, ctx):
@@ -23,7 +25,9 @@ def create_builtins(compiler, ctx):
 
     decls = compiler.init_node(DeclarationListNode(), ctx)
     decls.add_declaration(
-        compiler.init_node(BasicTypeDeclNode('_zc_void'), ctx))
+        compiler.init_node(VoidTypeDeclNode(), ctx))
+    decls.add_declaration(
+        compiler.init_node(IntTypeDeclNode('uint8_t'), ctx))
 
     decls.add_declaration(
         compiler.init_node(BasicTypeDeclNode('_zc_dont_care'), ctx))

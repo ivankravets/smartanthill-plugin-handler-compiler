@@ -84,10 +84,10 @@ default: ZEPTO_ASSERT(0);
 *(uint8_t*)(sa_state + 1) = 0;
 sa_state->sa_next = 1;
 label_1: helper_func_1((void*)(sa_state + 1), sa_wf, sa_result);
-if(*(uint8_t*)(sa_state + 1) != 0) return;
+if(*(uint8_t*)(sa_state + 1) != 0) return 0;
     helper_func_0();
 sa_state->sa_next = 2;
-{*sa_result = PLUGIN_DEBUG; return;}
+{*sa_result = PLUGIN_DEBUG; return 0;}
 label_2: /* nop */ ;
 //#line 50
 
@@ -95,7 +95,7 @@ label_2: /* nop */ ;
 *(uint8_t*)(sa_state + 1) = 0;
 sa_state->sa_next = 3;
 label_3: helper_func_1((void*)(sa_state + 1), sa_wf, sa_result);
-if(*(uint8_t*)(sa_state + 1) != 0) return;
+if(*(uint8_t*)(sa_state + 1) != 0) return 0;
     
     sa_state->sa_next = 0;return PLUGIN_OK;
 }

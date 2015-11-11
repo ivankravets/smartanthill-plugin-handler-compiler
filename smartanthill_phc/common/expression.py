@@ -384,7 +384,7 @@ class AssignmentExprNode(ExpressionNode):
                 self.txt_name)
             # no need to raise here
 
-        return self.get_scope(RootScope).lookup_type('_zc_void')
+        return self.get_scope(RootScope).lookup_type('void')
 
 
 class OperatorExprNode(ExpressionNode):

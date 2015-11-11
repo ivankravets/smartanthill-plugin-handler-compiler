@@ -18,6 +18,7 @@ from antlr4.tree.Tree import TerminalNodeImpl
 
 from smartanthill_phc import banner
 from smartanthill_phc.TokenStreamRewriter import TokenStreamRewriter
+from smartanthill_phc.c_node import VoidTypeDeclNode, IntTypeDeclNode
 from smartanthill_phc.common.visitor import NodeVisitor, visit_node
 from smartanthill_phc.parser import get_declarator_name
 from smartanthill_phc.root import NonBlockingData
@@ -95,6 +96,7 @@ class _RewriteVisitor(NodeVisitor):
         self._w = writer
         self._nb = None
         self._sm = None
+        self._func = None
 
     def default_visit(self, node):
         '''
@@ -120,11 +122,22 @@ class _RewriteVisitor(NodeVisitor):
         else:
             assert False
 
+    def _get_func_return(self):
+        if isinstance(self._func.child_return_type.ref_type_declaration,
+                      VoidTypeDeclNode):
+            return u"return;"
+        elif isinstance(self._func.child_return_type.ref_type_declaration,
+                        IntTypeDeclNode):
+            return u"return 0;"
+        else:
+            assert False
+
     def _format_result_return(self, txt_result):
         if self._sm.ref_state_machine.is_main_machine():
             return u"\nreturn %s;" % txt_result
         else:
-            return u"\n{*sa_result = %s; return;}" % txt_result
+            return u"\n{*sa_result = %s; %s}" % (txt_result,
+                                                 self._get_func_return())
 
     def visit_RootNode(self, node):
         self._nb = node.get_scope(NonBlockingData)
@@ -139,6 +152,7 @@ class _RewriteVisitor(NodeVisitor):
 
     def visit_FunctionDeclNode(self, node):
 
+        self._func = node
         self._sm = self._nb.get_state_machine_data(node)
         visit_node(self, node.child_statement_list)
 
@@ -318,12 +332,12 @@ class _RewriteVisitor(NodeVisitor):
 
     def visit_AfterSubStmtNode(self, node):
 
-        txt = u"\nif(*(uint8_t*)(sa_state + 1) != 0)"
+        txt = u"\nif(*(uint8_t*)(sa_state + 1) != 0) "
 
         if self._sm.ref_state_machine.is_main_machine():
-            txt += u" return *sa_result;"
+            txt += u"return *sa_result;"
         else:
-            txt += u" return;"
+            txt += self._get_func_return()
 
         self._w.insertAfterToken(node.ctx.stop, txt)
 

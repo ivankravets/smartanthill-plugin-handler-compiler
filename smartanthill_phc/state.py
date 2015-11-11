@@ -13,7 +13,8 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from smartanthill_phc.c_node import TypeCastExprNode
+from smartanthill_phc.c_node import TypeCastExprNode, IntTypeDeclNode,\
+    VoidTypeDeclNode
 from smartanthill_phc.common.expression import VariableExprNode,\
     FunctionCallExprNode
 from smartanthill_phc.common.node import StmtListNode, StatementNode
@@ -403,6 +404,12 @@ def _create_sub_state_machine(compiler, node, nb, split_all):
         ctx = stmt_list.ctx.start
         stmt = compiler.init_node(SubFirstStmtNode(), ctx)
         stmt_list.insert_statement_at(0, stmt)
+
+        if not isinstance(node.child_return_type.ref_type_declaration,
+                          (VoidTypeDeclNode, IntTypeDeclNode)):
+            compiler.report_error(
+                node.ctx,
+                "Function return type not supported for sub states creation")
 
         if not stmt_list.is_closed_stmt():
             stmt = compiler.init_node(

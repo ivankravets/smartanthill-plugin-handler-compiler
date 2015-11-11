@@ -354,10 +354,38 @@ def _resolve_expression_list_item(compiler, parent, expr_list, i):
         expr_list[i].assert_resolved()
 
 
+class TypeNode(Node):
+
+    '''
+    Base class for types references
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(TypeNode, self).__init__()
+        self.ref_type_declaration = None
+
+    def resolve(self, compiler):
+        '''
+        Base implementation of type resolution method
+        '''
+        assert not self.ref_type_declaration
+        t = self.resolve_type(compiler)
+        self.ref_type_declaration = t
+
+    def assert_resolved(self):
+        '''
+        Asserts this instance has been resolved
+        '''
+        assert self.ref_type_declaration
+
+
 class TypeDeclNode(Node):
 
     '''
-    Base class for types
+    Base class for types declarations
     '''
 
     NO_MATCH = 0
@@ -446,19 +474,6 @@ def expression_type_match(compiler, lhs_type, parent, child_name):
         return True
     else:
         return False
-
-
-class BasicTypeDeclNode(TypeDeclNode):
-
-    '''
-    Basic, built-in types are implemented using this class
-    '''
-
-    def __init__(self, type_name):
-        '''
-        Constructor
-        '''
-        super(BasicTypeDeclNode, self).__init__(type_name)
 
 
 class DeclarationListNode(Node):
