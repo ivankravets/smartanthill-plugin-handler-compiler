@@ -14,7 +14,8 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 from smartanthill_phc.c_node import TypeCastExprNode
-from smartanthill_phc.common.expression import VariableExprNode
+from smartanthill_phc.common.expression import VariableExprNode,\
+    FunctionCallExprNode
 from smartanthill_phc.common.node import StmtListNode, StatementNode
 from smartanthill_phc.common.statement import VariableDeclarationStmtNode
 from smartanthill_phc.common.visitor import NodeVisitor, visit_node
@@ -576,6 +577,15 @@ class _StatementsVisitor(NodeVisitor):
     def visit_VariableDeclarationStmtNode(self, node):
 
         self._h.add_var_decl(node, self._sm.get_last_state())
+
+        if node.child_initializer is not None:
+            if isinstance(node.child_initializer, FunctionCallExprNode):
+                if self._nb.has_states(node.child_initializer.txt_name):
+                    visit_node(
+                        self, node.child_initializer.child_argument_list)
+                    self._substates_around_current(node.ctx)
+                    return
+
         visit_node(self, node.child_initializer)
 
         if self._split_all:

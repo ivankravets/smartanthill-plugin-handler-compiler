@@ -188,15 +188,7 @@ class _RewriteVisitor(NodeVisitor):
 
         self._visit_expression(node.child_expression)
 
-        if self._nb.has_states(node.child_expression.txt_name):
-            args = node.child_expression.child_argument_list
-            txt = u"(void*)sa_state + 1, sa_wf, sa_result"
-            if len(args.childs_arguments) >= 1:
-                txt += u", "
-
-            self._w.insertAfterToken(args.ctx.symbol, txt)
-
-        elif node.flg_is_blocking:
+        if node.flg_is_blocking:
             n = node.child_expression.txt_name
             args = node.child_expression.child_argument_list.childs_arguments
             assert len(args) >= 1
@@ -386,6 +378,14 @@ class _RewriteVisitor(NodeVisitor):
 
     def visit_FunctionCallExprNode(self, node):
         visit_node(self, node.child_argument_list)
+
+        if self._nb.has_states(node.txt_name):
+            args = node.child_argument_list
+            txt = u"(void*)(sa_state + 1), sa_wf, sa_result"
+            if len(args.childs_arguments) >= 1:
+                txt += u", "
+
+            self._w.insertAfterToken(args.ctx.symbol, txt)
 
     def visit_ArgumentListNode(self, node):
         for each in node.childs_arguments:

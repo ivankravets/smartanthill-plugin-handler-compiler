@@ -1,0 +1,25 @@
+--- Build ---
+gcc -fno-exceptions -g -Os -Wall -ffunction-sections -fdata-sections -std=c99 -I.. -DSA_PLUGIN_ID=sub_machine2 -include sub_machine2.h -o sub_machine2.exe ../runner.c sub_machine2.c
+Ok
+
+---  Run  ---
+Ok
+
+
+*** Non Blocking ***
+--- Build ---
+gcc -fno-exceptions -g -Os -Wall -ffunction-sections -fdata-sections -std=c99 -I.. -DSA_PLUGIN_ID=sub_machine2 -include sub_machine2.h -o sub_machine2_non_blocking.exe ../runner.c sub_machine2_non_blocking.c
+sub_machine2_non_blocking.c: In function 'helper_func_2':
+sub_machine2_non_blocking.c:87:36: warning: 'return' with no value, in function returning non-void [enabled by default]
+ if(*(uint8_t*)(sa_state + 1) != 0) return;
+                                    ^
+sub_machine2_non_blocking.c:90:29: warning: 'return' with no value, in function returning non-void [enabled by default]
+ {*sa_result = PLUGIN_DEBUG; return;}
+                             ^
+sub_machine2_non_blocking.c:98:36: warning: 'return' with no value, in function returning non-void [enabled by default]
+ if(*(uint8_t*)(sa_state + 1) != 0) return;
+                                    ^
+Ok
+
+---  Run  ---
+Ok
