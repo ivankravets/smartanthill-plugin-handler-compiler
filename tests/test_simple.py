@@ -69,6 +69,11 @@ def test_sub_machine():
     non_blocking_test('sub_machine', True)
 
 
+def test_sub_machine2():
+
+    non_blocking_test('sub_machine2', True)
+
+
 def test_write_digital_pin():
 
     composer_test('write_digital_pin')

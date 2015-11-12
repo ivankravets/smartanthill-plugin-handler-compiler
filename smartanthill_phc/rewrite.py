@@ -136,8 +136,8 @@ class _RewriteVisitor(NodeVisitor):
         if self._sm.ref_state_machine.is_main_machine():
             return u"\nreturn %s;" % txt_result
         else:
-            return u"\n{*sa_result = %s; %s}" % (txt_result,
-                                                 self._get_func_return())
+            return u"\n*sa_result = %s;\n%s" % (txt_result,
+                                                self._get_func_return())
 
     def visit_RootNode(self, node):
         self._nb = node.get_scope(NonBlockingData)
@@ -295,11 +295,12 @@ class _RewriteVisitor(NodeVisitor):
         else:
             assert False
 
-        txt += u"\nif(papi_wait_handler_is_waiting_for_%s)" % f
+        txt += u"\nif(papi_wait_handler_is_waiting_for_%s) {" % f
         txt += self._format_result_return("PLUGIN_WAITING")
+        txt += u"\n}\n"
 
         if node.ctx.stop.line is not None:
-            txt += u"\n//#line %s\n" % node.ctx.stop.line
+            txt += u"//#line %s\n" % node.ctx.stop.line
 
         self._w.insertAfterToken(node.ctx.stop, txt)
 

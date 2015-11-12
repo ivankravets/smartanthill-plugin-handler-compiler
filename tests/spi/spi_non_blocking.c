@@ -58,8 +58,9 @@ sa_state->sa_next = 1;
 return PLUGIN_WAITING;
 
 label_1:
-if(papi_wait_handler_is_waiting_for_spi_send(sa_wf, pc->spi_id))
+if(papi_wait_handler_is_waiting_for_spi_send(sa_wf, pc->spi_id)) {
 return PLUGIN_WAITING;
+}
 //#line 40
 
 
@@ -70,8 +71,9 @@ sa_state->sa_next = 2;
 return PLUGIN_WAITING;
 
 label_2:
-if(papi_wait_handler_is_waiting_for_timeout(0, sa_wf))
+if(papi_wait_handler_is_waiting_for_timeout(0, sa_wf)) {
 return PLUGIN_WAITING;
+}
 //#line 43
    
 
@@ -83,8 +85,9 @@ sa_state->sa_next = 3;
 return PLUGIN_WAITING;
 
 label_3:
-if(papi_wait_handler_is_waiting_for_spi_receive(sa_wf, pc->spi_id))
+if(papi_wait_handler_is_waiting_for_spi_receive(sa_wf, pc->spi_id)) {
 return PLUGIN_WAITING;
+}
 //#line 47
 
     

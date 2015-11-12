@@ -199,6 +199,54 @@ class BeforeReturnStmtNode(StatementNode):
         super(BeforeReturnStmtNode, self).__init__()
 
 
+class LoopsHelper(object):
+    '''
+    Helper class to detect which variables are accessed inside loops
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        self._loop_stack = []
+        self._decls_stack = []
+
+    def add_var_ref(self, decl):
+        '''
+        Adds a variable declaration
+        '''
+        if len(self._decls_stack) != 0:
+            if decl not in self._decls_stack[-1]:
+                self._decls_stack[-1].append(decl)
+
+    def begin_loop(self, st):
+        '''
+        A loop begins, put a mark with state number
+        '''
+        self._loop_stack.append(st)
+        self._decls_stack.append([])
+
+    def end_loop(self, st):
+        '''
+        A loop ends, if same state number, the loop completed within the
+        same state, no special treatment needed, else return a set
+        with all variables that may be accessed on the following iteration,
+        and which values should be preserved
+        '''
+
+        result = []
+        if self._loop_stack[-1] != st:
+            for loop in self._decls_stack:
+                for each in loop:
+                    if each not in result:
+                        result.append(each)
+
+        self._loop_stack.pop()
+        self._decls_stack.pop()
+
+        return result
+
+
 class DeclsHelper(object):
 
     '''
@@ -210,66 +258,81 @@ class DeclsHelper(object):
         Constructor
         '''
         self._decls = {}
-        self._decls2 = []
-        self._loop_stack = []
-        self._used_inside_loop = []
+        self._to_be_moved = []
+        self._loops = LoopsHelper()
 
     def add_var_decl(self, decl, st):
         '''
         Adds a variable declaration
         '''
         assert decl not in self._decls
-
-        name = decl.txt_name
-        i = 0
-        while self._has_decl_with_name(name):
-            i += 1
-            name = decl.txt_name + str(i)
-
-        decl.txt_name = name  # TODO improve
         self._decls[decl] = st
 
-    def _has_decl_with_name(self, name):
+    def force_move_var_decl(self, decl):
+        '''
+        Adds a variable declaration and forces it into moveds
+        '''
+        assert decl in self._decls
 
-        for each in self._decls:
-            if each.txt_name == name:
-                return True
-        return False
+        if decl not in self._to_be_moved:
+            self._to_be_moved.append(decl)
 
     def add_var_expr(self, expr, st):
         '''
         Adds a reference (access) to a variable in certain state
         '''
-        if expr.ref_decl is None:
+
+        if expr.ref_decl is None or expr.ref_decl not in self._decls:
             return
 
-        if expr.ref_decl not in self._decls:
-            return
-
-        if expr.ref_decl in self._decls2:
+        if expr.ref_decl in self._to_be_moved:  # already moved
             return
 
         if self._decls[expr.ref_decl] != st:
-            self._decls2.append(expr.ref_decl)
+            self._to_be_moved.append(expr.ref_decl)
             return
 
-        if len(self._loop_stack) != 0:
-            self._used_inside_loop.append(expr.ref_decl)
+        # Still may need to be moved because of loops
+        self._loops.add_var_ref(expr.ref_decl)
 
     def begin_loop(self, st):
-        self._loop_stack.append(st)
+        '''
+        A loop begins, put a mark with state number
+        '''
+        self._loops.begin_loop(st)
 
     def end_loop(self, st):
-        if self._loop_stack.pop() != st:
-            for each in self._used_inside_loop:
-                if each not in self._decls2:
-                    self._decls2.append(each)
-
-            self._used_inside_loop = []
+        '''
+        A loop ends, if same state number, the loop completed within the
+        same state, no special treatment needed
+        '''
+        result = self._loops.end_loop(st)
+        for each in result:
+            if each not in self._to_be_moved:
+                self._to_be_moved.append(each)
 
     def get_decls_to_be_moved(self):
+        '''
+        Now we have the complete list of variable declarations that need to
+        be moved, make a sanity check to avoid name duplication,
+        mangle name if needed
+        '''
 
-        return self._decls2
+        names = set()
+        i = 0
+        for each in self._to_be_moved:
+            if each.txt_name in names:
+                tmp = each.txt_name
+                while tmp in names:
+                    i += 1
+                    tmp = each.txt_name + str(i)
+
+                each.txt_name = tmp
+
+            assert each.txt_name not in names
+            names.add(each.txt_name)
+
+        return self._to_be_moved
 
 
 class DeclsHelper2(object):
@@ -588,6 +651,7 @@ class _StatementsVisitor(NodeVisitor):
         if node.child_initializer is not None:
             if isinstance(node.child_initializer, FunctionCallExprNode):
                 if self._nb.has_states(node.child_initializer.txt_name):
+                    self._h.force_move_var_decl(node)
                     visit_node(
                         self, node.child_initializer.child_argument_list)
                     self._substates_around_current(node.ctx)

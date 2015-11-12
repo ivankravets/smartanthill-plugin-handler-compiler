@@ -52,11 +52,14 @@ default: ZEPTO_ASSERT(0);
     
 papi_wait_handler_add_wait_for_timeout(sa_wf, 100);
 sa_state->sa_next = 1;
-{*sa_result = PLUGIN_WAITING; return;}
+*sa_result = PLUGIN_WAITING;
+return;
 
 label_1:
-if(papi_wait_handler_is_waiting_for_timeout(0, sa_wf))
-{*sa_result = PLUGIN_WAITING; return;}
+if(papi_wait_handler_is_waiting_for_timeout(0, sa_wf)) {
+*sa_result = PLUGIN_WAITING;
+return;
+}
 //#line 40
 
     
@@ -87,7 +90,8 @@ label_1: helper_func_1((void*)(sa_state + 1), sa_wf, sa_result);
 if(*(uint8_t*)(sa_state + 1) != 0) return;
     helper_func_0();
 sa_state->sa_next = 2;
-{*sa_result = PLUGIN_DEBUG; return;}
+*sa_result = PLUGIN_DEBUG;
+return;
 label_2: /* nop */ ;
 //#line 50
 
@@ -133,8 +137,9 @@ sa_state->sa_next = 2;
 return PLUGIN_WAITING;
 
 label_2:
-if(papi_wait_handler_is_waiting_for_timeout(0, sa_wf))
+if(papi_wait_handler_is_waiting_for_timeout(0, sa_wf)) {
 return PLUGIN_WAITING;
+}
 //#line 60
 
     

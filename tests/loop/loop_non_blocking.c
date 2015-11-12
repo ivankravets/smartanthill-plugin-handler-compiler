@@ -73,8 +73,9 @@ sa_state->sa_next = 1;
 return PLUGIN_WAITING;
 
 label_1:
-if(papi_wait_handler_is_waiting_for_timeout(0, sa_wf))
+if(papi_wait_handler_is_waiting_for_timeout(0, sa_wf)) {
 return PLUGIN_WAITING;
+}
 //#line 54
 
         papi_write_digital_pin(pc->pin_led, HAPI_GPIO_VALUE_LOW);
@@ -84,8 +85,9 @@ sa_state->sa_next = 2;
 return PLUGIN_WAITING;
 
 label_2:
-if(papi_wait_handler_is_waiting_for_timeout(0, sa_wf))
+if(papi_wait_handler_is_waiting_for_timeout(0, sa_wf)) {
 return PLUGIN_WAITING;
+}
 //#line 56
 
     }
@@ -98,8 +100,9 @@ sa_state->sa_next = 3;
 return PLUGIN_WAITING;
 
 label_3:
-if(papi_wait_handler_is_waiting_for_timeout(0, sa_wf))
+if(papi_wait_handler_is_waiting_for_timeout(0, sa_wf)) {
 return PLUGIN_WAITING;
+}
 //#line 61
 
         (sa_state->i1)++;
@@ -113,8 +116,9 @@ sa_state->sa_next = 4;
 return PLUGIN_WAITING;
 
 label_4:
-if(papi_wait_handler_is_waiting_for_timeout(0, sa_wf))
+if(papi_wait_handler_is_waiting_for_timeout(0, sa_wf)) {
 return PLUGIN_WAITING;
+}
 //#line 67
 
     }

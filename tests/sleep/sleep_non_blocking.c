@@ -52,8 +52,9 @@ sa_state->sa_next = 1;
 return PLUGIN_WAITING;
 
 label_1:
-if(papi_wait_handler_is_waiting_for_timeout(0, sa_wf))
+if(papi_wait_handler_is_waiting_for_timeout(0, sa_wf)) {
 return PLUGIN_WAITING;
+}
 //#line 36
    
 
