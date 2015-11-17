@@ -19,7 +19,7 @@ from antlr4.tree.Tree import TerminalNodeImpl
 from smartanthill_phc import banner
 from smartanthill_phc.TokenStreamRewriter import TokenStreamRewriter
 from smartanthill_phc.c_node import VoidTypeDeclNode, IntTypeDeclNode
-from smartanthill_phc.common.visitor import NodeVisitor, visit_node
+from smartanthill_phc.common.visitor import visit_node, NodeVisitor
 from smartanthill_phc.parser import get_declarator_name
 from smartanthill_phc.root import NonBlockingData
 
@@ -92,6 +92,7 @@ class _RewriteVisitor(NodeVisitor):
         '''
         Constructor
         '''
+        super(_RewriteVisitor, self).__init__()
         self._c = compiler
         self._w = writer
         self._nb = None
@@ -104,12 +105,6 @@ class _RewriteVisitor(NodeVisitor):
         '''
         self._c.report_error(
             node.ctx, "Statement rewrite not supported")
-
-    def _visit_expression(self, expr):
-        '''
-        Helper method to create an expression visitor an call it
-        '''
-        visit_node(self, expr)
 
     def _get_text(self, ctx):
         '''
@@ -141,20 +136,20 @@ class _RewriteVisitor(NodeVisitor):
 
     def visit_RootNode(self, node):
         self._nb = node.get_scope(NonBlockingData)
-        visit_node(self, node.child_source)
+        self.visit(node.child_source)
 
     def visit_PluginSourceNode(self, node):
-        visit_node(self, node.child_declaration_list)
+        self.visit(node.child_declaration_list)
 
     def visit_DeclarationListNode(self, node):
         for each in node.childs_declarations:
-            visit_node(self, each)
+            self.visit(each)
 
     def visit_FunctionDeclNode(self, node):
 
         self._func = node
         self._sm = self._nb.get_state_machine_data(node)
-        visit_node(self, node.child_statement_list)
+        self.visit(node.child_statement_list)
 
         if self._sm is not None:
             if not self._sm.ref_state_machine.is_main_machine():
@@ -168,7 +163,7 @@ class _RewriteVisitor(NodeVisitor):
 
     def visit_StmtListNode(self, node):
         for each in node.childs_statements:
-            visit_node(self, each)
+            self.visit(each)
 
     def visit_NopStmtNode(self, node):
         # Nothing to do here
@@ -193,14 +188,14 @@ class _RewriteVisitor(NodeVisitor):
                     self._w.deleteTokens(node.ctx.start, node.ctx.stop)
 
             if node.child_initializer is not None:
-                self._visit_expression(node.child_initializer)
+                self.visit(node.child_initializer)
 
     def visit_ExpressionStmtNode(self, node):
-        self._visit_expression(node.child_expression)
+        self.visit(node.child_expression)
 
     def visit_FunctionCallStmtNode(self, node):
 
-        self._visit_expression(node.child_expression)
+        self.visit(node.child_expression)
 
         if node.flg_is_blocking:
             n = node.child_expression.txt_name
@@ -235,18 +230,18 @@ class _RewriteVisitor(NodeVisitor):
             self._w.insertAfterToken(node.ctx.stop, txt)
 
     def visit_LoopStmtNode(self, node):
-        self._visit_expression(node.child_expression)
-        visit_node(self, node.child_statement_list)
+        self.visit(node.child_expression)
+        self.visit(node.child_statement_list)
 
     def visit_ReturnStmtNode(self, node):
         if node.child_expression is not None:
-            self._visit_expression(node.child_expression)
+            self.visit(node.child_expression)
 
     def visit_IfElseStmtNode(self, node):
-        self._visit_expression(node.child_expression)
-        visit_node(self, node.child_if_branch)
+        self.visit(node.child_expression)
+        self.visit(node.child_if_branch)
         if node.child_else_branch is not None:
-            visit_node(self, node.child_else_branch)
+            self.visit(node.child_else_branch)
 
     def visit_StateMachineStmtNode(self, node):
 
@@ -373,10 +368,10 @@ class _RewriteVisitor(NodeVisitor):
 
     def visit_DontCareExprNode(self, node):
         for each in node.childs_expressions:
-            visit_node(self, each)
+            self.visit(each)
 
     def visit_TypeCastExprNode(self, node):
-        visit_node(self, node.child_expression)
+        self.visit(node.child_expression)
 
     def visit_LiteralExprNode(self, node):
         # nothing to do here
@@ -392,7 +387,7 @@ class _RewriteVisitor(NodeVisitor):
                         u"(sa_state->%s)" % node.ref_decl.txt_name)
 
     def visit_FunctionCallExprNode(self, node):
-        visit_node(self, node.child_argument_list)
+        self.visit(node.child_argument_list)
 
         if self._nb.has_states(node.txt_name):
             args = node.child_argument_list
@@ -404,4 +399,4 @@ class _RewriteVisitor(NodeVisitor):
 
     def visit_ArgumentListNode(self, node):
         for each in node.childs_arguments:
-            visit_node(self, each)
+            self.visit(each)

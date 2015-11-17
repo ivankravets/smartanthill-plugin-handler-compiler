@@ -13,7 +13,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from smartanthill_phc.common.node import Node
+from smartanthill_phc.common.node import Node, ExpressionNode, StmtListNode
 
 
 def visit_node(visitor, node):
@@ -61,7 +61,131 @@ class NodeVisitor(object):
     '''
     Base class for visitor
     '''
-    pass
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(NodeVisitor, self).__init__()
+
+    def visit(self, node):
+        '''
+        Generic visit function wrapper
+        '''
+        visit_node(self, node)
+
+
+class CodeVisitor(NodeVisitor):
+
+    '''
+    Base visitor with helpers for expression replacement
+    and statement list modification
+
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(CodeVisitor, self).__init__()
+        self._stmt_list = []
+        self._index = []
+        self._replacement = None
+
+    def visit_stmt_list(self, stmt_list, begin=0):
+        '''
+        Visit each statement in stmt_list starting from begin
+        Visiting an StmtListNode will call this method, so it is reentrant
+        And we also need access to current StmtListNode and index for statement
+        insertion, so we keep an stack of StmtListNode and the index on each
+        list we currently are
+        '''
+
+        assert isinstance(stmt_list, StmtListNode)
+
+        self._stmt_list.append(stmt_list)
+        self._index.append(begin)
+
+        while self._index[-1] < len(self._stmt_list[-1].childs_statements):
+            stmt = self._stmt_list[-1].childs_statements[self._index[-1]]
+            visit_node(self, stmt)
+
+            self._index[-1] += 1
+
+        self._stmt_list.pop()
+        self._index.pop()
+
+    def visit_expression(self, parent, child_name):
+        '''
+        Visit a child expression by attribute name, to allow expression
+        replacement
+        '''
+        assert self._replacement is None
+
+        expr = getattr(parent, child_name)
+        if expr is not None:
+            visit_node(self, expr)
+
+            if self._replacement is not None:
+                assert self._replacement is not expr
+                self._replacement.set_parent(parent)
+                setattr(parent, child_name, self._replacement)
+                self._replacement = None
+
+                # visit again (replacement)
+                self.visit_expression(parent, child_name)
+
+    def visit_expression_list(self, parent, expr_list):
+        '''
+        Visit child expression list, to allow expression replacement
+        '''
+        for i in range(len(expr_list)):
+            self._visit_expression_list_item(parent, expr_list, i)
+
+    def _visit_expression_list_item(self, parent, expr_list, i):
+        '''
+        Visit child expression list by index, to allow expression
+        replacement
+        '''
+        visit_node(self, expr_list[i])
+
+        if self._replacement is not None:
+            assert self._replacement is not expr_list[i]
+            self._replacement.set_parent(parent)
+            expr_list[i] = self._replacement
+            self._replacement = None
+
+            # visit again (replacement)
+            self._visit_expression_list_item(parent, expr_list, i)
+
+    def insert_before_current(self, stmt):
+        '''
+        Insert statement before current one
+        Index will be incremented to account for the extra statement
+        Inserted statement will never be visited, because it will be inserted
+        at a place visitor already did
+        '''
+        self._stmt_list[-1].insert_statement_at(self._index[-1], stmt)
+
+        self._index[-1] += 1
+
+    def insert_after_current(self, stmt):
+        '''
+        Insert statement after current one
+        Index will be incremented to account for the extra statement
+        and to avoid visitation of inserted statement
+        '''
+        self._stmt_list[-1].insert_statement_at(self._index[-1] + 1, stmt)
+
+        self._index[-1] += 1
+
+    def replace_expression(self, replacement):
+        '''
+        Replace current expression
+        '''
+        assert self._replacement is None
+        assert isinstance(replacement, ExpressionNode)
+        self._replacement = replacement
 
 
 def check_all_nodes_reachables(compiler, root):

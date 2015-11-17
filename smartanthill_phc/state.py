@@ -17,9 +17,9 @@ from smartanthill_phc.c_node import TypeCastExprNode, IntTypeDeclNode,\
     VoidTypeDeclNode
 from smartanthill_phc.common.expression import VariableExprNode,\
     FunctionCallExprNode
-from smartanthill_phc.common.node import StmtListNode, StatementNode
+from smartanthill_phc.common.node import StatementNode
 from smartanthill_phc.common.statement import VariableDeclarationStmtNode
-from smartanthill_phc.common.visitor import NodeVisitor, visit_node
+from smartanthill_phc.common.visitor import visit_node, CodeVisitor
 from smartanthill_phc.root import NonBlockingData
 
 
@@ -378,25 +378,26 @@ class DeclsHelper2(object):
         return self._funcs_with_sub_states.keys()
 
 
-class StateMachineVisitor(NodeVisitor):
+class StateMachineVisitor(CodeVisitor):
 
     def __init__(self, compiler, nb, split_all):
         '''
         Constructor
         '''
+        super(StateMachineVisitor, self).__init__()
         self._c = compiler
         self._nb = nb
         self._split_all = split_all
 
     def visit_RootNode(self, node):
-        visit_node(self, node.child_source)
+        self.visit(node.child_source)
 
     def visit_PluginSourceNode(self, node):
-        visit_node(self, node.child_declaration_list)
+        self.visit(node.child_declaration_list)
 
     def visit_DeclarationListNode(self, node):
         for each in node.childs_declarations:
-            visit_node(self, each)
+            self.visit(each)
 
     def visit_FunctionDeclNode(self, node):
         if node.txt_name == self._nb.handler_name:
@@ -530,7 +531,7 @@ def _skip_statements(stmt_list):
     return len(stmt_list.childs_statements)
 
 
-class _StatementsVisitor(NodeVisitor):
+class _StatementsVisitor(CodeVisitor):
     '''
     Here we insert cut point into the code, to mark where each state ends
     and the next one begins.
@@ -546,14 +547,12 @@ class _StatementsVisitor(NodeVisitor):
         '''
         Constructor
         '''
+        super(_StatementsVisitor, self).__init__()
         self._c = compiler
         self._sm = state_machine
         self._nb = nb
         self._h = DeclsHelper()
         self._split_all = split_all
-
-        self._stmt_list = []
-        self._index = []
 
     def default_visit(self, node):
         '''
@@ -564,27 +563,6 @@ class _StatementsVisitor(NodeVisitor):
 
     def get_moved_vars(self):
         return self._h.get_decls_to_be_moved()
-
-    def insert_before_current(self, stmt):
-        '''
-        Insert statement before current one
-        Index will be incremented to account for the extra statement
-        Inserted statement will never be visited, because it will be inserted
-        at a place visitor already did
-        '''
-        self._stmt_list[-1].insert_statement_at(self._index[-1], stmt)
-
-        self._index[-1] += 1
-
-    def insert_after_current(self, stmt):
-        '''
-        Insert statement after current one
-        Index will be incremented to account for the extra statement
-        and to avoid visitation of inserted statement
-        '''
-        self._stmt_list[-1].insert_statement_at(self._index[-1] + 1, stmt)
-
-        self._index[-1] += 1
 
     def _wait_after_current(self, wait_condition, ctx):
         '''
@@ -614,29 +592,6 @@ class _StatementsVisitor(NodeVisitor):
         aft = self._c.init_node(AfterSubStmtNode(), ctx)
         self.insert_after_current(aft)
 
-    def visit_stmt_list(self, stmt_list, begin=0):
-        '''
-        Visit each statement in stmt_list starting from begin
-        Visiting an StmtListNode will call this method, so it is reentrant
-        And we also need access to current StmtListNode and index for statement
-        insertion, so we keep an stack of StmtListNode and the index on each
-        list we currently are
-        '''
-
-        assert isinstance(stmt_list, StmtListNode)
-
-        self._stmt_list.append(stmt_list)
-        self._index.append(begin)
-
-        while self._index[-1] < len(self._stmt_list[-1].childs_statements):
-            stmt = self._stmt_list[-1].childs_statements[self._index[-1]]
-            visit_node(self, stmt)
-
-            self._index[-1] += 1
-
-        self._stmt_list.pop()
-        self._index.pop()
-
     def visit_StmtListNode(self, node):
         self.visit_stmt_list(node)
 
@@ -657,20 +612,20 @@ class _StatementsVisitor(NodeVisitor):
                     self._substates_around_current(node.ctx)
                     return
 
-        visit_node(self, node.child_initializer)
+        self.visit_expression(node, 'child_initializer')
 
         if self._split_all:
             self._debug_after_current(node.ctx)
 
     def visit_ExpressionStmtNode(self, node):
-        visit_node(self, node.child_expression)
+        self.visit_expression(node, 'child_expression')
 
         if self._split_all:
             self._debug_after_current(node.ctx)
 
     def visit_FunctionCallStmtNode(self, node):
 
-        visit_node(self, node.child_expression.child_argument_list)
+        self.visit(node.child_expression.child_argument_list)
 
         if self._nb.has_states(node.child_expression.txt_name):
             self._substates_around_current(node.ctx)
@@ -682,14 +637,14 @@ class _StatementsVisitor(NodeVisitor):
     def visit_LoopStmtNode(self, node):
 
         self._h.begin_loop(self._sm.get_last_state())
-        visit_node(self, node.child_expression)
 
-        self.visit_stmt_list(node.child_statement_list)
+        self.visit_expression(node, 'child_expression')
+        self.visit(node.child_statement_list)
+
         self._h.end_loop(self._sm.get_last_state())
 
     def visit_ReturnStmtNode(self, node):
-        if node.child_expression is not None:
-            visit_node(self, node.child_expression)
+        self.visit_expression(node, 'child_expression')
 
         if self._sm.has_states():  # Only needed if we already have states
             stmt = self._c.init_node(BeforeReturnStmtNode(), node.ctx.start)
@@ -702,36 +657,34 @@ class _StatementsVisitor(NodeVisitor):
 
     def visit_IfElseStmtNode(self, node):
 
-        visit_node(self, node.child_expression)
-        self.visit_stmt_list(node.child_if_branch)
+        self.visit_expression(node, 'child_expression')
+        self.visit(node.child_if_branch)
         if node.child_else_branch is not None:
-            self.visit_stmt_list(node.child_else_branch)
+            self.visit(node.child_else_branch)
 
     def visit_DontCareExprNode(self, node):
-        for each in node.childs_expressions:
-            visit_node(self, each)
+        self.visit_expression_list(node, node.childs_expressions)
 
     def visit_BinaryOpExprNode(self, node):
-        visit_node(self, node.child_argument_list)
+        self.visit(node.child_argument_list)
 
     def visit_UnaryOpExprNode(self, node):
-        visit_node(self, node.child_argument_list)
+        self.visit(node.child_argument_list)
 
     def visit_PostfixOpExprNode(self, node):
-        visit_node(self, node.child_argument_list)
+        self.visit(node.child_argument_list)
 
     def visit_LiteralExprNode(self, node):
         pass
 
     def visit_TypeCastExprNode(self, node):
-        visit_node(self, node.child_expression)
+        self.visit_expression(node, 'child_expression')
 
     def visit_VariableExprNode(self, node):
         self._h.add_var_expr(node, self._sm.get_last_state())
 
     def visit_FunctionCallExprNode(self, node):
-        visit_node(self, node.child_argument_list)
+        self.visit(node.child_argument_list)
 
     def visit_ArgumentListNode(self, node):
-        for each in node.childs_arguments:
-            visit_node(self, each)
+        self.visit_expression_list(node, node.childs_arguments)
