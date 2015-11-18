@@ -54,6 +54,11 @@ def test_debug():
     non_blocking_test('debug', True)
 
 
+def test_loop():
+
+    non_blocking_test('loop', False)
+
+
 def test_sleep():
 
     non_blocking_test('sleep', False)

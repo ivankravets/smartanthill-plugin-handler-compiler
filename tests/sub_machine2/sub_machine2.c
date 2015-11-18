@@ -28,6 +28,13 @@ uint8_t sub_machine2_plugin_handler_init(const void* plugin_config,
     return PLUGIN_OK;
 }
 
+bool flag(bool value)
+{
+    /* this function has two states */
+    papi_sleep( 100 );
+    return !value;
+}
+
 void helper_func_0()
 {
     /* this function does not have states */
@@ -63,8 +70,8 @@ uint8_t sub_machine2_plugin_handler(const void* plugin_config,
     
     helper_func_0();
     uint8_t res = helper_func_2();
-    if(res == PLUGIN_OK) {
-        helper_func_1();
+    if(flag(true)) {
+        helper_func_0();
     } else {
         return res;    
     }

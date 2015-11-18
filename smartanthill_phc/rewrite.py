@@ -108,7 +108,7 @@ class _RewriteVisitor(NodeVisitor):
 
     def _get_text(self, ctx):
         '''
-        Helper method to create an expression visitor an call it
+        Helper method
         '''
         if isinstance(ctx, TerminalNodeImpl):
             return self._w.getIntervalText(ctx.symbol, ctx.symbol)
@@ -337,6 +337,31 @@ class _RewriteVisitor(NodeVisitor):
 
         self._w.insertAfterToken(node.ctx.stop, txt)
 
+    def visit_FunctionCallSubStmtNode(self, node):
+
+        args = node.child_expression.child_argument_list
+        txt_args = u"(void*)(sa_state + 1), sa_wf, sa_result"
+        if len(args.childs_arguments) >= 1:
+            txt_args += u", "
+        self._w.insertAfterToken(args.ctx.symbol, txt_args)
+
+        nxt = str(node.int_next_state)
+        txt = u"\n*(uint8_t*)(sa_state + 1) = 0;"
+        txt += u"\nsa_state->sa_next = %s;" % nxt
+        txt += u"\nlabel_%s: ;/*nop*/" % nxt
+
+        txt += u"\n%s %s = %s;" % ("int", node.txt_name,
+                                   self._get_text(node.child_expression.ctx))
+
+        txt += u"\nif(*(uint8_t*)(sa_state + 1) != 0) "
+
+        if self._sm.ref_state_machine.is_main_machine():
+            txt += u"return *sa_result;"
+        else:
+            txt += self._get_func_return()
+
+        self._w.insertBeforeToken(node.ctx.start, txt)
+
     def visit_InitFirstStmtNode(self, node):
 
         txt = u"\n*(uint8_t*)%s = 0;" % node.txt_arg1
@@ -396,6 +421,11 @@ class _RewriteVisitor(NodeVisitor):
                 txt += u", "
 
             self._w.insertAfterToken(args.ctx.symbol, txt)
+
+    def visit_FunctionCallSubExprNode(self, node):
+
+        self._w.replaceTokens(node.ctx.start, node.ctx.stop,
+                              u"(%s)" % node.ref_declaration.txt_name)
 
     def visit_ArgumentListNode(self, node):
         for each in node.childs_arguments:

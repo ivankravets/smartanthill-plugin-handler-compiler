@@ -179,6 +179,12 @@ class CodeVisitor(NodeVisitor):
 
         self._index[-1] += 1
 
+    def get_current_statement(self):
+        '''
+        Returns current statement
+        '''
+        return self._stmt_list[-1].childs_statements[self._index[-1]]
+
     def replace_expression(self, replacement):
         '''
         Replace current expression

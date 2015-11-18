@@ -17,9 +17,10 @@ from smartanthill_phc.c_node import TypeCastExprNode, IntTypeDeclNode,\
     VoidTypeDeclNode
 from smartanthill_phc.common.expression import VariableExprNode,\
     FunctionCallExprNode
-from smartanthill_phc.common.node import StatementNode
+from smartanthill_phc.common.node import StatementNode, ExpressionNode
 from smartanthill_phc.common.statement import VariableDeclarationStmtNode
-from smartanthill_phc.common.visitor import visit_node, CodeVisitor
+from smartanthill_phc.common.visitor import visit_node, CodeVisitor,\
+    NodeVisitor
 from smartanthill_phc.root import NonBlockingData
 
 
@@ -183,6 +184,45 @@ class AfterSubStmtNode(StatementNode):
         Constructor
         '''
         super(AfterSubStmtNode, self).__init__()
+
+
+class FunctionCallSubStmtNode(StatementNode):
+
+    '''
+    Statement node class to be used as replacement for functions calls
+    with sub states
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(FunctionCallSubStmtNode, self).__init__()
+        self.int_next_state = None
+        self.child_expression = None
+        self.txt_name = None
+
+    def set_expression(self, child):
+        '''
+        expression setter
+        '''
+        assert isinstance(child, ExpressionNode)
+        child.set_parent(self)
+        self.child_expression = child
+
+
+class FunctionCallSubExprNode(ExpressionNode):
+
+    '''
+    Node class representing the use expression of FunctionCallSubStmtNode
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(FunctionCallSubExprNode, self).__init__()
+        self.ref_declaration = None
 
 
 class BeforeReturnStmtNode(StatementNode):
@@ -378,7 +418,25 @@ class DeclsHelper2(object):
         return self._funcs_with_sub_states.keys()
 
 
-class StateMachineVisitor(CodeVisitor):
+def _skip_statements(stmt_list):
+
+    for i in range(len(stmt_list.childs_statements)):
+        stmt = stmt_list.childs_statements[i]
+        if isinstance(stmt, MainFirstStmtNode):
+            continue
+
+        if not isinstance(stmt, VariableDeclarationStmtNode):
+            return i
+        if not isinstance(stmt.child_initializer, TypeCastExprNode):
+            return i
+        if not isinstance(stmt.child_initializer.child_expression,
+                          VariableExprNode):
+            return i
+
+    return len(stmt_list.childs_statements)
+
+
+class StateMachineVisitor(NodeVisitor):
 
     def __init__(self, compiler, nb, split_all):
         '''
@@ -415,8 +473,7 @@ class StateMachineVisitor(CodeVisitor):
 
             node.child_statement_list.insert_statement_at(0, stmt)
 
-            _create_state_machine(
-                self._c, node, self._nb, self._split_all)
+            self._create_state_machine(node)
         elif node.txt_name == self._nb.exec_init_name:
 
             ctx = node.child_statement_list.ctx.start
@@ -433,102 +490,81 @@ class StateMachineVisitor(CodeVisitor):
         elif node.txt_name == self._nb.handler_init_name:
             pass
         else:
-            _create_sub_state_machine(
-                self._c, node, self._nb, self._split_all)
+            self._create_sub_state_machine(node)
 
+    def _create_sub_state_machine(self, node):
+        '''
+        Creates a sub-state machine
 
-def _create_sub_state_machine(compiler, node, nb, split_all):
-    '''
-    Creates a sub-state machine
+        '''
 
-    '''
+        stmt_list = node.child_statement_list
+        i = _skip_statements(stmt_list)
 
-    stmt_list = node.child_statement_list
-    i = _skip_statements(stmt_list)
+        if i == 0:
+            ctx = stmt_list.ctx.start
+        elif i == 1:
+            assert isinstance(
+                stmt_list.childs_statements[0], MainFirstStmtNode)
+            ctx = stmt_list.ctx.start
+        else:
+            ctx = stmt_list.childs_statements[i - 1].ctx.stop
 
-    if i == 0:
-        ctx = stmt_list.ctx.start
-    elif i == 1:
-        assert isinstance(
-            stmt_list.childs_statements[0], MainFirstStmtNode)
-        ctx = stmt_list.ctx.start
-    else:
-        ctx = stmt_list.childs_statements[i - 1].ctx.stop
+        sm = self._c.init_node(StateMachineStmtNode(), ctx)
+        stmt_list.insert_statement_at(i, sm)
 
-    sm = compiler.init_node(StateMachineStmtNode(), ctx)
-    stmt_list.insert_statement_at(i, sm)
+        v = _StatementsVisitor(self._c, sm, self._nb, self._split_all)
+        v.visit_stmt_list(stmt_list, i + 1)
 
-    v = _StatementsVisitor(compiler, sm, nb, split_all)
-    v.visit_stmt_list(stmt_list, i + 1)
+        if sm.has_states():
+            moved_vars = v.get_moved_vars()
+            self._nb.add_function_with_states(node, sm, moved_vars)
 
-    if sm.has_states():
-        moved_vars = v.get_moved_vars()
-        nb.add_function_with_states(node, sm, moved_vars)
+            ctx = stmt_list.ctx.start
+            stmt = self._c.init_node(SubFirstStmtNode(), ctx)
+            stmt_list.insert_statement_at(0, stmt)
 
-        ctx = stmt_list.ctx.start
-        stmt = compiler.init_node(SubFirstStmtNode(), ctx)
-        stmt_list.insert_statement_at(0, stmt)
+            if not isinstance(node.child_return_type.ref_type_declaration,
+                              (VoidTypeDeclNode, IntTypeDeclNode)):
+                self._c.report_error(
+                    node.ctx,
+                    "Function return type not supported for sub states")
 
-        if not isinstance(node.child_return_type.ref_type_declaration,
-                          (VoidTypeDeclNode, IntTypeDeclNode)):
-            compiler.report_error(
-                node.ctx,
-                "Function return type not supported for sub states creation")
+            if not stmt_list.is_closed_stmt():
+                stmt = self._c.init_node(
+                    BeforeReturnStmtNode(), stmt_list.ctx.stop)
+                stmt_list.add_statement(stmt)
+
+    def _create_state_machine(self, node):
+        '''
+        Creates an state machine
+        '''
+        stmt_list = node.child_statement_list
 
         if not stmt_list.is_closed_stmt():
-            stmt = compiler.init_node(
-                BeforeReturnStmtNode(), stmt_list.ctx.stop)
-            stmt_list.add_statement(stmt)
+            self._c.report_error(stmt_list.ctx, "Missing 'return' statement")
+            return
 
+        i = _skip_statements(stmt_list)
 
-def _create_state_machine(compiler, node, nb, split_all):
-    '''
-    Creates an state machine
-    '''
-    stmt_list = node.child_statement_list
+        if i == 0:
+            assert False
+        if i == 1:
+            assert isinstance(
+                stmt_list.childs_statements[0], MainFirstStmtNode)
+            ctx = stmt_list.ctx.start
+        else:
+            ctx = stmt_list.childs_statements[i - 1].ctx.stop
 
-    if not stmt_list.is_closed_stmt():
-        compiler.report_error(stmt_list.ctx, "Missing 'return' statement")
-        return
+        sm = self._c.init_node(StateMachineStmtNode(), ctx)
+        sm.flag_main_machine = True
+        stmt_list.insert_statement_at(i, sm)
 
-    i = _skip_statements(stmt_list)
+        v = _StatementsVisitor(self._c, sm, self._nb, self._split_all)
+        v.visit_stmt_list(stmt_list, i + 1)
 
-    if i == 0:
-        assert False
-    if i == 1:
-        assert isinstance(
-            stmt_list.childs_statements[0], MainFirstStmtNode)
-        ctx = stmt_list.ctx.start
-    else:
-        ctx = stmt_list.childs_statements[i - 1].ctx.stop
-
-    sm = compiler.init_node(StateMachineStmtNode(), ctx)
-    sm.flag_main_machine = True
-    stmt_list.insert_statement_at(i, sm)
-
-    v = _StatementsVisitor(compiler, sm, nb, split_all)
-    v.visit_stmt_list(stmt_list, i + 1)
-
-    moved_vars = v.get_moved_vars()
-    nb.add_function_with_states(node, sm, moved_vars)
-
-
-def _skip_statements(stmt_list):
-
-    for i in range(len(stmt_list.childs_statements)):
-        stmt = stmt_list.childs_statements[i]
-        if isinstance(stmt, MainFirstStmtNode):
-            continue
-
-        if not isinstance(stmt, VariableDeclarationStmtNode):
-            return i
-        if not isinstance(stmt.child_initializer, TypeCastExprNode):
-            return i
-        if not isinstance(stmt.child_initializer.child_expression,
-                          VariableExprNode):
-            return i
-
-    return len(stmt_list.childs_statements)
+        moved_vars = v.get_moved_vars()
+        self._nb.add_function_with_states(node, sm, moved_vars)
 
 
 class _StatementsVisitor(CodeVisitor):
@@ -685,6 +721,21 @@ class _StatementsVisitor(CodeVisitor):
 
     def visit_FunctionCallExprNode(self, node):
         self.visit(node.child_argument_list)
+
+        if self._nb.has_states(node.txt_name):
+            ctx = self.get_current_statement().ctx
+            stmt = self._c.init_node(FunctionCallSubStmtNode(), ctx)
+            stmt.int_next_state = self._sm.increment_state()
+            stmt.set_expression(node)
+            stmt.txt_name = 'zc_temp_var'
+            self.insert_before_current(stmt)
+
+            var = self._c.init_node(FunctionCallSubExprNode(), node.ctx)
+            var.ref_declaration = stmt
+            self.replace_expression(var)
+
+    def visit_FunctionCallSubExprNode(self, node):
+        pass
 
     def visit_ArgumentListNode(self, node):
         self.visit_expression_list(node, node.childs_arguments)

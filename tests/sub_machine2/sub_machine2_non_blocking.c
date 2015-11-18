@@ -29,13 +29,7 @@ uint8_t sub_machine2_plugin_handler_init(const void* plugin_config,
     return PLUGIN_OK;
 }
 
-void helper_func_0()
-{
-    /* this function does not have states */
-    /* nop */;
-}
-
-void helper_func_1(void* sa_state0, waiting_for* sa_wf, uint8_t* sa_result)
+bool flag(void* sa_state0, waiting_for* sa_wf, uint8_t* sa_result, bool value)
 {
 sub_machine2_plugin_state1* sa_state = (sub_machine2_plugin_state1*)sa_state0;
 
@@ -46,7 +40,43 @@ default: ZEPTO_ASSERT(0);
 }
 
 
-//#line 38
+//#line 32
+
+    /* this function has two states */
+    
+papi_wait_handler_add_wait_for_timeout(sa_wf, 100);
+sa_state->sa_next = 1;
+*sa_result = PLUGIN_WAITING;
+return 0;
+
+label_1:
+if(papi_wait_handler_is_waiting_for_timeout(0, sa_wf)) {
+*sa_result = PLUGIN_WAITING;
+return 0;
+}
+//#line 34
+
+    sa_state->sa_next = 0;return !value;
+}
+
+void helper_func_0()
+{
+    /* this function does not have states */
+    /* nop */;
+}
+
+void helper_func_1(void* sa_state0, waiting_for* sa_wf, uint8_t* sa_result)
+{
+sub_machine2_plugin_state2* sa_state = (sub_machine2_plugin_state2*)sa_state0;
+
+switch(sa_state->sa_next) {
+case 0: break;
+case 1: goto label_1;
+default: ZEPTO_ASSERT(0);
+}
+
+
+//#line 45
 
     /* this function has two states */
     
@@ -60,7 +90,7 @@ if(papi_wait_handler_is_waiting_for_timeout(0, sa_wf)) {
 *sa_result = PLUGIN_WAITING;
 return;
 }
-//#line 40
+//#line 47
 
     
     sa_state->sa_next = 0;return;
@@ -68,7 +98,7 @@ return;
 
 uint8_t helper_func_2(void* sa_state0, waiting_for* sa_wf, uint8_t* sa_result)
 {
-sub_machine2_plugin_state2* sa_state = (sub_machine2_plugin_state2*)sa_state0;
+sub_machine2_plugin_state3* sa_state = (sub_machine2_plugin_state3*)sa_state0;
 
 switch(sa_state->sa_next) {
 case 0: break;
@@ -79,7 +109,7 @@ default: ZEPTO_ASSERT(0);
 }
 
 
-//#line 46
+//#line 53
 
     /* this function call another function with states */
 
@@ -93,7 +123,7 @@ sa_state->sa_next = 2;
 *sa_result = PLUGIN_DEBUG;
 return 0;
 label_2: /* nop */ ;
-//#line 50
+//#line 57
 
     
 *(uint8_t*)(sa_state + 1) = 0;
@@ -120,17 +150,18 @@ case 2: goto label_2;
 case 3: goto label_3;
 case 4: goto label_4;
 case 5: goto label_5;
+case 6: goto label_6;
 default: ZEPTO_ASSERT(0);
 }
 
 
-//#line 59
+//#line 66
 
     helper_func_0();
 sa_state->sa_next = 1;
 return PLUGIN_DEBUG;
 label_1: /* nop */ ;
-//#line 60
+//#line 67
 
     /* waiting function */
     
@@ -142,26 +173,32 @@ label_2:
 if(papi_wait_handler_is_waiting_for_timeout(0, sa_wf)) {
 return PLUGIN_WAITING;
 }
-//#line 62
+//#line 69
 
     
     helper_func_0();
 sa_state->sa_next = 3;
 return PLUGIN_DEBUG;
 label_3: /* nop */ ;
-//#line 64
+//#line 71
 
     
 *(uint8_t*)(sa_state + 1) = 0;
 sa_state->sa_next = 4;
 label_4: sa_state->res = helper_func_2((void*)(sa_state + 1), sa_wf, sa_result);
 if(*(uint8_t*)(sa_state + 1) != 0) return *sa_result;
-    if((sa_state->res) == PLUGIN_OK) {
-        
+    
 *(uint8_t*)(sa_state + 1) = 0;
 sa_state->sa_next = 5;
-label_5: helper_func_1((void*)(sa_state + 1), sa_wf, sa_result);
-if(*(uint8_t*)(sa_state + 1) != 0) return *sa_result;
+label_5: ;/*nop*/
+int zc_temp_var = flag((void*)(sa_state + 1), sa_wf, sa_result, true);
+if(*(uint8_t*)(sa_state + 1) != 0) return *sa_result;if((zc_temp_var)) {
+        helper_func_0();
+sa_state->sa_next = 6;
+return PLUGIN_DEBUG;
+label_6: /* nop */ ;
+//#line 74
+
     } else {
         sa_state->sa_next = 0;return (sa_state->res);    
     }

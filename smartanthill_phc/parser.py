@@ -69,8 +69,8 @@ def _get_direct_declarator_name(ctx):
     assert isinstance(ctx, CParser.CParser.DirectDeclaratorContext)
     if ctx.Identifier() is not None:
         return ctx.Identifier()
-    elif ctx.declarator() is not None:
-        return get_declarator_name(ctx.declarator())
+#     elif ctx.declarator() is not None:
+#         return get_declarator_name(ctx.declarator())
     else:
         assert ctx.directDeclarator() is not None
         return _get_direct_declarator_name(ctx.directDeclarator())

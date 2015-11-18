@@ -28,6 +28,10 @@ def create_builtins(compiler, ctx):
         compiler.init_node(VoidTypeDeclNode(), ctx))
     decls.add_declaration(
         compiler.init_node(IntTypeDeclNode('uint8_t'), ctx))
+    decls.add_declaration(
+        compiler.init_node(IntTypeDeclNode('bool'), ctx))
+    decls.add_declaration(
+        compiler.init_node(IntTypeDeclNode('_Bool'), ctx))
 
     decls.add_declaration(
         compiler.init_node(BasicTypeDeclNode('_zc_dont_care'), ctx))

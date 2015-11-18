@@ -30,6 +30,10 @@ typedef struct _sub_machine2_plugin_state2 {
 uint8_t sa_next;
 } sub_machine2_plugin_state2;
 
+typedef struct _sub_machine2_plugin_state3 {
+uint8_t sa_next;
+} sub_machine2_plugin_state3;
+
 typedef struct _sub_machine2_plugin_state {
 uint8_t sa_next;
 uint8_t res;
