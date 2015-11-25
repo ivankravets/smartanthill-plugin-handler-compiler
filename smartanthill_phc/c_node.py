@@ -121,6 +121,8 @@ class FunctionDeclNode(Node):
         self.child_argument_list = child
 
     def resolve(self, compiler):
+        self.get_scope(RootScope).add_function(compiler, self.txt_name, self)
+
         compiler.resolve_node(self.child_return_type)
         compiler.resolve_node(self.child_statement_list)
 

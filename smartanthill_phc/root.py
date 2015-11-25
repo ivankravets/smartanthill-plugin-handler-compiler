@@ -105,13 +105,13 @@ class NonBlockingData(object):
 
         return None
 
-    def has_states(self, txt_name):
+    def has_states(self, func_decl):
         '''
         Returns true if function has states
         '''
 
         for each in self.functions_with_states:
-            if each.ref_function_decl.txt_name == txt_name:
+            if each.ref_function_decl == func_decl:
                 return True
 
         return False
@@ -129,7 +129,7 @@ class NonBlockingData(object):
             tmp.txt_struct_name += str(
                 len(self.functions_with_states) + 1)
 
-        assert not self.has_states(func.txt_name)
+        assert not self.has_states(func)
         self.functions_with_states.append(tmp)
 
 

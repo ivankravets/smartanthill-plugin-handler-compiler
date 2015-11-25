@@ -414,7 +414,7 @@ class _RewriteVisitor(NodeVisitor):
     def visit_FunctionCallExprNode(self, node):
         self.visit(node.child_argument_list)
 
-        if self._nb.has_states(node.txt_name):
+        if self._nb.has_states(node.ref_declaration):
             args = node.child_argument_list
             txt = u"(void*)(sa_state + 1), sa_wf, sa_result"
             if len(args.childs_arguments) >= 1:

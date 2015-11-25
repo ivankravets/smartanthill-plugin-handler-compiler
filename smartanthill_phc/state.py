@@ -375,49 +375,6 @@ class DeclsHelper(object):
         return self._to_be_moved
 
 
-class DeclsHelper2(object):
-
-    '''
-    Helper class to detect which variables are accessed in each state
-    '''
-
-    def __init__(self):
-        '''
-        Constructor
-        '''
-        self._funcs_with_sub_states = {}
-        self.int_last_machine = 0
-
-    def increment_state_machine(self):
-        '''
-        Increments the state counter
-        '''
-        self.int_last_machine += 1
-
-        return self.int_last_machine
-
-    def add_function_with_sub_states(self, txt_name, machine):
-
-        self._funcs_with_sub_states[txt_name] = machine
-
-    def has_sub_states(self, txt_name):
-
-        return txt_name in self._funcs_with_sub_states
-
-    def get_sub_machine(self, txt_name):
-
-        assert txt_name in self._funcs_with_sub_states
-        return self._funcs_with_sub_states[txt_name]
-
-    def get_state_machines(self):
-
-        return self._funcs_with_sub_states.values()
-
-    def get_functions(self):
-
-        return self._funcs_with_sub_states.keys()
-
-
 def _skip_statements(stmt_list):
 
     for i in range(len(stmt_list.childs_statements)):
@@ -641,12 +598,14 @@ class _StatementsVisitor(CodeVisitor):
 
         if node.child_initializer is not None:
             if isinstance(node.child_initializer, FunctionCallExprNode):
-                if self._nb.has_states(node.child_initializer.txt_name):
-                    self._h.force_move_var_decl(node)
-                    visit_node(
-                        self, node.child_initializer.child_argument_list)
-                    self._substates_around_current(node.ctx)
-                    return
+                if node.child_initializer.ref_declaration is not None:
+                    if self._nb.has_states(
+                            node.child_initializer.ref_declaration):
+                        self._h.force_move_var_decl(node)
+                        visit_node(
+                            self, node.child_initializer.child_argument_list)
+                        self._substates_around_current(node.ctx)
+                        return
 
         self.visit_expression(node, 'child_initializer')
 
@@ -663,7 +622,7 @@ class _StatementsVisitor(CodeVisitor):
 
         self.visit(node.child_expression.child_argument_list)
 
-        if self._nb.has_states(node.child_expression.txt_name):
+        if self._nb.has_states(node.child_expression.ref_declaration):
             self._substates_around_current(node.ctx)
         elif node.flg_is_blocking:
             self._wait_after_current(node.child_expression, node.ctx)
@@ -722,7 +681,7 @@ class _StatementsVisitor(CodeVisitor):
     def visit_FunctionCallExprNode(self, node):
         self.visit(node.child_argument_list)
 
-        if self._nb.has_states(node.txt_name):
+        if self._nb.has_states(node.ref_declaration):
             ctx = self.get_current_statement().ctx
             stmt = self._c.init_node(FunctionCallSubStmtNode(), ctx)
             stmt.int_next_state = self._sm.increment_state()

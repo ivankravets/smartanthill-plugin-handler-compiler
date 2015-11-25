@@ -32,6 +32,7 @@ class FunctionCallExprNode(ExpressionNode):
         super(FunctionCallExprNode, self).__init__()
         self.txt_name = None
         self.child_argument_list = None
+        self.ref_declaration = None
 
     def set_argument_list(self, child):
         '''
@@ -44,65 +45,12 @@ class FunctionCallExprNode(ExpressionNode):
     def resolve_expr(self, compiler):
         compiler.resolve_node(self.child_argument_list)
 
+        self.ref_declaration = self.get_scope(
+            RootScope).lookup_function(self.txt_name)
 #         compiler.report_error(
 #             self.ctx, "Unresolved function call '%s'" % self.txt_name)
 
         return self.get_scope(RootScope).lookup_type('_zc_dont_care')
-
-
-class BodyPartCallExprNode(ExpressionNode):
-
-    '''
-    Node class representing a method call
-    '''
-
-    def __init__(self):
-        '''
-        Constructor
-        '''
-        super(BodyPartCallExprNode, self).__init__()
-        self.txt_bodypart = None
-        self.txt_method = None
-        self.child_argument_list = None
-        self.ref_bodypart_decl = None
-        self.ref_method_decl = None
-
-    def set_argument_list(self, child):
-        '''
-        argument_list setter
-        '''
-        assert isinstance(child, ArgumentListNode)
-        child.set_parent(self)
-        self.child_argument_list = child
-
-    def resolve_expr(self, compiler):
-        compiler.resolve_node(self.child_argument_list)
-
-        bp = self.get_scope(RootScope).lookup_bodypart(self.txt_bodypart)
-
-        if not bp:
-            compiler.report_error(self.ctx, "Unresolved body-part name '%s'" %
-                                  self.txt_bodypart)
-            compiler.raise_error()
-
-        method = bp.ref_plugin.lookup_method(self.txt_method)
-        if not method:
-            compiler.report_error(self.ctx,
-                                  "Method '%s' not found at body-part '%s'" %
-                                  (self.txt_method,
-                                   self.txt_bodypart))
-            compiler.raise_error()
-
-        self.child_argument_list.make_match(compiler,
-                                            method.child_parameter_list)
-
-        self.ref_bodypart_decl = bp
-        self.ref_method_decl = method
-
-        return self.ref_method_decl.get_type()
-
-    def get_data_value(self, compiler):
-        return self.ref_bodypart_decl.get_data_value(compiler, self)
 
 
 class MemberAccessExprNode(ExpressionNode):
