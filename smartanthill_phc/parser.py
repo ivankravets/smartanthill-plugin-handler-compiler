@@ -133,6 +133,7 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
         expr = self._c.init_node(expression.FunctionCallExprNode(), ctx)
         expr.txt_name = get_token_text(self._c, ctx.Identifier(), _prefix)
+        expr.bool_is_blocking = _is_blocking_api_function(expr.txt_name)
 
         args = self._c.init_node(node.ArgumentListNode(), ctx.getChild(1))
 
@@ -538,9 +539,6 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
                 stmt = self._c.init_node(c_node.FunctionCallStmtNode(), ctx)
                 stmt.set_expression(expr)
-
-                if _is_blocking_api_function(expr.txt_name):
-                    stmt.flg_is_blocking = True
 
                 return stmt
             else:

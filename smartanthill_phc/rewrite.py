@@ -197,7 +197,7 @@ class _RewriteVisitor(NodeVisitor):
 
         self.visit(node.child_expression)
 
-        if node.flg_is_blocking:
+        if node.child_expression.bool_is_blocking:
             n = node.child_expression.txt_name
             args = node.child_expression.child_argument_list.childs_arguments
             assert len(args) >= 1
@@ -350,7 +350,8 @@ class _RewriteVisitor(NodeVisitor):
         txt += u"\nsa_state->sa_next = %s;" % nxt
         txt += u"\nlabel_%s: ;/*nop*/" % nxt
 
-        txt += u"\n%s %s = %s;" % ("int", node.txt_name,
+        t = node.child_expression.ref_declaration.child_return_type.txt_name
+        txt += u"\n%s %s = %s;" % (t, node.txt_name,
                                    self._get_text(node.child_expression.ctx))
 
         txt += u"\nif(*(uint8_t*)(sa_state + 1) != 0) "

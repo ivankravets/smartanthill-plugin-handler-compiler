@@ -156,7 +156,6 @@ class FunctionCallStmtNode(StatementNode):
         '''
         super(FunctionCallStmtNode, self).__init__()
         self.child_expression = None
-        self.flg_is_blocking = False
 
     def set_expression(self, child):
         '''
@@ -273,3 +272,20 @@ class SimpleTypeNode(TypeNode):
             return t
         else:
             return self.get_scope(RootScope).lookup_type('_zc_dont_care')
+
+
+class PapiFunctionDeclNode(Node):
+
+    '''
+    Node class representing a plugin api function
+    '''
+
+    def __init__(self, name):
+        '''
+        Constructor
+        '''
+        super(PapiFunctionDeclNode, self).__init__()
+        self.txt_name = name
+
+    def resolve(self, compiler):
+        self.get_scope(RootScope).add_function(compiler, self.txt_name, self)

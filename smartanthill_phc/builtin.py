@@ -14,7 +14,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 from smartanthill_phc.c_node import VoidTypeDeclNode, IntTypeDeclNode,\
-    BasicTypeDeclNode
+    BasicTypeDeclNode, PapiFunctionDeclNode
 from smartanthill_phc.common.node import DeclarationListNode
 
 
@@ -35,6 +35,17 @@ def create_builtins(compiler, ctx):
 
     decls.add_declaration(
         compiler.init_node(BasicTypeDeclNode('_zc_dont_care'), ctx))
+
+    decls.add_declaration(compiler.init_node(
+        PapiFunctionDeclNode('papi_sleep'), ctx))
+    decls.add_declaration(compiler.init_node(
+        PapiFunctionDeclNode('papi_wait_for_spi_send'), ctx))
+    decls.add_declaration(compiler.init_node(
+        PapiFunctionDeclNode('papi_wait_for_i2c_send'), ctx))
+    decls.add_declaration(compiler.init_node(
+        PapiFunctionDeclNode('papi_wait_for_spi_receive'), ctx))
+    decls.add_declaration(compiler.init_node(
+        PapiFunctionDeclNode('papi_wait_for_i2c_receive'), ctx))
 
     compiler.check_stage('built_in')
 

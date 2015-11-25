@@ -308,15 +308,6 @@ class DeclsHelper(object):
         assert decl not in self._decls
         self._decls[decl] = st
 
-    def force_move_var_decl(self, decl):
-        '''
-        Adds a variable declaration and forces it into moveds
-        '''
-        assert decl in self._decls
-
-        if decl not in self._to_be_moved:
-            self._to_be_moved.append(decl)
-
     def add_var_expr(self, expr, st):
         '''
         Adds a reference (access) to a variable in certain state
@@ -601,7 +592,7 @@ class _StatementsVisitor(CodeVisitor):
                 if node.child_initializer.ref_declaration is not None:
                     if self._nb.has_states(
                             node.child_initializer.ref_declaration):
-                        self._h.force_move_var_decl(node)
+
                         visit_node(
                             self, node.child_initializer.child_argument_list)
                         self._substates_around_current(node.ctx)
@@ -624,7 +615,7 @@ class _StatementsVisitor(CodeVisitor):
 
         if self._nb.has_states(node.child_expression.ref_declaration):
             self._substates_around_current(node.ctx)
-        elif node.flg_is_blocking:
+        elif node.child_expression.bool_is_blocking:
             self._wait_after_current(node.child_expression, node.ctx)
         elif self._split_all:
             self._debug_after_current(node.ctx)
@@ -686,7 +677,7 @@ class _StatementsVisitor(CodeVisitor):
             stmt = self._c.init_node(FunctionCallSubStmtNode(), ctx)
             stmt.int_next_state = self._sm.increment_state()
             stmt.set_expression(node)
-            stmt.txt_name = 'zc_temp_var'
+            stmt.txt_name = 'zc_tmp%s' % stmt.int_next_state
             self.insert_before_current(stmt)
 
             var = self._c.init_node(FunctionCallSubExprNode(), node.ctx)

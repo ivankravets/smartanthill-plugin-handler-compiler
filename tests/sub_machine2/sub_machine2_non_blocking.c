@@ -191,8 +191,8 @@ if(*(uint8_t*)(sa_state + 1) != 0) return *sa_result;
 *(uint8_t*)(sa_state + 1) = 0;
 sa_state->sa_next = 5;
 label_5: ;/*nop*/
-int zc_temp_var = flag((void*)(sa_state + 1), sa_wf, sa_result, true);
-if(*(uint8_t*)(sa_state + 1) != 0) return *sa_result;if((zc_temp_var)) {
+bool zc_tmp5 = flag((void*)(sa_state + 1), sa_wf, sa_result, true);
+if(*(uint8_t*)(sa_state + 1) != 0) return *sa_result;if((zc_tmp5)) {
         helper_func_0();
 sa_state->sa_next = 6;
 return PLUGIN_DEBUG;
