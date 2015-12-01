@@ -26,6 +26,13 @@ class StatementListScope(object):
         '''
         self._owner = owner
         self._variables = {}
+        self._typedefs = {}
+
+    def get_parent_scope(self):
+        '''
+        Returns parent scope of this same type
+        '''
+        return self._owner.get_parent_scope(StatementListScope)
 
     def add_variable(self, compiler, name, node):
         '''
@@ -49,11 +56,29 @@ class StatementListScope(object):
         if name in self._variables:
             return self._variables[name]
         else:
-            p = self._owner.get_parent_scope(StatementListScope)
+            p = self.get_parent_scope()
             if p is not None:
                 return p.lookup_variable(name)
             else:
                 return None
+
+    def add_typedef(self, compiler, name, node):
+        '''
+        Adds a typedef to this scope
+        '''
+        if name in self._typedefs:
+            compiler.report_error(
+                node.ctx, "Redeclaration of '%s'" % name)
+            compiler.report_error(
+                self._typedefs[name].ctx, "Previous was here")
+
+        self._typedefs[name] = node
+
+    def get_typedef(self, name):
+        '''
+        Typedef lookup
+        '''
+        return self._typedefs[name] if name in self._typedefs else None
 
 
 class ReturnStmtScope(object):
@@ -112,6 +137,7 @@ class RootScope(object):
         self._owner = owner
         self._bodyparts = {}
         self._types = {}
+        self._typedefs = {}
         self._functions = {}
         self._operators = {}
         self._parameters = {}
@@ -144,11 +170,29 @@ class RootScope(object):
 
         self._types[name] = node
 
-    def lookup_type(self, name):
+    def get_type(self, name):
         '''
         Looks up a type
         '''
         return self._types[name] if name in self._types else None
+
+    def add_typedef(self, compiler, name, node):
+        '''
+        Adds a typedef to this scope
+        '''
+        if name in self._typedefs:
+            compiler.report_error(
+                node.ctx, "Redeclaration of '%s'" % name)
+            compiler.report_error(
+                self._typedefs[name].ctx, "Previous was here")
+
+        self._typedefs[name] = node
+
+    def get_typedef(self, name):
+        '''
+        Typedef lookup will look up name here
+        '''
+        return self._typedefs[name] if name in self._typedefs else None
 
     def add_operator(self, compiler, name, node):
         '''
@@ -202,3 +246,27 @@ class RootScope(object):
         Returns None if not found
         '''
         return self._parameters[name] if name in self._parameters else None
+
+
+def lookup_type(name, root_scope, stmt_scope):
+    '''
+    Type lookup algorithm
+    Will lookup for typedef in every StatementListScope,
+    if not found will lookup for type or typedef at RootScope
+    '''
+
+    while stmt_scope is not None:
+        t = stmt_scope.get_typedef(name)
+        if t is not None:
+            return t.get_type()
+
+        stmt_scope = stmt_scope.get_parent_scope()
+
+    # If we reach here stmt_scope is None, and name was not found
+
+    assert root_scope is not None
+    t = root_scope.get_typedef(name)
+    if t is not None:
+        return t.get_type()
+
+    return root_scope.get_type(name)

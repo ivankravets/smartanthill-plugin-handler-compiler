@@ -15,7 +15,8 @@
 
 
 from smartanthill_phc.common import errors
-from smartanthill_phc.common.lookup import RootScope, StatementListScope
+from smartanthill_phc.common.lookup import RootScope, StatementListScope,\
+    lookup_type
 
 
 class ResolutionHelper(object):
@@ -367,6 +368,13 @@ class TypeNode(Node):
         super(TypeNode, self).__init__()
         self.ref_type_declaration = None
 
+    def get_type(self):
+        '''
+        Returns the resolved type
+        '''
+        assert self.ref_type_declaration
+        return self.ref_type_declaration
+
     def resolve(self, compiler):
         '''
         Base implementation of type resolution method
@@ -650,9 +658,9 @@ class ParameterDeclNode(Node, ResolutionHelper):
         '''
         Template method from ResolutionHelper
         '''
-        del compiler
+        # pylint: disable=unused-argument
 
-        return self.get_scope(RootScope).lookup_type(self.txt_type_name)
+        return lookup_type(self.txt_type_name, self.get_scope(RootScope), None)
 
 
 class ParameterListNode(Node):

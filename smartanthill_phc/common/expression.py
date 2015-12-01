@@ -50,7 +50,7 @@ class FunctionCallExprNode(ExpressionNode):
 #         compiler.report_error(
 #             self.ctx, "Unresolved function call '%s'" % self.txt_name)
 
-        return self.get_scope(RootScope).lookup_type('_zc_dont_care')
+        return self.get_scope(RootScope).get_type('_zc_dont_care')
 
 
 class MemberAccessExprNode(ExpressionNode):
@@ -116,9 +116,7 @@ class LiteralExprNode(ExpressionNode):
 
         # pylint: disable=unused-argument
 
-        scope = self.get_scope(RootScope)
-
-        return scope.lookup_type('_zc_dont_care')
+        return self.get_scope(RootScope).get_type('_zc_dont_care')
 
 
 class NumberLiteralExprNode(ExpressionNode):
@@ -138,9 +136,7 @@ class NumberLiteralExprNode(ExpressionNode):
 
         # pylint: disable=unused-argument
 
-        scope = self.get_scope(RootScope)
-
-        return scope.lookup_type('_zc_number_literal')
+        return self.get_scope(RootScope).get_type('_zc_number_literal')
 
     def get_static_value(self):
         '''
@@ -166,11 +162,9 @@ class BooleanLiteralExprNode(ExpressionNode):
 
     def resolve_expr(self, compiler):
 
-        del compiler
+        # pylint: disable=unused-argument
 
-        scope = self.get_scope(RootScope)
-
-        return scope.lookup_type('_zc_boolean_literal')
+        return self.get_scope(RootScope).get_type('_zc_boolean_literal')
 
     def get_static_value(self):
         '''
@@ -277,7 +271,7 @@ class VariableExprNode(ExpressionNode):
 
             return self.ref_decl.get_type()
         else:
-            return self.get_scope(RootScope).lookup_type('_zc_dont_care')
+            return self.get_scope(RootScope).get_type('_zc_dont_care')
 
     def get_static_value(self):
         '''
@@ -332,7 +326,7 @@ class AssignmentExprNode(ExpressionNode):
                 self.txt_name)
             # no need to raise here
 
-        return self.get_scope(RootScope).lookup_type('void')
+        return self.get_scope(RootScope).get_type('void')
 
 
 class OperatorExprNode(ExpressionNode):
@@ -369,7 +363,7 @@ class OperatorExprNode(ExpressionNode):
                     self.ctx, "Unresolved operator '%s'" % self.txt_operator)
                 compiler.raise_error()
             else:
-                return self.get_scope(RootScope).lookup_type('_zc_dont_care')
+                return self.get_scope(RootScope).get_type('_zc_dont_care')
 
         self.ref_decl = self.child_argument_list.overload_filter(
             compiler, candidates)

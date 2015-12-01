@@ -113,7 +113,7 @@ class ReturnStmtNode(StatementNode):
         if self.child_expression is not None:
             t = self.child_expression.get_type()
         else:
-            t = self.get_scope(RootScope).lookup_type('void')
+            t = self.get_scope(RootScope).get_type('void')
 
         self.get_scope(ReturnStmtScope).add_return_stmt(
             compiler, self.ctx, t)
@@ -150,7 +150,7 @@ class VariableDeclarationStmtNode(StatementNode, ResolutionHelper):
             compiler, self.txt_name, self)
 
         # return self.child_initializer.get_type()
-        return self.get_scope(RootScope).lookup_type('_zc_dont_care')
+        return self.get_scope(RootScope).get_type('_zc_dont_care')
 
     def get_static_value(self):
         '''
@@ -184,7 +184,7 @@ class ParameterDeclarationStmtNode(StatementNode, ResolutionHelper):
         self.get_scope(RootScope).add_parameter(
             compiler, self.txt_name, self)
 
-        return self.get_scope(RootScope).lookup_type('_zc_parameter')
+        return self.get_scope(RootScope).get_type('_zc_parameter')
 
     def get_static_value(self):
         '''

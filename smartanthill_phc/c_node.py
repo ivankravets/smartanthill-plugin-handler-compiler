@@ -14,11 +14,11 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 from smartanthill_phc.common.lookup import RootScope, ReturnStmtScope,\
-    StatementListScope
+    StatementListScope, lookup_type
 from smartanthill_phc.common.node import ExpressionNode,\
     resolve_expression_list, Node, StmtListNode,\
     StatementNode, resolve_expression, DeclarationListNode, TypeDeclNode,\
-    TypeNode
+    TypeNode, ResolutionHelper
 
 
 class DontCareExprNode(ExpressionNode):
@@ -47,7 +47,7 @@ class DontCareExprNode(ExpressionNode):
 
         resolve_expression_list(compiler, self, self.childs_expressions)
 
-        return self.get_scope(RootScope).lookup_type('_zc_dont_care')
+        return self.get_scope(RootScope).get_type('_zc_dont_care')
 
 
 class TypeCastExprNode(ExpressionNode):
@@ -75,10 +75,10 @@ class TypeCastExprNode(ExpressionNode):
 
         resolve_expression(compiler, self, 'child_expression')
 
-        return self.get_scope(RootScope).lookup_type('_zc_dont_care')
+        return self.get_scope(RootScope).get_type('_zc_dont_care')
 
 
-class FunctionDeclNode(Node):
+class FunctionDeclNode(Node, ResolutionHelper):
 
     '''
     Node class representing a function declaration
@@ -120,11 +120,13 @@ class FunctionDeclNode(Node):
         child.set_parent(self)
         self.child_argument_list = child
 
-    def resolve(self, compiler):
-        self.get_scope(RootScope).add_function(compiler, self.txt_name, self)
+    def do_resolve_declaration(self, compiler):
 
+        self.get_scope(RootScope).add_function(compiler, self.txt_name, self)
         compiler.resolve_node(self.child_return_type)
         compiler.resolve_node(self.child_statement_list)
+
+        return self.child_return_type.get_type()
 
 
 class ArgumentDeclNode(Node):
@@ -267,11 +269,14 @@ class SimpleTypeNode(TypeNode):
         Type resolution
         '''
         # pylint: disable=unused-argument
-        t = self.get_scope(RootScope).lookup_type(self.txt_name)
+
+        root_scope = self.get_scope(RootScope)
+        stmt_scope = self.get_scope(StatementListScope)
+        t = lookup_type(self.txt_name, root_scope, stmt_scope)
         if t is not None:
             return t
         else:
-            return self.get_scope(RootScope).lookup_type('_zc_dont_care')
+            return root_scope.get_type('_zc_dont_care')
 
 
 class PapiFunctionDeclNode(Node):
@@ -289,3 +294,32 @@ class PapiFunctionDeclNode(Node):
 
     def resolve(self, compiler):
         self.get_scope(RootScope).add_function(compiler, self.txt_name, self)
+
+
+class TypedefStmtNode(StatementNode, ResolutionHelper):
+
+    '''
+    Node class representing variable declaration statement
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(TypedefStmtNode, self).__init__()
+        self.txt_name = None
+        self.child_type = None
+
+    def set_type(self, child):
+        '''
+        expression setter
+        '''
+        assert isinstance(child, TypeNode)
+        child.set_parent(self)
+        self.child_type = child
+
+    def do_resolve_declaration(self, compiler):
+
+        compiler.resolve_node(self.child_type)
+
+        return self.child_type.get_type()
