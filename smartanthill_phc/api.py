@@ -18,10 +18,11 @@ import antlr4
 from smartanthill_phc.antlr_parser import CLexer, CParser
 from smartanthill_phc.builtin import create_builtins
 from smartanthill_phc.common.antlr_helper import dump_antlr_tree
-from smartanthill_phc.common.compiler import Compiler, Ctx, process_syntax_tree
+from smartanthill_phc.common.compiler import Compiler, Ctx
 from smartanthill_phc.common.visitor import dump_tree,\
     check_all_nodes_reachables
 from smartanthill_phc.parser import c_parse_tree_to_syntax_tree
+from smartanthill_phc.resolve import resolve_tree
 from smartanthill_phc.rewrite import rewrite_code, write_header
 from smartanthill_phc.root import RootNode, NonBlockingData
 from smartanthill_phc.state import create_states
@@ -66,7 +67,7 @@ def process_file(file_name, prefix, split_all, dump):
         print '\n'.join(dump_tree(root))
 
     check_all_nodes_reachables(c, root)
-    process_syntax_tree(c, root)
+    resolve_tree(c, root)
 
     create_states(c, root, prefix, split_all)
 

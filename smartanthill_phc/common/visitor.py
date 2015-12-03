@@ -74,6 +74,14 @@ class NodeVisitor(object):
         '''
         visit_node(self, node)
 
+    def default_visit(self, node):
+        '''
+        Default action when a node specific action is not found
+        '''
+        # pylint: disable=unused-argument
+        # pylint: disable=no-self-use
+        assert False
+
 
 class CodeVisitor(NodeVisitor):
 
@@ -108,7 +116,7 @@ class CodeVisitor(NodeVisitor):
 
         while self._index[-1] < len(self._stmt_list[-1].childs_statements):
             stmt = self._stmt_list[-1].childs_statements[self._index[-1]]
-            visit_node(self, stmt)
+            self.visit(stmt)
 
             self._index[-1] += 1
 
@@ -124,7 +132,7 @@ class CodeVisitor(NodeVisitor):
 
         expr = getattr(parent, child_name)
         if expr is not None:
-            visit_node(self, expr)
+            self.visit(expr)
 
             if self._replacement is not None:
                 assert self._replacement is not expr
@@ -147,7 +155,7 @@ class CodeVisitor(NodeVisitor):
         Visit child expression list by index, to allow expression
         replacement
         '''
-        visit_node(self, expr_list[i])
+        self.visit(expr_list[i])
 
         if self._replacement is not None:
             assert self._replacement is not expr_list[i]

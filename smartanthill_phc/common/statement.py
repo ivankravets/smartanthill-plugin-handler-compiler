@@ -14,11 +14,9 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-from smartanthill_phc.common.lookup import StatementListScope, ReturnStmtScope,\
-    RootScope
+from smartanthill_phc.common.lookup import StatementListScope, RootScope
 from smartanthill_phc.common.node import ArgumentListNode, ExpressionNode,\
-    ResolutionHelper, StatementNode, resolve_expression,\
-    StmtListNode
+    ResolutionHelper, StatementNode, StmtListNode
 
 
 def make_statement_list(compiler, stmt):
@@ -53,11 +51,6 @@ class NopStmtNode(StatementNode):
         '''
         super(NopStmtNode, self).__init__()
 
-    def resolve(self, compiler):
-        # pylint: disable=unused-argument
-        # pylint: disable=no-self-use
-        pass
-
 
 class ErrorStmtNode(StatementNode):
 
@@ -72,11 +65,6 @@ class ErrorStmtNode(StatementNode):
         Constructor
         '''
         super(ErrorStmtNode, self).__init__()
-
-    def resolve(self, compiler):
-        # pylint: disable=unused-argument
-        # pylint: disable=no-self-use
-        assert False
 
 
 class ReturnStmtNode(StatementNode):
@@ -107,17 +95,6 @@ class ReturnStmtNode(StatementNode):
         # pylint: disable=no-self-use
         return True
 
-    def resolve(self, compiler):
-        resolve_expression(compiler, self, 'child_expression')
-
-        if self.child_expression is not None:
-            t = self.child_expression.get_type()
-        else:
-            t = self.get_scope(RootScope).get_type('void')
-
-        self.get_scope(ReturnStmtScope).add_return_stmt(
-            compiler, self.ctx, t)
-
 
 class VariableDeclarationStmtNode(StatementNode, ResolutionHelper):
 
@@ -140,17 +117,6 @@ class VariableDeclarationStmtNode(StatementNode, ResolutionHelper):
         assert isinstance(child, ExpressionNode)
         child.set_parent(self)
         self.child_initializer = child
-
-    def do_resolve_declaration(self, compiler):
-
-        resolve_expression(compiler, self, 'child_initializer')
-        # we are adding variable name after resolution of initializer
-        # because we don't allow that kind of resolution cycle
-        self.get_scope(StatementListScope).add_variable(
-            compiler, self.txt_name, self)
-
-        # return self.child_initializer.get_type()
-        return self.get_scope(RootScope).get_type('_zc_dont_care')
 
     def get_static_value(self):
         '''
@@ -216,9 +182,6 @@ class ExpressionStmtNode(StatementNode):
         child.set_parent(self)
         self.child_expression = child
 
-    def resolve(self, compiler):
-        resolve_expression(compiler, self, 'child_expression')
-
 
 class IfElseStmtNode(StatementNode):
 
@@ -268,11 +231,6 @@ class IfElseStmtNode(StatementNode):
                 self.child_else_branch.is_closed_stmt()
         else:
             return False
-
-    def resolve(self, compiler):
-        resolve_expression(compiler, self, 'child_expression')
-        compiler.resolve_node(self.child_if_branch)
-        compiler.resolve_node(self.child_else_branch)
 
 #         t = self.get_scope(RootScope).lookup_type('_zc_boolean')
 #
@@ -378,6 +336,7 @@ class SimpleForStmtNode(StatementNode):
             return super(SimpleForStmtNode, self).get_scope(kind)
 
     def resolve(self, compiler):
-        resolve_expression(compiler, self, 'child_begin_expression')
-        resolve_expression(compiler, self, 'child_end_expression')
-        compiler.resolve_node(self.child_statement_list)
+        pass
+#         resolve_expression(compiler, self, 'child_begin_expression')
+#         resolve_expression(compiler, self, 'child_end_expression')
+#         compiler.resolve_node(self.child_statement_list)

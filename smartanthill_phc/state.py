@@ -538,13 +538,6 @@ class _StatementsVisitor(CodeVisitor):
         self._h = DeclsHelper()
         self._split_all = split_all
 
-    def default_visit(self, node):
-        '''
-        Default action when a node specific action is not found
-        '''
-        self._c.report_error(
-            node.ctx, "Statement not supported")
-
     def get_moved_vars(self):
         return self._h.get_decls_to_be_moved()
 

@@ -14,9 +14,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-from smartanthill_phc.common.lookup import StatementListScope, RootScope
-from smartanthill_phc.common.node import ArgumentListNode, ExpressionNode,\
-    expression_type_match, resolve_expression
+from smartanthill_phc.common.node import ArgumentListNode, ExpressionNode
 
 
 class FunctionCallExprNode(ExpressionNode):
@@ -41,16 +39,6 @@ class FunctionCallExprNode(ExpressionNode):
         assert isinstance(child, ArgumentListNode)
         child.set_parent(self)
         self.child_argument_list = child
-
-    def resolve_expr(self, compiler):
-        compiler.resolve_node(self.child_argument_list)
-
-        self.ref_declaration = self.get_scope(
-            RootScope).lookup_function(self.txt_name)
-#         compiler.report_error(
-#             self.ctx, "Unresolved function call '%s'" % self.txt_name)
-
-        return self.get_scope(RootScope).get_type('_zc_dont_care')
 
 
 class MemberAccessExprNode(ExpressionNode):
@@ -77,21 +65,6 @@ class MemberAccessExprNode(ExpressionNode):
         child.set_parent(self)
         self.child_expression = child
 
-    def resolve_expr(self, compiler):
-        resolve_expression(compiler, self, 'child_expression')
-
-        t = self.child_expression.get_type()
-        m = t.lookup_member(self.txt_member)
-        if not m:
-            compiler.report_error(self.ctx, "Member '%s' not found" %
-                                  self.txt_member)
-            compiler.raise_error()
-
-        self.type_decl = t
-        self.member_decl = m
-
-        return m.get_type()
-
     def get_member_field_sequence(self):
         '''
         Creates a field sequence to represent this member
@@ -112,12 +85,6 @@ class LiteralExprNode(ExpressionNode):
         super(LiteralExprNode, self).__init__()
         self.txt_literal = None
 
-    def resolve_expr(self, compiler):
-
-        # pylint: disable=unused-argument
-
-        return self.get_scope(RootScope).get_type('_zc_dont_care')
-
 
 class NumberLiteralExprNode(ExpressionNode):
 
@@ -131,12 +98,6 @@ class NumberLiteralExprNode(ExpressionNode):
         '''
         super(NumberLiteralExprNode, self).__init__()
         self.txt_literal = None
-
-    def resolve_expr(self, compiler):
-
-        # pylint: disable=unused-argument
-
-        return self.get_scope(RootScope).get_type('_zc_number_literal')
 
     def get_static_value(self):
         '''
@@ -159,12 +120,6 @@ class BooleanLiteralExprNode(ExpressionNode):
         '''
         super(BooleanLiteralExprNode, self).__init__()
         self.boolean_value = False
-
-    def resolve_expr(self, compiler):
-
-        # pylint: disable=unused-argument
-
-        return self.get_scope(RootScope).get_type('_zc_boolean_literal')
 
     def get_static_value(self):
         '''
@@ -261,26 +216,12 @@ class VariableExprNode(ExpressionNode):
         self.txt_name = None
         self.ref_decl = None
 
-    def resolve_expr(self, compiler):
-        # pylint: disable=unused-argument
-
-        decl = self.get_scope(
-            StatementListScope).lookup_variable(self.txt_name)
-        if decl is not None:
-            self.ref_decl = decl
-
-            return self.ref_decl.get_type()
-        else:
-            return self.get_scope(RootScope).get_type('_zc_dont_care')
-
     def get_static_value(self):
         '''
         Returns compile-time value of this expression is possible,
         Returns None otherwise
         '''
-        assert self.ref_decl
-
-        return self.ref_decl.get_static_value()
+        return self.ref_decl.get_static_value() if self.ref_decl else None
 
 
 class AssignmentExprNode(ExpressionNode):
@@ -306,28 +247,6 @@ class AssignmentExprNode(ExpressionNode):
         child.set_parent(self)
         self.child_rhs = child
 
-    def resolve_expr(self, compiler):
-
-        resolve_expression(compiler, self, 'child_rhs')
-
-        decl = self.get_scope(
-            StatementListScope).lookup_variable(self.txt_name)
-        if not decl:
-            compiler.report_error(
-                self.ctx, "Unresolved variable '%s'" % self.txt_name)
-            compiler.raise_error()
-
-        self.ref_decl = decl
-        t = self.ref_decl.get_type()
-
-        if not expression_type_match(compiler, t, self, 'child_rhs'):
-            compiler.report_error(
-                self.ctx, "Type mismatch on assignment of variable '%s'" %
-                self.txt_name)
-            # no need to raise here
-
-        return self.get_scope(RootScope).get_type('void')
-
 
 class OperatorExprNode(ExpressionNode):
 
@@ -351,29 +270,6 @@ class OperatorExprNode(ExpressionNode):
         assert isinstance(child, ArgumentListNode)
         child.set_parent(self)
         self.child_argument_list = child
-
-    def resolve_expr(self, compiler):
-        compiler.resolve_node(self.child_argument_list)
-        candidates = self.get_scope(
-            RootScope).lookup_operator(self.txt_operator)
-
-        if len(candidates) == 0:
-            if False:
-                compiler.report_error(
-                    self.ctx, "Unresolved operator '%s'" % self.txt_operator)
-                compiler.raise_error()
-            else:
-                return self.get_scope(RootScope).get_type('_zc_dont_care')
-
-        self.ref_decl = self.child_argument_list.overload_filter(
-            compiler, candidates)
-        self.child_argument_list.make_match(
-            compiler, self.ref_decl.child_parameter_list)
-
-        self.ref_decl.static_evaluate(compiler, self,
-                                      self.child_argument_list)
-
-        return self.ref_decl.get_type()
 
 
 class BinaryOpExprNode(OperatorExprNode):

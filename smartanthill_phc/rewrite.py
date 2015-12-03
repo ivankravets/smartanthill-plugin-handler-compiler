@@ -99,13 +99,6 @@ class _RewriteVisitor(NodeVisitor):
         self._sm = None
         self._func = None
 
-    def default_visit(self, node):
-        '''
-        Default action when a node specific action is not found
-        '''
-        self._c.report_error(
-            node.ctx, "Statement rewrite not supported")
-
     def _get_text(self, ctx):
         '''
         Helper method

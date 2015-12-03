@@ -38,9 +38,6 @@ class PluginSourceNode(Node):
         child.set_parent(self)
         self.child_declaration_list = child
 
-    def resolve(self, compiler):
-        compiler.resolve_node(self.child_declaration_list)
-
 
 class StateMachineData(object):
 
@@ -164,9 +161,3 @@ class RootNode(Node):
         assert isinstance(child, PluginSourceNode)
         child.set_parent(self)
         self.child_source = child
-
-    def resolve(self, compiler):
-        # First built-ins
-        compiler.resolve_node(self.child_builtins)
-        # Last user code
-        compiler.resolve_node(self.child_source)

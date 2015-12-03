@@ -15,8 +15,7 @@
 
 
 from smartanthill_phc.common import errors
-from smartanthill_phc.common.lookup import RootScope, StatementListScope,\
-    lookup_type
+from smartanthill_phc.common.lookup import RootScope, StatementListScope
 
 
 class ResolutionHelper(object):
@@ -40,29 +39,36 @@ class ResolutionHelper(object):
         self._resolved_flag = self._NOT_RESOLVED
         self._resolved_type = None
 
-    def resolve(self, compiler):
-        '''
-        Resolve, will call template method do_resolve_declaration that needs to
-        be at implementing class
-        '''
-        try:
-            if self._resolved_flag == self._NOT_RESOLVED:
-                self._resolved_flag = self._RESOLVING_NOW
-                self._resolved_type = self.do_resolve_declaration(compiler)
-                assert self._resolved_type
-                self._resolved_flag = self._RESOLVED_OK
-            elif self._resolved_flag == self._RESOLVING_NOW:
-                raise errors.ResolutionCycleError()
-            elif self._resolved_flag == self._RESOLVED_OK:
-                pass
-            elif self.resolved_flag == self._RESOLUTION_ERROR:
-                pass
-            else:
-                assert False
-        except:
-            self._resolved_flag = self._RESOLUTION_ERROR
-            self._resolved_type = None
-            raise
+#     def resolve(self, compiler):
+#         '''
+#         Resolve, will call template method do_resolve_declaration that needs
+#         be at implementing class
+#         '''
+#         try:
+#             if self._resolved_flag == self._NOT_RESOLVED:
+#                 self._resolved_flag = self._RESOLVING_NOW
+#                 self._resolved_type = self.do_resolve_declaration(compiler)
+#                 assert self._resolved_type
+#                 self._resolved_flag = self._RESOLVED_OK
+#             elif self._resolved_flag == self._RESOLVING_NOW:
+#                 raise errors.ResolutionCycleError()
+#             elif self._resolved_flag == self._RESOLVED_OK:
+#                 pass
+#             elif self.resolved_flag == self._RESOLUTION_ERROR:
+#                 pass
+#             else:
+#                 assert False
+#         except:
+#             self._resolved_flag = self._RESOLUTION_ERROR
+#             self._resolved_type = None
+#             raise
+
+    def begin_resolution(self):
+        if self._resolved_flag == self._NOT_RESOLVED:
+            self._resolved_flag = self._RESOLVING_NOW
+            return True
+        else:
+            return False
 
     def get_type(self):
         '''
@@ -80,6 +86,16 @@ class ResolutionHelper(object):
             raise errors.PreviousResolutionError()
         else:
             assert False
+
+    def set_type(self, type_ref):
+        '''
+        Sets the type of this declaration
+        '''
+
+        assert self._resolved_flag == self._RESOLVING_NOW
+        assert type_ref
+        self._resolved_type = type_ref
+        self._resolved_flag = self._RESOLVED_OK
 
 
 class Node(object):
@@ -190,20 +206,6 @@ class StmtListNode(StatementNode):
         child.set_parent(self)
         self.childs_statements.insert(index, child)
 
-    def resolve(self, compiler):
-        has_flow_stmt = False
-        for i in range(len(self.childs_statements)):
-            _resolve_statement_list_item(
-                compiler, self, self.childs_statements, i)
-
-            stmt = self.childs_statements[i]
-            # state _StatementsSplitterVisitor needs nice flow statements
-            # so no unreachable statements allowed
-            if has_flow_stmt:
-                compiler.report_error(stmt.ctx, "Unreachable statement")
-            if stmt.is_closed_stmt():
-                has_flow_stmt = True
-
     def split_at(self, index, other):
         '''
         Splits this StmtListNode,
@@ -229,32 +231,6 @@ class StmtListNode(StatementNode):
             return False
 
 
-def resolve_statement_list(compiler, parent, stmt_list):
-    '''
-    Resolve child statement list, to allow statement replacement
-    '''
-    for i in range(len(stmt_list)):
-        _resolve_statement_list_item(compiler, parent, stmt_list, i)
-
-
-def _resolve_statement_list_item(compiler, parent, stmt_list, i):
-    '''
-    Resolve child statement list by index, to allow statement
-    replacement
-    '''
-    compiler.resolve_node(stmt_list[i])
-
-    replacement = compiler.release_replacement()
-    if replacement is not None:
-        assert replacement is not stmt_list[i]
-        assert isinstance(replacement, StatementNode)
-        replacement.set_parent(parent)
-        stmt_list[i] = replacement
-
-        # resolve again (replacement)
-        _resolve_expression_list_item(compiler, parent, stmt_list, i)
-
-
 class ExpressionNode(Node):
 
     '''
@@ -268,13 +244,6 @@ class ExpressionNode(Node):
         super(ExpressionNode, self).__init__()
         self._resolved_type = None
         self.has_parenthesis = False
-
-    def resolve(self, compiler):
-        '''
-        Base implementation of expression resolution method
-        '''
-        t = self.resolve_expr(compiler)
-        self.set_type(t)
 
     def set_type(self, resolved_type):
         '''
@@ -305,56 +274,6 @@ class ExpressionNode(Node):
         return None
 
 
-def resolve_expression(compiler, parent, child_name):
-    '''
-    Resolve child expression by attribute name, to allow expression
-    replacement
-    '''
-
-    expr = getattr(parent, child_name)
-    if expr is not None:
-        compiler.resolve_node(expr)
-        replacement = compiler.release_replacement()
-        if replacement is not None:
-            assert replacement is not expr
-            assert isinstance(replacement, ExpressionNode)
-            replacement.set_parent(parent)
-            setattr(parent, child_name, replacement)
-
-            # resolve again (replacement)
-            resolve_expression(compiler, parent, child_name)
-        else:
-            expr.assert_resolved()
-
-
-def resolve_expression_list(compiler, parent, expr_list):
-    '''
-    Resolve child expression list, to allow expression replacement
-    '''
-    for i in range(len(expr_list)):
-        _resolve_expression_list_item(compiler, parent, expr_list, i)
-
-
-def _resolve_expression_list_item(compiler, parent, expr_list, i):
-    '''
-    Resolve child expression list by index, to allow expression
-    replacement
-    '''
-    compiler.resolve_node(expr_list[i])
-    replacement = compiler.release_replacement()
-
-    if replacement is not None:
-        assert replacement is not expr_list[i]
-        assert isinstance(replacement, ExpressionNode)
-        replacement.set_parent(parent)
-        expr_list[i] = replacement
-
-        # resolve again (replacement)
-        _resolve_expression_list_item(compiler, parent, expr_list, i)
-    else:
-        expr_list[i].assert_resolved()
-
-
 class TypeNode(Node):
 
     '''
@@ -375,19 +294,14 @@ class TypeNode(Node):
         assert self.ref_type_declaration
         return self.ref_type_declaration
 
-    def resolve(self, compiler):
+    def set_type(self, type_ref):
         '''
-        Base implementation of type resolution method
+        Sets the resolved type
         '''
-        assert not self.ref_type_declaration
-        t = self.resolve_type(compiler)
-        self.ref_type_declaration = t
+        assert self.ref_type_declaration is None
+        assert type_ref is not None
 
-    def assert_resolved(self):
-        '''
-        Asserts this instance has been resolved
-        '''
-        assert self.ref_type_declaration
+        self.ref_type_declaration = type_ref
 
 
 class TypeDeclNode(Node):
@@ -514,10 +428,6 @@ class DeclarationListNode(Node):
         for each in childs:
             self.add_declaration(each)
 
-    def resolve(self, compiler):
-        for decl in self.childs_declarations:
-            compiler.resolve_node(decl)
-
 
 class ArgumentListNode(Node):
 
@@ -539,9 +449,6 @@ class ArgumentListNode(Node):
         assert isinstance(child, ExpressionNode)
         child.set_parent(self)
         self.childs_arguments.append(child)
-
-    def resolve(self, compiler):
-        resolve_expression_list(compiler, self, self.childs_arguments)
 
     def overload_filter(self, compiler, decl_list):
         '''
@@ -654,14 +561,6 @@ class ParameterDeclNode(Node, ResolutionHelper):
         super(ParameterDeclNode, self).__init__()
         self.txt_type_name = type_name
 
-    def do_resolve_declaration(self, compiler):
-        '''
-        Template method from ResolutionHelper
-        '''
-        # pylint: disable=unused-argument
-
-        return lookup_type(self.txt_type_name, self.get_scope(RootScope), None)
-
 
 class ParameterListNode(Node):
 
@@ -684,15 +583,6 @@ class ParameterListNode(Node):
         assert isinstance(child, ParameterDeclNode)
         child.set_parent(self)
         self.childs_parameters.append(child)
-
-    def resolve(self, compiler):
-        '''
-        resolve
-        '''
-        assert not self._already_resolved
-        for param in self.childs_parameters:
-            compiler.resolve_node(param)
-        self._already_resolved = True
 
     def get_size(self):
         return len(self.childs_parameters)
