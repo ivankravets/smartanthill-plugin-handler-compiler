@@ -14,27 +14,27 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-from smartanthill_phc.common.lookup import StatementListScope, RootScope
-from smartanthill_phc.common.node import ArgumentListNode, ExpressionNode,\
+from smartanthill_phc.common.base import ArgumentListNode, ExpressionNode,\
     ResolutionHelper, StatementNode, StmtListNode
+from smartanthill_phc.common.lookup import StatementListScope, RootScope
 
 
-def make_statement_list(compiler, stmt):
+def make_statement_list(compiler, statement):
     '''
-    If stmt is instance of StmtListNode, returns stmt.
-    Otherwise, creates and returns an StmtListNode holding stmt
+    If statement is instance of StmtListNode, returns statement.
+    Otherwise, creates and returns an StmtListNode holding statement
 
     This helper function is used to always use StmtListNode as child
     of statements like if-else, or for loops, even when a single statement
     (without braces) is used.
     '''
-    assert isinstance(stmt, StatementNode)
+    assert isinstance(statement, StatementNode)
 
-    if isinstance(stmt, StmtListNode):
-        return stmt
+    if isinstance(statement, StmtListNode):
+        return statement
 
-    stmt_list = compiler.init_node(StmtListNode(), stmt.ctx)
-    stmt_list.add_statement(stmt)
+    stmt_list = compiler.init_node(StmtListNode(), statement.ctx)
+    stmt_list.add_statement(statement)
 
     return stmt_list
 

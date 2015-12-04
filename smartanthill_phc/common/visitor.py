@@ -13,7 +13,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from smartanthill_phc.common.node import Node, ExpressionNode, StmtListNode
+from smartanthill_phc.common.base import Node, ExpressionNode, StmtListNode
 
 
 def visit_node(visitor, node):
@@ -38,15 +38,15 @@ def _visit_node_base(visitor, node, cls):
     if attr:
         return attr(node)
     else:
-        base = None
+        b = None
         for each in cls.__bases__:
             if issubclass(each, Node):
-                assert base is None
-                base = each
-        if base is None:
+                assert b is None
+                b = each
+        if b is None:
             return getattr(visitor, 'default_visit')(node)
         else:
-            return _visit_node_base(visitor, node, base)
+            return _visit_node_base(visitor, node, b)
 
 
 def walk_node_childs(walker, node):
@@ -134,8 +134,8 @@ class CodeVisitor(NodeVisitor):
         self._index.append(begin)
 
         while self._index[-1] < len(self._stmt_list[-1].childs_statements):
-            stmt = self._stmt_list[-1].childs_statements[self._index[-1]]
-            self.visit(stmt)
+            s = self._stmt_list[-1].childs_statements[self._index[-1]]
+            self.visit(s)
 
             self._index[-1] += 1
 
@@ -149,12 +149,12 @@ class CodeVisitor(NodeVisitor):
         '''
         assert self._replacement is None
 
-        expr = getattr(parent, child_name)
-        if expr is not None:
-            self.visit(expr)
+        e = getattr(parent, child_name)
+        if e is not None:
+            self.visit(e)
 
             if self._replacement is not None:
-                assert self._replacement is not expr
+                assert self._replacement is not e
                 self._replacement.set_parent(parent)
                 setattr(parent, child_name, self._replacement)
                 self._replacement = None
@@ -185,24 +185,24 @@ class CodeVisitor(NodeVisitor):
             # visit again (replacement)
             self._visit_expression_list_item(parent, expr_list, i)
 
-    def insert_before_current(self, stmt):
+    def insert_before_current(self, statement):
         '''
         Insert statement before current one
         Index will be incremented to account for the extra statement
         Inserted statement will never be visited, because it will be inserted
         at a place visitor already did
         '''
-        self._stmt_list[-1].insert_statement_at(self._index[-1], stmt)
+        self._stmt_list[-1].insert_statement_at(self._index[-1], statement)
 
         self._index[-1] += 1
 
-    def insert_after_current(self, stmt):
+    def insert_after_current(self, statement):
         '''
         Insert statement after current one
         Index will be incremented to account for the extra statement
         and to avoid visitation of inserted statement
         '''
-        self._stmt_list[-1].insert_statement_at(self._index[-1] + 1, stmt)
+        self._stmt_list[-1].insert_statement_at(self._index[-1] + 1, statement)
 
         self._index[-1] += 1
 

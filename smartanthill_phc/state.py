@@ -15,10 +15,10 @@
 
 from smartanthill_phc.c_node import TypeCastExprNode, IntTypeDeclNode,\
     VoidTypeDeclNode
-from smartanthill_phc.common.expression import VariableExprNode,\
+from smartanthill_phc.common.base import StatementNode, ExpressionNode
+from smartanthill_phc.common.expr import VariableExprNode,\
     FunctionCallExprNode
-from smartanthill_phc.common.node import StatementNode, ExpressionNode
-from smartanthill_phc.common.statement import VariableDeclarationStmtNode
+from smartanthill_phc.common.stmt import VariableDeclarationStmtNode
 from smartanthill_phc.common.visitor import visit_node, CodeVisitor,\
     NodeVisitor
 from smartanthill_phc.root import NonBlockingData
@@ -308,23 +308,23 @@ class DeclsHelper(object):
         assert decl not in self._decls
         self._decls[decl] = st
 
-    def add_var_expr(self, expr, st):
+    def add_var_expr(self, e, st):
         '''
         Adds a reference (access) to a variable in certain state
         '''
 
-        if expr.ref_decl is None or expr.ref_decl not in self._decls:
+        if e.ref_decl is None or e.ref_decl not in self._decls:
             return
 
-        if expr.ref_decl in self._to_be_moved:  # already moved
+        if e.ref_decl in self._to_be_moved:  # already moved
             return
 
-        if self._decls[expr.ref_decl] != st:
-            self._to_be_moved.append(expr.ref_decl)
+        if self._decls[e.ref_decl] != st:
+            self._to_be_moved.append(e.ref_decl)
             return
 
         # Still may need to be moved because of loops
-        self._loops.add_var_ref(expr.ref_decl)
+        self._loops.add_var_ref(e.ref_decl)
 
     def begin_loop(self, st):
         '''
@@ -369,15 +369,15 @@ class DeclsHelper(object):
 def _skip_statements(stmt_list):
 
     for i in range(len(stmt_list.childs_statements)):
-        stmt = stmt_list.childs_statements[i]
-        if isinstance(stmt, MainFirstStmtNode):
+        s = stmt_list.childs_statements[i]
+        if isinstance(s, MainFirstStmtNode):
             continue
 
-        if not isinstance(stmt, VariableDeclarationStmtNode):
+        if not isinstance(s, VariableDeclarationStmtNode):
             return i
-        if not isinstance(stmt.child_initializer, TypeCastExprNode):
+        if not isinstance(s.child_initializer, TypeCastExprNode):
             return i
-        if not isinstance(stmt.child_initializer.child_expression,
+        if not isinstance(s.child_initializer.child_expression,
                           VariableExprNode):
             return i
 
@@ -410,31 +410,31 @@ class StateMachineVisitor(NodeVisitor):
 
             ctx = node.child_statement_list.ctx.start
 
-            stmt = self._c.init_node(MainFirstStmtNode(), ctx)
+            s = self._c.init_node(MainFirstStmtNode(), ctx)
 
             args = node.child_argument_list.childs_declarations
             if len(args) >= 6:
-                stmt.txt_arg2 = args[2].txt_name
-                stmt.txt_arg5 = args[5].txt_name
+                s.txt_arg2 = args[2].txt_name
+                s.txt_arg5 = args[5].txt_name
             else:
                 self._c.report_error(node.ctx, "Too few arguments")
 
-            node.child_statement_list.insert_statement_at(0, stmt)
+            node.child_statement_list.insert_statement_at(0, s)
 
             self._create_state_machine(node)
         elif node.txt_name == self._nb.exec_init_name:
 
             ctx = node.child_statement_list.ctx.start
 
-            stmt = self._c.init_node(InitFirstStmtNode(), ctx)
+            s = self._c.init_node(InitFirstStmtNode(), ctx)
 
             args = node.child_argument_list.childs_declarations
             if len(args) >= 2:
-                stmt.txt_arg1 = args[1].txt_name
+                s.txt_arg1 = args[1].txt_name
             else:
                 self._c.report_error(node.ctx, "Too few arguments")
 
-            node.child_statement_list.insert_statement_at(0, stmt)
+            node.child_statement_list.insert_statement_at(0, s)
         elif node.txt_name == self._nb.handler_init_name:
             pass
         else:
@@ -469,8 +469,8 @@ class StateMachineVisitor(NodeVisitor):
             self._nb.add_function_with_states(node, sm, moved_vars)
 
             ctx = stmt_list.ctx.start
-            stmt = self._c.init_node(SubFirstStmtNode(), ctx)
-            stmt_list.insert_statement_at(0, stmt)
+            s = self._c.init_node(SubFirstStmtNode(), ctx)
+            stmt_list.insert_statement_at(0, s)
 
             if not isinstance(node.child_return_type.ref_type_declaration,
                               (VoidTypeDeclNode, IntTypeDeclNode)):
@@ -479,9 +479,9 @@ class StateMachineVisitor(NodeVisitor):
                     "Function return type not supported for sub states")
 
             if not stmt_list.is_closed_stmt():
-                stmt = self._c.init_node(
+                s = self._c.init_node(
                     BeforeReturnStmtNode(), stmt_list.ctx.stop)
-                stmt_list.add_statement(stmt)
+                stmt_list.add_statement(s)
 
     def _create_state_machine(self, node):
         '''
@@ -626,13 +626,13 @@ class _StatementsVisitor(CodeVisitor):
         self.visit_expression(node, 'child_expression')
 
         if self._sm.has_states():  # Only needed if we already have states
-            stmt = self._c.init_node(BeforeReturnStmtNode(), node.ctx.start)
-            self.insert_before_current(stmt)
+            s = self._c.init_node(BeforeReturnStmtNode(), node.ctx.start)
+            self.insert_before_current(s)
 
     def visit_ImplicitReturnStmtNode(self, node):
         if self._sm.has_states():  # Only needed if we already have states
-            stmt = self._c.init_node(BeforeReturnStmtNode(), node.ctx.stop)
-            self.insert_before_current(stmt)
+            s = self._c.init_node(BeforeReturnStmtNode(), node.ctx.stop)
+            self.insert_before_current(s)
 
     def visit_IfElseStmtNode(self, node):
 
@@ -667,14 +667,14 @@ class _StatementsVisitor(CodeVisitor):
 
         if self._nb.has_states(node.ref_declaration):
             ctx = self.get_current_statement().ctx
-            stmt = self._c.init_node(FunctionCallSubStmtNode(), ctx)
-            stmt.int_next_state = self._sm.increment_state()
-            stmt.set_expression(node)
-            stmt.txt_name = 'zc_tmp%s' % stmt.int_next_state
-            self.insert_before_current(stmt)
+            s = self._c.init_node(FunctionCallSubStmtNode(), ctx)
+            s.int_next_state = self._sm.increment_state()
+            s.set_expression(node)
+            s.txt_name = 'zc_tmp%s' % s.int_next_state
+            self.insert_before_current(s)
 
             var = self._c.init_node(FunctionCallSubExprNode(), node.ctx)
-            var.ref_declaration = stmt
+            var.ref_declaration = s
             self.replace_expression(var)
 
     def visit_FunctionCallSubExprNode(self, node):

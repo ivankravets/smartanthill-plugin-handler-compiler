@@ -15,7 +15,7 @@
 
 from smartanthill_phc.common.lookup import ReturnStmtScope,\
     StatementListScope
-from smartanthill_phc.common.node import ExpressionNode,\
+from smartanthill_phc.common.base import ExpressionNode,\
     Node, StmtListNode,\
     StatementNode, DeclarationListNode, TypeDeclNode,\
     TypeNode, ResolutionHelper

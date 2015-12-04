@@ -15,7 +15,7 @@
 
 from smartanthill_phc.c_node import VoidTypeDeclNode, IntTypeDeclNode,\
     BasicTypeDeclNode, PapiFunctionDeclNode
-from smartanthill_phc.common.node import DeclarationListNode
+from smartanthill_phc.common.base import DeclarationListNode
 
 
 def create_builtins(compiler, ctx):

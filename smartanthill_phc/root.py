@@ -14,7 +14,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 from smartanthill_phc.common.lookup import RootScope
-from smartanthill_phc.common.node import Node, DeclarationListNode
+from smartanthill_phc.common.base import Node, DeclarationListNode
 
 
 class PluginSourceNode(Node):

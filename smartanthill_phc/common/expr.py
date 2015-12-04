@@ -14,7 +14,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-from smartanthill_phc.common.node import ArgumentListNode, ExpressionNode
+from smartanthill_phc.common.base import ArgumentListNode, ExpressionNode
 
 
 class FunctionCallExprNode(ExpressionNode):
@@ -165,18 +165,6 @@ class StaticEvaluatedExprNode(ExpressionNode):
         return self._static_value
 
 
-def create_trivial_cast(compiler, expr, target_type):
-    '''
-    Helper funtion to create a TrivialCastExprNode
-    '''
-
-    c = compiler.init_node(TrivialCastExprNode(), expr.ctx)
-    c.set_expression(expr)
-    c.set_type(target_type)
-
-    return c
-
-
 class TrivialCastExprNode(ExpressionNode):
 
     '''
@@ -200,6 +188,17 @@ class TrivialCastExprNode(ExpressionNode):
 
     def get_static_value(self):
         return self.child_expression.get_static_value()
+
+    @staticmethod
+    def create(compiler, expression, target_type):
+        '''
+        Creates a new instance
+        '''
+        node = compiler.init_node(TrivialCastExprNode(), expression.ctx)
+        node.set_expression(expression)
+        node.set_type(target_type)
+
+        return node
 
 
 class VariableExprNode(ExpressionNode):

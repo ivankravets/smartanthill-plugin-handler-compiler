@@ -340,7 +340,7 @@ class TypeDeclNode(Node):
         # pylint: disable=unused-argument
         return False
 
-    def insert_cast_to(self, compiler, target_type, expr):
+    def insert_cast_to(self, compiler, target_type, expression):
         '''
         Inserts a cast to the target type
         Only implemented by types that return true to can_cast_to
@@ -359,7 +359,7 @@ class TypeDeclNode(Node):
         # pylint: disable=unused-argument
         return False
 
-    def insert_cast_from(self, compiler, source_type, expr):
+    def insert_cast_from(self, compiler, source_type, expression):
         '''
         Inserts a cast from the source type
         Only implemented by types that return true to can_cast_from
@@ -384,13 +384,13 @@ def expression_type_match(compiler, lhs_type, parent, child_name):
     If exact match returns true
     If can match but needs cast, inserts cast and returns true
     '''
-    expr = getattr(parent, child_name)
-    expr_type = expr.get_type()
+    e = getattr(parent, child_name)
+    expr_type = e.get_type()
 
     if expr_type == lhs_type:
         return True
     elif expr_type.can_cast_to(lhs_type):
-        cast = expr_type.insert_cast_to(compiler, lhs_type, expr)
+        cast = expr_type.insert_cast_to(compiler, lhs_type, e)
         cast.set_parent(parent)
         setattr(parent, child_name, cast)
         return True

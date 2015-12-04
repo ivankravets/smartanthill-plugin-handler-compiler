@@ -16,7 +16,7 @@
 from smartanthill_phc.common import errors
 from smartanthill_phc.common.lookup import lookup_type, RootScope,\
     StatementListScope, ReturnStmtScope
-from smartanthill_phc.common.node import ResolutionHelper,\
+from smartanthill_phc.common.base import ResolutionHelper,\
     expression_type_match
 from smartanthill_phc.common.visitor import CodeVisitor, visit_node,\
     NodeWalker, walk_node_childs
