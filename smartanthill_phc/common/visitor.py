@@ -19,15 +19,34 @@ from smartanthill_phc.common.node import Node, ExpressionNode, StmtListNode
 def visit_node(visitor, node):
     '''
     Dynamic version of node visitor using reflection
-    Trivial implementation
+    If visitor of specific type is not found, we look up for base classes
+    in the Node hierarchy
     '''
     assert isinstance(node, Node)
-    name = 'visit_' + type(node).__name__
+    return _visit_node_base(visitor, node, type(node))
+
+
+def _visit_node_base(visitor, node, cls):
+    '''
+    Dynamic version of node visitor using reflection
+    If visitor of specific type is not found, we look up for base classes
+    in the Node hierarchy
+    '''
+    assert issubclass(cls, Node)
+    name = 'visit_' + cls.__name__
     attr = getattr(visitor, name, None)
     if attr:
         return attr(node)
     else:
-        return getattr(visitor, 'default_visit')(node)
+        base = None
+        for each in cls.__bases__:
+            if issubclass(each, Node):
+                assert base is None
+                base = each
+        if base is None:
+            return getattr(visitor, 'default_visit')(node)
+        else:
+            return _visit_node_base(visitor, node, base)
 
 
 def walk_node_childs(walker, node):

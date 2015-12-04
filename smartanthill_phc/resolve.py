@@ -247,17 +247,8 @@ class _ResolveVisitor(CodeVisitor):
     def visit_PapiFunctionDeclNode(self, node):
         node.get_scope(RootScope).add_function(self._c, node.txt_name, node)
 
-    def resolveTypeDeclNode(self, node):
+    def visit_TypeDeclNode(self, node):
         node.get_scope(RootScope).add_type(self._c, node.txt_name, node)
-
-    def visit_BasicTypeDeclNode(self, node):
-        self.resolveTypeDeclNode(node)
-
-    def visit_VoidTypeDeclNode(self, node):
-        self.resolveTypeDeclNode(node)
-
-    def visit_IntTypeDeclNode(self, node):
-        self.resolveTypeDeclNode(node)
 
     def visit_FunctionCallExprNode(self, node):
         self.visit(node.child_argument_list)
@@ -334,7 +325,7 @@ class _ResolveVisitor(CodeVisitor):
         # don't allow chained assignment
         node.set_type(self._void)
 
-    def resolveOperatorExprNode(self, node):
+    def visit_OperatorExprNode(self, node):
 
         self.visit(node.child_argument_list)
         candidates = node.get_scope(
@@ -359,24 +350,6 @@ class _ResolveVisitor(CodeVisitor):
 
         t = self.on_demand_resolve(node.ref_decl)
         node.set_type(t)
-
-    def visit_BinaryOpExprNode(self, node):
-        self.resolveOperatorExprNode(node)
-
-    def visit_LogicOpExprNode(self, node):
-        self.resolveOperatorExprNode(node)
-
-    def visit_ArithmeticOpExprNode(self, node):
-        self.resolveOperatorExprNode(node)
-
-    def visit_UnaryOpExprNode(self, node):
-        self.resolveOperatorExprNode(node)
-
-    def visit_PostfixOpExprNode(self, node):
-        self.resolveOperatorExprNode(node)
-
-    def visit_ComparisonOpExprNode(self, node):
-        self.resolveOperatorExprNode(node)
 
     def visit_DontCareExprNode(self, node):
 
