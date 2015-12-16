@@ -15,6 +15,7 @@
 
 import antlr4
 
+from smartanthill_phc import writer
 from smartanthill_phc.antlr_parser import CLexer, CParser
 from smartanthill_phc.builtin import create_builtins
 from smartanthill_phc.common.antlr_helper import dump_antlr_tree
@@ -43,7 +44,7 @@ class _Helper(object):
         self.cparser = CParser.CParser(self.token_stream)
 
 
-def process_file(file_name, prefix, split_all, dump):
+def process_file(file_name, prefix, split_all, dump, new_writer):
     '''
     Process a c input file, and returns an string with output text
     '''
@@ -77,5 +78,8 @@ def process_file(file_name, prefix, split_all, dump):
 
     async = rewrite_code(c, root, helper.token_stream)
     header = write_header(c, root, helper.token_stream)
+    async2 = None
+    if new_writer:
+        async2 = writer.write_code(c, root)
 
-    return (async, header)
+    return (async, header, async2)

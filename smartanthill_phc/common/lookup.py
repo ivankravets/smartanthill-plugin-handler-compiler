@@ -96,24 +96,29 @@ class ReturnStmtScope(object):
         self._owner = owner
         self._previous_return_type = None
         self._previous_ctx = None
+        self._return_stmts = []
 
-    def add_return_stmt(self, compiler, ctx, return_type):
+    def add_return_stmt(self, stmt):
         '''
-        Adds a return statement to this scope, check type compatibility with
-        previous ones
+        Adds a return statement to this scope
+        '''
+        self._return_stmts.append(stmt)
+
+    def check_auto_return_type(self, compiler):
+        '''
+        check type compatibility of return statements
         '''
 
-        if not self._previous_return_type:
-            self._previous_return_type = return_type
-            self._previous_ctx = ctx
-        elif self._previous_return_type == return_type:
-            pass
-        else:
-            compiler.report_error(
-                ctx,
-                "Return statement type does not exactly match previous one")
-            compiler.report_error(
-                self._previous_ctx, "Previous was here")
+        _first_return = None
+        for each in self._return_stmts:
+            if _first_return is None:
+                _first_return = each
+            else:
+                if _first_return != each.get_type():
+                    compiler.report_error(
+                        each.ctx, "Return type does not match")
+                    compiler.report_error(
+                        _first_return.ctx, "Previous was here")
 
     def get_return_type(self):
         '''

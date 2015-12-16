@@ -34,7 +34,8 @@ def non_blocking_test(prefix, split_all):
     c_file = "tests/%s/%s.c" % (prefix, prefix)
     nb_file = "tests/%s/%s_non_blocking.c" % (prefix, prefix)
     h_file = "tests/%s/%s_state.h" % (prefix, prefix)
-    code, header = api.process_file(c_file, prefix, split_all, False)
+    code, header, c2 = api.process_file(
+        c_file, prefix, split_all, False, False)
 
     f = open(nb_file, 'rb')
     assert code.splitlines() == f.read().splitlines()

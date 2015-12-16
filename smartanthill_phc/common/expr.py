@@ -213,14 +213,17 @@ class VariableExprNode(ExpressionNode):
         '''
         super(VariableExprNode, self).__init__()
         self.txt_name = None
-        self.ref_decl = None
+        self.ref_declaration = None
 
     def get_static_value(self):
         '''
         Returns compile-time value of this expression is possible,
         Returns None otherwise
         '''
-        return self.ref_decl.get_static_value() if self.ref_decl else None
+        if self.ref_declaration is not None:
+            return self.ref_declaration.get_static_value()
+        else:
+            return None
 
 
 class AssignmentExprNode(ExpressionNode):
@@ -235,16 +238,16 @@ class AssignmentExprNode(ExpressionNode):
         '''
         super(AssignmentExprNode, self).__init__()
         self.txt_name = None
-        self.child_rhs = None
-        self.ref_decl = None
+        self.child_rhs_expression = None
+        self.ref_declaration = None
 
-    def set_rhs(self, child):
+    def set_rhs_expression(self, child):
         '''
         rhs setter
         '''
         assert isinstance(child, ExpressionNode)
         child.set_parent(self)
-        self.child_rhs = child
+        self.child_rhs_expression = child
 
 
 class OperatorExprNode(ExpressionNode):
@@ -260,7 +263,7 @@ class OperatorExprNode(ExpressionNode):
         super(OperatorExprNode, self).__init__()
         self.txt_operator = None
         self.child_argument_list = None
-        self.ref_decl = None
+        self.ref_declaration = None
 
     def set_argument_list(self, child):
         '''

@@ -57,13 +57,13 @@ def walk_node_childs(walker, node):
     assert isinstance(node, Node)
     names = dir(node)
     for current in names:
-        if current.startswith('child_') or current.startswith('ch_'):
-            ch = getattr(node, current)
-            if ch:
-                walker.walk_node(ch)
-        elif current.startswith('childs_'):
+        if current.startswith('childs') or current.startswith('chlist'):
             chs = getattr(node, current)
             for ch in chs:
+                walker.walk_node(ch)
+        elif current.startswith('child'):
+            ch = getattr(node, current)
+            if ch:
                 walker.walk_node(ch)
 
 
@@ -185,6 +185,27 @@ class CodeVisitor(NodeVisitor):
             # visit again (replacement)
             self._visit_expression_list_item(parent, expr_list, i)
 
+    def visit_childs(self, node):
+        '''
+        Dynamic version of node walker using reflection
+        Trivial implementation
+        '''
+        assert isinstance(node, Node)
+        names = dir(node)
+        for current in names:
+            if current.startswith('child') and\
+                    not current.startswith('childs'):
+                if current.endswith('expression'):
+                    self.visit_expression(node, current)
+                elif current.endswith('stmt_list'):
+                    stmt_list = getattr(node, current)
+                    if stmt_list is not None:
+                        self.visit_stmt_list(stmt_list)
+                else:
+                    ch = getattr(node, current)
+                    if ch is not None:
+                        self.visit(ch)
+
     def insert_before_current(self, statement):
         '''
         Insert statement before current one
@@ -265,9 +286,13 @@ class _CheckReachableWalker(NodeWalker):
                 expected += 1
             elif current == expected - 1:
                 print 'Node %i has been reached again' % current
-            elif current > expected:
+            elif current == expected + 1:
+                print 'Node %i has not been reached' % expected
+                expected = current + 1
+            elif current > expected + 1:
                 print ('Node range %i to %i has not been reached' %
-                       (expected, current + 1))
+                       (expected, current - 1))
+                expected = current + 1
             else:
                 assert False
 

@@ -14,10 +14,10 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 from smartanthill_phc.common import errors
-from smartanthill_phc.common.lookup import lookup_type, RootScope,\
-    StatementListScope, ReturnStmtScope
 from smartanthill_phc.common.base import ResolutionHelper,\
     expression_type_match
+from smartanthill_phc.common.lookup import lookup_type, RootScope,\
+    StatementListScope, ReturnStmtScope
 from smartanthill_phc.common.visitor import CodeVisitor, visit_node,\
     NodeWalker, walk_node_childs
 
@@ -154,9 +154,9 @@ class _ResolveVisitor(CodeVisitor):
             node.get_scope(StatementListScope).add_variable(
                 self._c, node.txt_name, node)
 
-            self.visit_expression(node, 'child_initializer')
+            self.visit_childs(node)
 
-            node.set_type(self._zc_dont_care)
+            node.set_type(node.child_declaration_type.get_type())
 
     def visit_FunctionDeclNode(self, node):
 
@@ -165,7 +165,7 @@ class _ResolveVisitor(CodeVisitor):
             node.get_scope(RootScope).add_function(
                 self._c, node.txt_name, node)
             self.visit(node.child_return_type)
-            self.visit(node.child_statement_list)
+            self.visit(node.child_stmt_list)
 
             node.set_type(node.child_return_type.get_type())
 
@@ -196,25 +196,16 @@ class _ResolveVisitor(CodeVisitor):
 
     def visit_ReturnStmtNode(self, node):
 
-        self.visit_expression(node, 'child_expression')
+        self.visit_childs(node)
 
-        if node.child_expression is not None:
-            t = node.child_expression.get_type()
-        else:
-            t = self._void
-
-        node.get_scope(ReturnStmtScope).add_return_stmt(
-            self._c, node.ctx, t)
+        node.get_scope(ReturnStmtScope).add_return_stmt(node)
 
     def visit_ExpressionStmtNode(self, node):
 
-        self.visit_expression(node, 'child_expression')
+        self.visit_childs(node)
 
     def visit_IfElseStmtNode(self, node):
-
-        self.visit_expression(node, 'child_expression')
-        self.visit_stmt_list(node.child_if_branch)
-        self.visit_stmt_list(node.child_else_branch)
+        self.visit_childs(node)
 
 #         t = self.get_scope(RootScope).lookup_type('_zc_boolean')
 #
@@ -224,13 +215,12 @@ class _ResolveVisitor(CodeVisitor):
         # no need to raise here
 
     def visit_FunctionCallStmtNode(self, node):
-
-        self.visit_expression(node, 'child_expression')
+        self.visit_childs(node)
 
     def visit_LoopStmtNode(self, node):
 
         self.visit_expression(node, 'child_expression')
-        self.visit_stmt_list(node.child_statement_list)
+        self.visit_stmt_list(node.child_stmt_list)
 
     def visit_SimpleTypeNode(self, node):
 
@@ -262,7 +252,7 @@ class _ResolveVisitor(CodeVisitor):
 
     def visit_MemberAccessExprNode(self, node):
 
-        self.visit_expression(node, 'child_expression')
+        self.visit_childs(node)
 
         t = node.child_expression.get_type()
         m = t.lookup_member(self.txt_member)
@@ -295,8 +285,8 @@ class _ResolveVisitor(CodeVisitor):
         sc = node.get_scope(StatementListScope)
         decl = sc.lookup_variable(node.txt_name)
         if decl is not None:
-            node.ref_decl = decl
-            t = self.on_demand_resolve(node.ref_decl)
+            node.ref_declaration = decl
+            t = self.on_demand_resolve(node.ref_declaration)
         else:
             t = self._zc_dont_care
 
@@ -304,7 +294,7 @@ class _ResolveVisitor(CodeVisitor):
 
     def visit_AssignmentExprNode(self, node):
 
-        self.visit_expression(node, 'child_rhs')
+        self.visit_childs(node)
 
         sc = node.get_scope(StatementListScope)
         decl = sc.lookup_variable(node.txt_name)
@@ -313,10 +303,10 @@ class _ResolveVisitor(CodeVisitor):
                 node.ctx, "Unresolved variable '%s'" % node.txt_name)
             self._c.raise_error()
 
-        node.ref_decl = decl
-        t = self.on_demand_resolve(node.ref_decl)
+        node.ref_declaration = decl
+        t = self.on_demand_resolve(node.ref_declaration)
 
-        if not expression_type_match(self._c, t, node, 'child_rhs'):
+        if not expression_type_match(self._c, t, node, 'child_rhs_expression'):
             self._c.report_error(
                 node.ctx, "Type mismatch on assignment of variable '%s'" %
                 node.txt_name)
@@ -343,20 +333,20 @@ class _ResolveVisitor(CodeVisitor):
         node.ref_decl = node.child_argument_list.overload_filter(
             self._c, candidates)
         node.child_argument_list.make_match(
-            self._c, node.ref_decl.child_parameter_list)
+            self._c, node.ref_declaration.child_parameter_list)
 
-        node.ref_decl.static_evaluate(self._c, node,
-                                      node.child_argument_list)
+        node.ref_declaration.static_evaluate(self._c, node,
+                                             node.child_argument_list)
 
-        t = self.on_demand_resolve(node.ref_decl)
+        t = self.on_demand_resolve(node.ref_declaration)
         node.set_type(t)
 
     def visit_DontCareExprNode(self, node):
 
-        self.visit_expression_list(node, node.childs_expressions)
+        self.visit(node.child_argument_list)
         node.set_type(self._zc_dont_care)
 
     def visit_TypeCastExprNode(self, node):
 
-        self.visit_expression(node, 'child_expression')
+        self.visit_childs(node)
         node.set_type(self._zc_dont_care)

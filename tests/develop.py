@@ -23,10 +23,11 @@ def main():
 
     prefix = "sleep"
 
-    async, header = api.process_file(prefix + ".c", prefix, False, True)
+    code, header, c2 = api.process_file(
+        prefix + ".c", prefix, False, True, False)
 
     f = open(prefix + "_non_blocking.c", 'wb')
-    f.write(async)
+    f.write(code)
 
     h = open(prefix + "_state.h", 'wb')
     h.write(header)

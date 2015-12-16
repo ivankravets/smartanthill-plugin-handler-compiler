@@ -143,11 +143,11 @@ typeSpecifier
     |   'signed'
     |   'unsigned'
     |   '_Bool'
-    |   '_Complex'
-    |   '__m128'
-    |   '__m128d'
-    |   '__m128i')
-    |   '__extension__' '(' ('__m128' | '__m128d' | '__m128i') ')'
+    |   '_Complex')
+//    |   '__m128'
+//    |   '__m128d'
+//    |   '__m128i')
+//    |   '__extension__' '(' ('__m128' | '__m128d' | '__m128i') ')'
     |   atomicTypeSpecifier
     |   structOrUnionSpecifier
     |   enumSpecifier

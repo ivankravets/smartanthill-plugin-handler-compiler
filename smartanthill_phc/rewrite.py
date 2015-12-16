@@ -142,7 +142,7 @@ class _RewriteVisitor(NodeVisitor):
 
         self._func = node
         self._sm = self._nb.get_state_machine_data(node)
-        self.visit(node.child_statement_list)
+        self.visit(node.child_stmt_list)
 
         if self._sm is not None:
             if not self._sm.ref_state_machine.is_main_machine():
@@ -173,15 +173,15 @@ class _RewriteVisitor(NodeVisitor):
                 tk = get_declarator_name(
                     decl_list.initDeclarator(0).declarator())
 
-                if node.child_initializer is not None:
+                if node.child_initializer_expression is not None:
                     self._w.replaceTokens(
                         node.ctx.start, tk.symbol,
                         u"sa_state->%s" % node.txt_name)
                 else:
                     self._w.deleteTokens(node.ctx.start, node.ctx.stop)
 
-            if node.child_initializer is not None:
-                self.visit(node.child_initializer)
+            if node.child_initializer_expression is not None:
+                self.visit(node.child_initializer_expression)
 
     def visit_ExpressionStmtNode(self, node):
         self.visit(node.child_expression)
@@ -224,17 +224,17 @@ class _RewriteVisitor(NodeVisitor):
 
     def visit_LoopStmtNode(self, node):
         self.visit(node.child_expression)
-        self.visit(node.child_statement_list)
+        self.visit(node.child_stmt_list)
 
     def visit_ReturnStmtNode(self, node):
         if node.child_expression is not None:
             self.visit(node.child_expression)
 
     def visit_IfElseStmtNode(self, node):
-        self.visit(node.child_expression)
-        self.visit(node.child_if_branch)
-        if node.child_else_branch is not None:
-            self.visit(node.child_else_branch)
+        self.visit(node.child0_expression)
+        self.visit(node.child1_if_stmt_list)
+        if node.child2_else_stmt_list is not None:
+            self.visit(node.child2_else_stmt_list)
 
     def visit_StateMachineStmtNode(self, node):
 
@@ -386,8 +386,7 @@ class _RewriteVisitor(NodeVisitor):
         self._w.insertAfterToken(node.ctx, txt)
 
     def visit_DontCareExprNode(self, node):
-        for each in node.childs_expressions:
-            self.visit(each)
+        self.visit(node.child_argument_list)
 
     def visit_TypeCastExprNode(self, node):
         self.visit(node.child_expression)
@@ -398,12 +397,12 @@ class _RewriteVisitor(NodeVisitor):
 
     def visit_VariableExprNode(self, node):
 
-        if node.ref_decl is not None:
+        if node.ref_declaration is not None:
             if self._sm is not None:
-                if self._sm.is_moved_var_decl(node.ref_decl):
+                if self._sm.is_moved_var_decl(node.ref_declaration):
                     self._w.replaceToken(
                         node.ctx.symbol,
-                        u"(sa_state->%s)" % node.ref_decl.txt_name)
+                        u"(sa_state->%s)" % node.ref_declaration.txt_name)
 
     def visit_FunctionCallExprNode(self, node):
         self.visit(node.child_argument_list)

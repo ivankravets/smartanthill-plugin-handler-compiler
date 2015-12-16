@@ -15,7 +15,7 @@
 
 
 from smartanthill_phc.common.base import ArgumentListNode, ExpressionNode,\
-    ResolutionHelper, StatementNode, StmtListNode
+    ResolutionHelper, StatementNode, StmtListNode, TypeNode
 from smartanthill_phc.common.lookup import StatementListScope, RootScope
 
 
@@ -95,6 +95,15 @@ class ReturnStmtNode(StatementNode):
         # pylint: disable=no-self-use
         return True
 
+    def get_return_type(self, void_type):
+        '''
+        Returns the type returned by this return, or void_type if no expression
+        '''
+        if self.child_expression is not None:
+            return self.child_expression.get_type()
+        else:
+            return void_type
+
 
 class VariableDeclarationStmtNode(StatementNode, ResolutionHelper):
 
@@ -108,7 +117,16 @@ class VariableDeclarationStmtNode(StatementNode, ResolutionHelper):
         '''
         super(VariableDeclarationStmtNode, self).__init__()
         self.txt_name = None
-        self.child_initializer = None
+        self.child_declaration_type = None
+        self.child_initializer_expression = None
+
+    def set_declaration_type(self, child):
+        '''
+        statement list setter
+        '''
+        assert isinstance(child, TypeNode)
+        child.set_parent(self)
+        self.child_declaration_type = child
 
     def set_initializer(self, child):
         '''
@@ -116,7 +134,7 @@ class VariableDeclarationStmtNode(StatementNode, ResolutionHelper):
         '''
         assert isinstance(child, ExpressionNode)
         child.set_parent(self)
-        self.child_initializer = child
+        self.child_initializer_expression = child
 
     def get_static_value(self):
         '''
@@ -124,8 +142,8 @@ class VariableDeclarationStmtNode(StatementNode, ResolutionHelper):
         Returns None otherwise
         '''
 
-        if self.child_initializer is not None:
-            return self.child_initializer.get_static_value()
+        if self.child_initializer_expression is not None:
+            return self.child_initializer_expression.get_static_value()
         else:
             return None
 
@@ -194,9 +212,9 @@ class IfElseStmtNode(StatementNode):
         Constructor
         '''
         super(IfElseStmtNode, self).__init__()
-        self.child_expression = None
-        self.child_if_branch = None
-        self.child_else_branch = None
+        self.child0_expression = None
+        self.child1_if_stmt_list = None
+        self.child2_else_stmt_list = None
 
     def set_expression(self, child):
         '''
@@ -204,31 +222,31 @@ class IfElseStmtNode(StatementNode):
         '''
         assert isinstance(child, ExpressionNode)
         child.set_parent(self)
-        self.child_expression = child
+        self.child0_expression = child
 
-    def set_if_branch(self, child):
+    def set_if_stmt_list(self, child):
         '''
         if_branch setter
         '''
         assert isinstance(child, StmtListNode)
         child.set_parent(self)
-        self.child_if_branch = child
+        self.child1_if_stmt_list = child
 
-    def set_else_branch(self, child):
+    def set_else_stmt_list(self, child):
         '''
         else_branch setter
         '''
         assert isinstance(child, StmtListNode)
         child.set_parent(self)
-        self.child_else_branch = child
+        self.child2_else_stmt_list = child
 
     def is_closed_stmt(self):
         '''
         Returns true when last statement is closed
         '''
-        if self.child_else_branch is not None:
-            return self.child_if_branch.is_closed_stmt() and\
-                self.child_else_branch.is_closed_stmt()
+        if self.child2_else_stmt_list is not None:
+            return self.child1_if_stmt_list.is_closed_stmt() and\
+                self.child2_else_stmt_list.is_closed_stmt()
         else:
             return False
 

@@ -13,12 +13,13 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from smartanthill_phc.common.lookup import ReturnStmtScope,\
-    StatementListScope
+from smartanthill_phc.common import base
 from smartanthill_phc.common.base import ExpressionNode,\
     Node, StmtListNode,\
     StatementNode, DeclarationListNode, TypeDeclNode,\
     TypeNode, ResolutionHelper
+from smartanthill_phc.common.lookup import ReturnStmtScope,\
+    StatementListScope
 
 
 class DontCareExprNode(ExpressionNode):
@@ -32,16 +33,25 @@ class DontCareExprNode(ExpressionNode):
         Constructor
         '''
         super(DontCareExprNode, self).__init__()
-        self.childs_expressions = []
+        self.child_argument_list = None
 
-    def add_expression(self, child):
+    def set_argument_list(self, child):
         '''
-        expression adder
+        argument_list setter
         '''
-        assert child is not None
-        assert isinstance(child, ExpressionNode)
+        assert isinstance(child, base.ArgumentListNode)
         child.set_parent(self)
-        self.childs_expressions.append(child)
+        self.child_argument_list = child
+
+    @staticmethod
+    def create(compiler, ctx):
+        '''
+        Creates a new instance, and a new argument list
+        '''
+        node = compiler.init_node(DontCareExprNode(), ctx)
+        node.set_argument_list(
+            compiler.init_node(base.ArgumentListNode(), ctx))
+        return node
 
 
 class TypeCastExprNode(ExpressionNode):
@@ -78,7 +88,7 @@ class FunctionDeclNode(Node, ResolutionHelper):
         '''
         super(FunctionDeclNode, self).__init__()
         self.child_return_type = None
-        self.child_statement_list = None
+        self.child_stmt_list = None
         self.child_argument_list = None
         self.txt_name = None
         self.add_scope(ReturnStmtScope, ReturnStmtScope(self))
@@ -98,7 +108,7 @@ class FunctionDeclNode(Node, ResolutionHelper):
         '''
         assert isinstance(child, StmtListNode)
         child.set_parent(self)
-        self.child_statement_list = child
+        self.child_stmt_list = child
 
     def set_argument_list(self, child):
         '''
@@ -163,7 +173,7 @@ class LoopStmtNode(StatementNode):
         '''
         super(LoopStmtNode, self).__init__()
         self.child_expression = None
-        self.child_statement_list = None
+        self.child_stmt_list = None
 
     def set_expression(self, child):
         '''
@@ -179,7 +189,7 @@ class LoopStmtNode(StatementNode):
         '''
         assert isinstance(child, StmtListNode)
         child.set_parent(self)
-        self.child_statement_list = child
+        self.child_stmt_list = child
 
 
 class BasicTypeDeclNode(TypeDeclNode):
