@@ -353,11 +353,14 @@ selectionStatement
     |   'switch' '(' expression ')' statement # SwitchStatement
     ;
 
+initExpression : expression;
+iterationExpression: expression;
+
 iterationStatement
     :   'while' '(' expression ')' statement # WhileStatement
     |   'do' statement 'while' '(' expression ')' ';' # DoWhileStatement
-    |   'for' '(' expression? ';' expression? ';' expression? ')' statement # ForStatement
-    |   'for' '(' declaration expression? ';' expression? ')' statement # DeclForStatement
+    |   'for' '(' initExpression? ';' expression? ';' iterationExpression? ')' statement # ForStatement
+    |   'for' '(' declaration expression? ';' iterationExpression? ')' statement # DeclForStatement
     ;
 
 jumpStatement

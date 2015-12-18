@@ -303,6 +303,15 @@ class TypeNode(Node):
 
         self.ref_type_declaration = type_ref
 
+    def add_qualifiers(self, compiler, qualifiers):
+        '''
+        Add qualifiers to this type.
+        To be implemented by derived classes
+        '''
+        # pylint: disable=no-self-use
+        # pylint: disable=unused-argument
+        pass
+
 
 class TypeDeclNode(Node):
 
@@ -345,8 +354,8 @@ class TypeDeclNode(Node):
         Inserts a cast to the target type
         Only implemented by types that return true to can_cast_to
         '''
-        # pylint: disable=no-self-use
         # pylint: disable=unused-argument
+        print "Node: %s" % type(self).__name__
         assert False
 
     def can_cast_from(self, source_type):
@@ -364,8 +373,8 @@ class TypeDeclNode(Node):
         Inserts a cast from the source type
         Only implemented by types that return true to can_cast_from
         '''
-        # pylint: disable=no-self-use
         # pylint: disable=unused-argument
+        print "Node: %s" % type(self).__name__
         assert False
 
     def lookup_member(self, name):

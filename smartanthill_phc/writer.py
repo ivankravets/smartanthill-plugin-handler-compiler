@@ -137,6 +137,8 @@ class _WriterVisitor(NodeVisitor):
 
     def visit_VariableDeclarationStmtNode(self, node):
 
+        self.visit(node.child_declaration_type)
+        self._w.write(' ')
         self._w.write(node.txt_name)
         if node.child_initializer_expression is not None:
             self._w.write('=')
@@ -159,11 +161,12 @@ class _WriterVisitor(NodeVisitor):
             n = node.child_expression.txt_name
             args = node.child_expression.child_argument_list.childs_arguments
             assert len(args) >= 1
-            arg0 = self._get_text(args[0].ctx)
+#             arg0 = self._get_text(args[0].ctx)
+            arg0 = '/* TODO */'
 
             if n == "papi_sleep":
                 w = u"timeout"
-                self._w.deleteTokens(node.ctx.start, node.ctx.stop)
+#                 self._w.deleteTokens(node.ctx.start, node.ctx.stop)
             else:
                 if n == "papi_wait_for_spi_send":
                     f = u"papi_start_sending_spi_command_16"
@@ -180,18 +183,46 @@ class _WriterVisitor(NodeVisitor):
                 else:
                     assert False
 
-                self._w.replaceToken(
-                    node.child_expression.ctx.Identifier().symbol, f)
+                self._w.write_line('/* %s */' % f)
 
-            txt = u"\npapi_wait_handler_add_wait_for_%s(sa_wf, %s);" % (
+#                 self._w.replaceToken(
+#                     node.child_expression.ctx.Identifier().symbol, f)
+
+            txt = "papi_wait_handler_add_wait_for_%s(sa_wf, %s);" % (
                 w, arg0)
-            self._w.insertAfterToken(node.ctx.stop, txt)
+            self._w.write_line(txt)
 
-    def visit_LoopStmtNode(self, node):
-        # TODO
-        #         self.visit(node.child_expression)
-        #         self.visit(node.child_stmt_list)
-        pass
+    def visit_WhileStmtNode(self, node):
+        self._w.write('while')
+        self._w.write('(')
+        self.write_expr(node.child0_expression)
+        self._w.write(')')
+        self.visit(node.child1_stmt_list)
+        self._w.end_of_statement()
+
+    def visit_DoWhileStmtNode(self, node):
+        self._w.write('do')
+        self.visit(node.child1_stmt_list)
+        self._w.write('while')
+        self._w.write('(')
+        self.write_expr(node.child0_expression)
+        self._w.write(')')
+        self._w.end_of_statement()
+
+    def visit_ForStmtNode(self, node):
+        self._w.write('for')
+        self._w.write('(')
+        if node.child0_init_expression is not None:
+            self.write_expr(node.child0_init_expression)
+        self._w.write(';')
+        if node.child1_condition_expression is not None:
+            self.write_expr(node.child1_condition_expression)
+        self._w.write(';')
+        if node.child2_iteration_expression is not None:
+            self.write_expr(node.child2_iteration_expression)
+        self._w.write(')')
+        self.visit(node.child3_stmt_list)
+        self._w.end_of_statement()
 
     def visit_ReturnStmtNode(self, node):
 
@@ -245,7 +276,8 @@ class _WriterVisitor(NodeVisitor):
         n = node.ref_waiting_for.txt_name
         args = node.ref_waiting_for.child_argument_list.childs_arguments
         assert len(args) >= 1
-        arg0 = self._get_text(args[0].ctx)
+#         arg0 = self._get_text(args[0].ctx)
+        arg0 = '/* TODO */'
 
         if n == "papi_sleep":
             f = "timeout(0, sa_wf)"
@@ -369,9 +401,9 @@ class _WriterVisitor(NodeVisitor):
         # self.visit(node.child_argument_list)
         self._w.write('/* TODO */')
 
-    def visit_TypeCastExprNode(self, node):
+    def visit_CastExprNode(self, node):
         self._w.write('(')
-        self._w.write('/* TODO */')
+        self.visit(node.child_cast_type)
         self._w.write(')')
         self.visit(node.child_expression)
 
@@ -410,7 +442,12 @@ class _WriterVisitor(NodeVisitor):
 
     def visit_SimpleTypeNode(self, node):
 
-        self._w.write(node.ref_type_declaration.txt_name)
+        self._w.write(node.txt_name)
+
+    def visit_PointerTypeNode(self, node):
+
+        self.visit(node.child_pointed_type)
+        self._w.write('*')
 
 
 class _Writer(object):

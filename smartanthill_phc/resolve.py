@@ -217,13 +217,16 @@ class _ResolveVisitor(CodeVisitor):
     def visit_FunctionCallStmtNode(self, node):
         self.visit_childs(node)
 
-    def visit_LoopStmtNode(self, node):
+    def visit_WhileStmtNode(self, node):
+        self.visit_childs(node)
 
-        self.visit_expression(node, 'child_expression')
-        self.visit_stmt_list(node.child_stmt_list)
+    def visit_DoWhileStmtNode(self, node):
+        self.visit_childs(node)
+
+    def visit_ForStmtNode(self, node):
+        self.visit_childs(node)
 
     def visit_SimpleTypeNode(self, node):
-
         # pylint: disable=no-self-use
 
         root_scope = node.get_scope(RootScope)
@@ -232,6 +235,18 @@ class _ResolveVisitor(CodeVisitor):
         if t is None:
             t = self._zc_dont_care
 
+        node.set_type(t)
+
+    def visit_InvalidTypeNode(self, node):
+        # pylint: disable=unused-argument
+        # pylint: disable=no-self-use
+        assert False
+
+    def visit_PointerTypeNode(self, node):
+        self.visit_childs(node)
+
+        t = node.child_pointed_type.get_type()
+        # TODO
         node.set_type(t)
 
     def visit_PapiFunctionDeclNode(self, node):
@@ -346,7 +361,7 @@ class _ResolveVisitor(CodeVisitor):
         self.visit(node.child_argument_list)
         node.set_type(self._zc_dont_care)
 
-    def visit_TypeCastExprNode(self, node):
+    def visit_CastExprNode(self, node):
 
         self.visit_childs(node)
-        node.set_type(self._zc_dont_care)
+        node.set_type(node.child_cast_type.get_type())

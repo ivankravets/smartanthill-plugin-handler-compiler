@@ -54,7 +54,7 @@ class DontCareExprNode(ExpressionNode):
         return node
 
 
-class TypeCastExprNode(ExpressionNode):
+class CastExprNode(ExpressionNode):
 
     '''
     Node class representing an explicit type cast
@@ -64,8 +64,17 @@ class TypeCastExprNode(ExpressionNode):
         '''
         Constructor
         '''
-        super(TypeCastExprNode, self).__init__()
+        super(CastExprNode, self).__init__()
+        self.child_cast_type = None
         self.child_expression = None
+
+    def set_cast_type(self, child):
+        '''
+        expression setter
+        '''
+        assert isinstance(child, TypeNode)
+        child.set_parent(self)
+        self.child_cast_type = child
 
     def set_expression(self, child):
         '''
@@ -158,13 +167,7 @@ class FunctionCallStmtNode(StatementNode):
 class LoopStmtNode(StatementNode):
 
     '''
-    Node class representing a loop, it can be a 'while', a 'do-while' or
-    a 'for' with expression and not declaration.
-    So far we don't care too much about the specific type of loop,
-    we only need a basic understanding of the code structure
-        for (i = 0;...) {...}
-        while(...) {...}
-        do {...} while(...);
+    Base class for loop nodes
     '''
 
     def __init__(self):
@@ -172,8 +175,21 @@ class LoopStmtNode(StatementNode):
         Constructor
         '''
         super(LoopStmtNode, self).__init__()
-        self.child_expression = None
-        self.child_stmt_list = None
+
+
+class WhileStmtNode(LoopStmtNode):
+
+    '''
+    Node class representing a 'while' loop
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(WhileStmtNode, self).__init__()
+        self.child0_expression = None
+        self.child1_stmt_list = None
 
     def set_expression(self, child):
         '''
@@ -181,7 +197,7 @@ class LoopStmtNode(StatementNode):
         '''
         assert isinstance(child, ExpressionNode)
         child.set_parent(self)
-        self.child_expression = child
+        self.child0_expression = child
 
     def set_statement_list(self, child):
         '''
@@ -189,7 +205,69 @@ class LoopStmtNode(StatementNode):
         '''
         assert isinstance(child, StmtListNode)
         child.set_parent(self)
-        self.child_stmt_list = child
+        self.child1_stmt_list = child
+
+
+class DoWhileStmtNode(WhileStmtNode):
+
+    '''
+    Node class representing a 'do-while' loop
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(DoWhileStmtNode, self).__init__()
+
+
+class ForStmtNode(LoopStmtNode):
+
+    '''
+    Node class representing a 'for' with expression and not declaration.
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(ForStmtNode, self).__init__()
+        self.child0_init_expression = None
+        self.child1_condition_expression = None
+        self.child2_iteration_expression = None
+        self.child3_stmt_list = None
+
+    def set_init_expression(self, child):
+        '''
+        expression setter
+        '''
+        assert isinstance(child, ExpressionNode)
+        child.set_parent(self)
+        self.child0_init_expression = child
+
+    def set_condition_expression(self, child):
+        '''
+        expression setter
+        '''
+        assert isinstance(child, ExpressionNode)
+        child.set_parent(self)
+        self.child1_condition_expression = child
+
+    def set_iteration_expression(self, child):
+        '''
+        expression setter
+        '''
+        assert isinstance(child, ExpressionNode)
+        child.set_parent(self)
+        self.child2_iteration_expression = child
+
+    def set_statement_list(self, child):
+        '''
+        statement_list setter
+        '''
+        assert isinstance(child, StmtListNode)
+        child.set_parent(self)
+        self.child3_stmt_list = child
 
 
 class BasicTypeDeclNode(TypeDeclNode):
@@ -243,6 +321,42 @@ class SimpleTypeNode(TypeNode):
         '''
         super(SimpleTypeNode, self).__init__()
         self.txt_name = None
+
+
+class InvalidTypeNode(TypeNode):
+
+    '''
+    Node class representing an error while parsing a type
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(InvalidTypeNode, self).__init__()
+        self.txt_name = None
+
+
+class PointerTypeNode(TypeNode):
+
+    '''
+    Node class representing an pointer to type
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(PointerTypeNode, self).__init__()
+        self.child_pointed_type = None
+
+    def set_pointed_type(self, child):
+        '''
+        expression setter
+        '''
+        assert isinstance(child, TypeNode)
+        child.set_parent(self)
+        self.child_pointed_type = child
 
 
 class PapiFunctionDeclNode(Node):

@@ -13,7 +13,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from smartanthill_phc.c_node import TypeCastExprNode, IntTypeDeclNode,\
+from smartanthill_phc.c_node import CastExprNode, IntTypeDeclNode,\
     VoidTypeDeclNode
 from smartanthill_phc.common.base import StatementNode, ExpressionNode
 from smartanthill_phc.common.expr import VariableExprNode,\
@@ -375,7 +375,7 @@ def _skip_statements(stmt_list):
 
         if not isinstance(s, VariableDeclarationStmtNode):
             return i
-        if not isinstance(s.child_initializer_expression, TypeCastExprNode):
+        if not isinstance(s.child_initializer_expression, CastExprNode):
             return i
         if not isinstance(s.child_initializer_expression.child_expression,
                           VariableExprNode):
@@ -616,10 +616,7 @@ class _StatementsVisitor(CodeVisitor):
     def visit_LoopStmtNode(self, node):
 
         self._h.begin_loop(self._sm.get_last_state())
-
-        self.visit_expression(node, 'child_expression')
-        self.visit(node.child_stmt_list)
-
+        self.visit_childs(node)
         self._h.end_loop(self._sm.get_last_state())
 
     def visit_ReturnStmtNode(self, node):
@@ -652,7 +649,7 @@ class _StatementsVisitor(CodeVisitor):
     def visit_LiteralExprNode(self, node):
         pass
 
-    def visit_TypeCastExprNode(self, node):
+    def visit_CastExprNode(self, node):
         self.visit_childs(node)
 
     def visit_VariableExprNode(self, node):

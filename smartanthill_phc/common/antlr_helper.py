@@ -19,18 +19,19 @@ import antlr4.error.ErrorListener
 from antlr4.tree.Tree import TerminalNodeImpl
 
 
-def get_token_text(compiler, token, reserved_prefix):
+def get_identifier_text(compiler, identifier, reserved_prefix):
     '''
     Returns the text of a parser token, checking for reserved names,
     and non-ascii characters
     TODO better check and error report for non-ascii
     '''
 
-    txt = str(token.getText())
+    txt = str(identifier.getText())
 
     if txt.startswith(reserved_prefix):
-        compiler.report_error(token, "Name '%s' and all names starting with "
-                              "'%s' are reserved" % (txt, reserved_prefix))
+        compiler.report_error(
+            identifier, "Name '%s' and all names starting with "
+            "'%s' are reserved" % (txt, reserved_prefix))
 
     return txt
 

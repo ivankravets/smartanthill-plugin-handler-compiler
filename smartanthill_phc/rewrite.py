@@ -19,8 +19,8 @@ from antlr4.tree.Tree import TerminalNodeImpl
 from smartanthill_phc import banner
 from smartanthill_phc.TokenStreamRewriter import TokenStreamRewriter
 from smartanthill_phc.c_node import VoidTypeDeclNode, IntTypeDeclNode
-from smartanthill_phc.common.visitor import visit_node, NodeVisitor
-from smartanthill_phc.parser import get_declarator_name
+from smartanthill_phc.common.visitor import visit_node, CodeVisitor
+from smartanthill_phc.parser import get_declarator_identifier
 from smartanthill_phc.root import NonBlockingData
 
 
@@ -82,7 +82,7 @@ def _write_header_file(token_stream, nb):
     return txt
 
 
-class _RewriteVisitor(NodeVisitor):
+class _RewriteVisitor(CodeVisitor):
 
     '''
     Visitor class for plugin rewrite
@@ -170,7 +170,7 @@ class _RewriteVisitor(NodeVisitor):
                 decl_list = node.ctx.initDeclaratorList()
                 assert decl_list is not None
                 assert len(decl_list.initDeclarator()) == 1
-                tk = get_declarator_name(
+                tk = get_declarator_identifier(
                     decl_list.initDeclarator(0).declarator())
 
                 if node.child_initializer_expression is not None:
@@ -223,18 +223,13 @@ class _RewriteVisitor(NodeVisitor):
             self._w.insertAfterToken(node.ctx.stop, txt)
 
     def visit_LoopStmtNode(self, node):
-        self.visit(node.child_expression)
-        self.visit(node.child_stmt_list)
+        self.visit_childs(node)
 
     def visit_ReturnStmtNode(self, node):
-        if node.child_expression is not None:
-            self.visit(node.child_expression)
+        self.visit_childs(node)
 
     def visit_IfElseStmtNode(self, node):
-        self.visit(node.child0_expression)
-        self.visit(node.child1_if_stmt_list)
-        if node.child2_else_stmt_list is not None:
-            self.visit(node.child2_else_stmt_list)
+        self.visit_childs(node)
 
     def visit_StateMachineStmtNode(self, node):
 
@@ -388,7 +383,7 @@ class _RewriteVisitor(NodeVisitor):
     def visit_DontCareExprNode(self, node):
         self.visit(node.child_argument_list)
 
-    def visit_TypeCastExprNode(self, node):
+    def visit_CastExprNode(self, node):
         self.visit(node.child_expression)
 
     def visit_LiteralExprNode(self, node):

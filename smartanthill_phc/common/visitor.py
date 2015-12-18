@@ -97,8 +97,8 @@ class NodeVisitor(object):
         '''
         Default action when a node specific action is not found
         '''
-        # pylint: disable=unused-argument
-        # pylint: disable=no-self-use
+        print "Node   : %s" % type(node).__name__
+        print "Visitor: %s" % type(self).__name__
         assert False
 
 
