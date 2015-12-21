@@ -16,10 +16,8 @@
 from smartanthill_phc.common import base
 from smartanthill_phc.common.base import ExpressionNode,\
     Node, StmtListNode,\
-    StatementNode, DeclarationListNode, TypeDeclNode,\
+    StatementNode, TypeDeclNode,\
     TypeNode, ResolutionHelper
-from smartanthill_phc.common.lookup import ReturnStmtScope,\
-    StatementListScope
 
 
 class DontCareExprNode(ExpressionNode):
@@ -83,63 +81,6 @@ class CastExprNode(ExpressionNode):
         assert isinstance(child, ExpressionNode)
         child.set_parent(self)
         self.child_expression = child
-
-
-class FunctionDeclNode(Node, ResolutionHelper):
-
-    '''
-    Node class representing a function declaration
-    '''
-
-    def __init__(self):
-        '''
-        Constructor
-        '''
-        super(FunctionDeclNode, self).__init__()
-        self.child_return_type = None
-        self.child_stmt_list = None
-        self.child_argument_list = None
-        self.txt_name = None
-        self.add_scope(ReturnStmtScope, ReturnStmtScope(self))
-        self.add_scope(StatementListScope, None)
-
-    def set_return_type(self, child):
-        '''
-        statement list setter
-        '''
-        assert isinstance(child, TypeNode)
-        child.set_parent(self)
-        self.child_return_type = child
-
-    def set_statement_list(self, child):
-        '''
-        statement list setter
-        '''
-        assert isinstance(child, StmtListNode)
-        child.set_parent(self)
-        self.child_stmt_list = child
-
-    def set_argument_list(self, child):
-        '''
-        argument list setter
-        '''
-        assert isinstance(child, DeclarationListNode)
-        child.set_parent(self)
-        self.child_argument_list = child
-
-
-class ArgumentDeclNode(Node):
-
-    '''
-    Node class representing a function argument declaration
-    '''
-
-    def __init__(self):
-        '''
-        Constructor
-        '''
-        super(ArgumentDeclNode, self).__init__()
-        self.txt_name = None
 
 
 class FunctionCallStmtNode(StatementNode):

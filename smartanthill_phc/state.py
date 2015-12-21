@@ -412,7 +412,7 @@ class StateMachineVisitor(NodeVisitor):
 
             s = self._c.init_node(MainFirstStmtNode(), ctx)
 
-            args = node.child_argument_list.childs_declarations
+            args = node.child_argument_decl_list.childs_declarations
             if len(args) >= 6:
                 s.txt_arg2 = args[2].txt_name
                 s.txt_arg5 = args[5].txt_name
@@ -428,7 +428,7 @@ class StateMachineVisitor(NodeVisitor):
 
             s = self._c.init_node(InitFirstStmtNode(), ctx)
 
-            args = node.child_argument_list.childs_declarations
+            args = node.child_argument_decl_list.childs_declarations
             if len(args) >= 2:
                 s.txt_arg1 = args[1].txt_name
             else:

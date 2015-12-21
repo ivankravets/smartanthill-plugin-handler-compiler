@@ -16,7 +16,7 @@
 
 from smartanthill_phc import c_node, root
 from smartanthill_phc.antlr_parser import CVisitor, CParser
-from smartanthill_phc.common import base
+from smartanthill_phc.common import base, decl
 from smartanthill_phc.common import expr
 from smartanthill_phc.common import stmt
 from smartanthill_phc.common.antlr_helper import get_identifier_text
@@ -385,8 +385,8 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
             return []
 
         if ctx.initDeclaratorList() is None:
-            # TODO this is a type declaration
-            # self._c.report_error(ctx, "Incomplete declaration not supported")
+            # TODO this is a type declaration without name
+            self._c.report_error(ctx, "Incomplete declaration not supported")
             return []
 
         init_decl = ctx.initDeclaratorList().initDeclarator()
@@ -396,17 +396,17 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
         node = self._c.init_node(stmt.VariableDeclarationStmtNode(), ctx)
 
-        decl = init_decl[0].declarator()
+        d = init_decl[0].declarator()
 
-        i = decl.directDeclarator().Identifier()
+        i = d.directDeclarator().Identifier()
         if i is not None:
             node.txt_name = get_identifier_text(self._c, i, _prefix)
         else:
             self._c.report_error(ctx, "Unsupported declaration")
 
         t = self._process_specifiers(ctx.declarationSpecifier())
-        if decl.pointer() is not None:
-            t = self._pointerHelper(decl.pointer(), t)
+        if d.pointer() is not None:
+            t = self._pointerHelper(d.pointer(), t)
         node.set_declaration_type(t)
 
         init = init_decl[0].initializer()
@@ -594,17 +594,17 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
     def visitTypeName(self, ctx):
 
-        decl = ctx.abstractDeclarator()
-        if decl is not None:
-            if decl.directAbstractDeclarator() is not None:
+        ad = ctx.abstractDeclarator()
+        if ad is not None:
+            if ad.directAbstractDeclarator() is not None:
                 self._c.report_error(ctx, "Unsupported type")
                 t = self._c.init_node(c_node.InvalidTypeNode(), ctx)
                 return t
 
         t = self.visit(ctx.specifierQualifierList())
-        if decl is not None:
-            assert decl.pointer() is not None
-            t = self._pointerHelper(decl.pointer(), t)
+        if ad is not None:
+            assert ad.pointer() is not None
+            t = self._pointerHelper(ad.pointer(), t)
 
         return t
 
@@ -823,50 +823,79 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
         return None
 
+    def _process_arg_list(self, parameterTypeList, al):
+        if parameterTypeList is not None:
+
+            for each in parameterTypeList.parameterDeclaration():
+
+                arg = self._c.init_node(decl.ArgumentDeclNode(), each)
+                al.add_declaration(arg)
+                t = self._process_specifiers(each.declarationSpecifier())
+
+                if each.declarator() is not None:
+                    if each.declarator().pointer() is not None:
+                        t = self._pointerHelper(
+                            each.declarator().pointer(), t)
+
+                    i = each.declarator().directDeclarator().Identifier()
+                    if i is None:
+                        self._c.report_error(each, "Unsupported parameter")
+
+                    arg.txt_name = get_identifier_text(self._c, i, _prefix)
+
+                elif each.abstractDeclarator() is not None:
+                    if each.abstractDeclarator().pointer() is not None:
+                        t = self._pointerHelper(
+                            each.abstractDeclarator().pointer(), t)
+
+                    if each.abstractDeclarator()\
+                            .directAbstractDeclarator() is not None:
+                        self._c.report_error(each,
+                                             "Unsupported parameter")
+
+                arg.set_argument_type(t)
+
     # Visit a parse tree produced by CParser#functionDefinition.
     def visitFunctionDefinition(self, ctx):
 
-        decl = self._c.init_node(c_node.FunctionDeclNode(), ctx)
+        if len(ctx.declarationSpecifier()) == 0:
+            self._c.report_error(ctx, "Unsupported implicit return type")
+            return
 
         dd = ctx.declarator().directDeclarator()
+        if dd.Identifier() is not None or \
+                len(dd.typeQualifier()) != 0 or \
+                dd.assignmentExpression() is not None or \
+                dd.identifierList() is not None:
+            self._c.report_error(ctx, "Invalid function declaration")
+            return
 
-        al = self._c.init_node(base.DeclarationListNode(), dd.getChild(1))
-        decl.set_argument_list(al)
+        assert dd.directDeclarator() is not None
+        if dd.directDeclarator().Identifier() is None:
+            self._c.report_error(ctx, "Invalid function declaration")
+            return
 
-        if dd.directDeclarator() and dd.directDeclarator().Identifier():
-            decl.txt_name = get_identifier_text(
-                self._c, dd.directDeclarator().Identifier(), _prefix)
+        f = self._c.init_node(decl.FunctionDeclNode(), ctx)
 
-            if dd.parameterTypeList() is not None:
+        f.txt_name = get_identifier_text(
+            self._c, dd.directDeclarator().Identifier(), _prefix)
 
-                for each in dd.parameterTypeList().parameterDeclaration():
-                    assert each.declarator() is not None
+        t = self._process_specifiers(ctx.declarationSpecifier())
+        if ctx.declarator().pointer() is not None:
+            t = self._pointerHelper(ctx.declarator().pointer(), t)
 
-                    tk = each.declarator().directDeclarator().Identifier()
-                    assert tk is not None
+        f.set_return_type(t)
 
-                    arg = self._c.init_node(c_node.ArgumentDeclNode(), tk)
-                    arg.txt_name = get_identifier_text(self._c, tk, _prefix)
+        al = self._c.init_node(decl.ArgumentDeclListNode(), dd.getChild(1))
+        f.set_argument_decl_list(al)
 
-                    decl.child_argument_list.add_declaration(arg)
-        else:
-            self._c.report_error(ctx, "Unsupported function declaration")
-
-        if len(ctx.declarationSpecifier()) >= 1:
-            t = self._process_specifiers(ctx.declarationSpecifier())
-            decl.set_return_type(t)
-        else:
-            self._c.report_error(ctx, "Unsupported implicit return type")
-
-#         if decl.child_return_type is None:
-#             t = self._c.init_node(c_node.SimpleTypeNode(), ctx)
-#             t.txt_name = '_zc_dont_care'
-#             decl.set_return_type(t)
+        # add argument declarations
+        self._process_arg_list(dd.parameterTypeList(), al)
 
         sl = self.visit(ctx.compoundStatement())
-        decl.set_statement_list(sl)
+        f.set_statement_list(sl)
 
-        self._s.child_declaration_list.add_declaration(decl)
+        self._s.child_declaration_list.add_declaration(f)
 
         return None
 

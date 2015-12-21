@@ -81,6 +81,54 @@ class StatementListScope(object):
         return self._typedefs[name] if name in self._typedefs else None
 
 
+class FunctionScope(object):
+
+    '''
+    The scope created by statement lists, where variables are look up
+    '''
+
+    def __init__(self, owner):
+        '''
+        Constructor
+        '''
+        self._owner = owner
+        self._arguments = {}
+
+    def get_parent_scope(self):
+        '''
+        Returns parent scope of this same type
+        '''
+        return self._owner.get_parent_scope(type(self))
+
+    def add_argument(self, compiler, name, node):
+        '''
+        Adds a variable to this scope
+        '''
+        if name in self._arguments:
+            compiler.report_error(
+                node.ctx, "Redeclaration of '%s'" % name)
+            compiler.report_error(
+                self._variables[name].ctx, "Previous was here")
+
+        self._arguments[name] = node
+
+    def lookup_argument(self, name):
+        '''
+        Variable lookup algorithm
+        It will look up name in this scope,
+        and if not found it will look up in the containing scope recursively
+        until either it is found, or no more scopes are available
+        '''
+        if name in self._arguments:
+            return self._arguments[name]
+        else:
+            p = self.get_parent_scope()
+            if p is not None:
+                return p.lookup_argument(name)
+            else:
+                return None
+
+
 class ReturnStmtScope(object):
 
     '''

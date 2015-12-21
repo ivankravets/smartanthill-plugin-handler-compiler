@@ -148,11 +148,11 @@ class _RewriteVisitor(CodeVisitor):
             if not self._sm.ref_state_machine.is_main_machine():
                 txt = u"void* sa_state0"
                 txt += u", waiting_for* sa_wf, uint8_t* sa_result"
-                if len(node.child_argument_list.childs_declarations) >= 1:
+                if len(node.child_argument_decl_list.childs_declarations) >= 1:
                     txt += u", "
 
                 self._w.insertAfterToken(
-                    node.child_argument_list.ctx.symbol, txt)
+                    node.child_argument_decl_list.ctx.symbol, txt)
 
     def visit_StmtListNode(self, node):
         for each in node.childs_statements:

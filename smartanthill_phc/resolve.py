@@ -17,7 +17,7 @@ from smartanthill_phc.common import errors
 from smartanthill_phc.common.base import ResolutionHelper,\
     expression_type_match
 from smartanthill_phc.common.lookup import lookup_type, RootScope,\
-    StatementListScope, ReturnStmtScope
+    StatementListScope, ReturnStmtScope, FunctionScope
 from smartanthill_phc.common.visitor import CodeVisitor, visit_node,\
     NodeWalker, walk_node_childs
 
@@ -133,19 +133,14 @@ class _ResolveVisitor(CodeVisitor):
         for decl in node.childs_declarations:
             self.visit(decl)
 
-    def visit_ArgumentListNode(self, node):
-        self.visit_expression_list(node, node.childs_arguments)
-
-    def visit_ParameterDeclNode(self, node):
+    def visit_ArgumentDeclNode(self, node):
         # pylint: disable=no-self-use
         if node.begin_resolution():
-            root_scope = node.get_scope(RootScope)
-            t = lookup_type(node.txt_type_name, root_scope, None)
-            node.set_type(t)
+            node.get_scope(FunctionScope).add_argument(
+                self._c, node.txt_name, node)
 
-    def visit_ParameterListNode(self, node):
-        for param in node.childs_parameters:
-            self.visit(param)
+            self.visit(node.child_argument_type)
+            node.set_type(node.child_argument_type.get_type())
 
     def visit_VariableDeclarationStmtNode(self, node):
 
@@ -165,6 +160,7 @@ class _ResolveVisitor(CodeVisitor):
             node.get_scope(RootScope).add_function(
                 self._c, node.txt_name, node)
             self.visit(node.child_return_type)
+            self.visit(node.child_argument_decl_list)
             self.visit(node.child_stmt_list)
 
             node.set_type(node.child_return_type.get_type())
@@ -298,12 +294,20 @@ class _ResolveVisitor(CodeVisitor):
     def visit_VariableExprNode(self, node):
 
         sc = node.get_scope(StatementListScope)
-        decl = sc.lookup_variable(node.txt_name)
-        if decl is not None:
-            node.ref_declaration = decl
+        assert sc is not None
+        d = sc.lookup_variable(node.txt_name)
+        if d is not None:
+            node.ref_declaration = d
             t = self.on_demand_resolve(node.ref_declaration)
         else:
-            t = self._zc_dont_care
+            sc = node.get_scope(FunctionScope)
+            assert sc is not None
+            d = sc.lookup_argument(node.txt_name)
+            if d is not None:
+                node.ref_declaration = d
+                t = self.on_demand_resolve(node.ref_declaration)
+            else:
+                t = self._zc_dont_care
 
         node.set_type(t)
 
@@ -365,3 +369,6 @@ class _ResolveVisitor(CodeVisitor):
 
         self.visit_childs(node)
         node.set_type(node.child_cast_type.get_type())
+
+    def visit_ArgumentListNode(self, node):
+        self.visit_expression_list(node, node.childs_arguments)

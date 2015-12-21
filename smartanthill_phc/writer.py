@@ -108,11 +108,13 @@ class _WriterVisitor(NodeVisitor):
         self._w.write('(')
 
         first = True
-        for each in node.child_argument_list.childs_declarations:
+        for each in node.child_argument_decl_list.childs_declarations:
 
             if not first:
                 self._w.write(',')
             first = False
+            self.visit(each.child_argument_type)
+            self._w.write(' ')
             self._w.write(each.txt_name)
 
         self._w.write(')')
