@@ -637,14 +637,17 @@ class _StatementsVisitor(CodeVisitor):
     def visit_DontCareExprNode(self, node):
         self.visit(node.child_argument_list)
 
-    def visit_BinaryOpExprNode(self, node):
+    def visit_MemberExprNode(self, node):
+        self.visit_childs(node)
+
+    def visit_OperatorExprNode(self, node):
         self.visit(node.child_argument_list)
 
-    def visit_UnaryOpExprNode(self, node):
-        self.visit(node.child_argument_list)
-
-    def visit_PostfixOpExprNode(self, node):
-        self.visit(node.child_argument_list)
+#     def visit_UnaryOpExprNode(self, node):
+#         self.visit(node.child_argument_list)
+#
+#     def visit_PostfixOpExprNode(self, node):
+#         self.visit(node.child_argument_list)
 
     def visit_LiteralExprNode(self, node):
         pass

@@ -15,7 +15,7 @@
 
 from smartanthill_phc.common import errors
 from smartanthill_phc.common.base import ResolutionHelper,\
-    expression_type_match
+    expression_type_match, TypeDeclNode
 from smartanthill_phc.common.lookup import lookup_type, RootScope,\
     StatementListScope, ReturnStmtScope, FunctionScope
 from smartanthill_phc.common.visitor import CodeVisitor, visit_node,\
@@ -97,7 +97,7 @@ class _ResolveVisitor(CodeVisitor):
         Calls to resolve on demand, on some declaration after look up
         This resolution in not result of natural tree order
         '''
-        assert isinstance(node, ResolutionHelper)
+        assert isinstance(node, (ResolutionHelper, TypeDeclNode))
         self.visit(node)
         return node.get_type()
 
@@ -364,6 +364,27 @@ class _ResolveVisitor(CodeVisitor):
 
         self.visit(node.child_argument_list)
         node.set_type(self._zc_dont_care)
+
+    def visit_MemberExprNode(self, node):
+
+        self.visit_childs(node)
+        left = node.child_expression.get_type()
+
+        if node.bool_arrow:
+            pass
+        if left == self._zc_dont_care:
+            node.set_type(self._zc_dont_care)
+            return
+
+        node.ref_declaration = left.lookup_member(node.txt_name)
+        if node.ref_declaration is not None:
+            t = self.on_demand_resolve(node.ref_declaration)
+        else:
+            self._c.report_error(node.ctx, "Member '%s' not found on '%s'" % (
+                node.txt_name, t.to_string()))
+            t = self._zc_dont_care
+
+        node.set_type(t)
 
     def visit_CastExprNode(self, node):
 

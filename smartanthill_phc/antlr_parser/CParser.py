@@ -25,9 +25,9 @@ def serializedATN():
         buf.write(u",\4-\t-\4.\t.\4/\t/\4\60\t\60\4\61\t\61\4\62\t\62\4\63")
         buf.write(u"\t\63\4\64\t\64\4\65\t\65\4\66\t\66\4\67\t\67\48\t8\3")
         buf.write(u"\2\3\2\3\2\3\2\3\2\3\2\3\2\3\2\6\2y\n\2\r\2\16\2z\3\2")
-        buf.write(u"\3\2\3\2\3\2\3\2\3\2\3\2\5\2\u0084\n\2\3\2\3\2\3\2\3")
-        buf.write(u"\2\3\2\3\2\3\2\3\2\3\2\3\2\3\2\3\2\3\2\5\2\u0093\n\2")
         buf.write(u"\3\2\3\2\3\2\3\2\3\2\3\2\3\2\3\2\3\2\3\2\3\2\3\2\3\2")
+        buf.write(u"\3\2\3\2\5\2\u008d\n\2\3\2\3\2\3\2\3\2\3\2\3\2\3\2\3")
+        buf.write(u"\2\5\2\u0097\n\2\3\2\3\2\3\2\3\2\3\2\3\2\3\2\3\2\3\2")
         buf.write(u"\7\2\u00a2\n\2\f\2\16\2\u00a5\13\2\3\3\3\3\3\3\7\3\u00aa")
         buf.write(u"\n\3\f\3\16\3\u00ad\13\3\3\4\3\4\3\4\3\4\3\4\3\4\5\4")
         buf.write(u"\u00b5\n\4\3\5\3\5\3\5\3\5\3\5\3\5\3\5\3\5\3\5\3\5\3")
@@ -100,7 +100,7 @@ def serializedATN():
         buf.write(u"\17\4\2>>@@\7\2==??AADDIJ\3\2AC\4\2==??\3\2;<\3\2\67")
         buf.write(u":\3\2Z[\3\2OY\b\2\5\5\20\20\30\30\36\36!!\60\60\t\2\b")
         buf.write(u"\b\r\r\21\21\26\27\33\34#$*+\4\2\37\37\"\"\6\2\t\t\31")
-        buf.write(u"\31%%))\5\2\3\3\25\25..\u0398\2\u0092\3\2\2\2\4\u00a6")
+        buf.write(u"\31%%))\5\2\3\3\25\25..\u0398\2\u008c\3\2\2\2\4\u00a6")
         buf.write(u"\3\2\2\2\6\u00b4\3\2\2\2\b\u00b6\3\2\2\2\n\u00e3\3\2")
         buf.write(u"\2\2\f\u00ea\3\2\2\2\16\u00ec\3\2\2\2\20\u00f4\3\2\2")
         buf.write(u"\2\22\u0101\3\2\2\2\24\u0108\3\2\2\2\26\u010a\3\2\2\2")
@@ -117,26 +117,26 @@ def serializedATN():
         buf.write(u"\3\2\2\2^\u02d0\3\2\2\2`\u02e3\3\2\2\2b\u02e5\3\2\2\2")
         buf.write(u"d\u02e7\3\2\2\2f\u0313\3\2\2\2h\u0321\3\2\2\2j\u0326")
         buf.write(u"\3\2\2\2l\u032e\3\2\2\2n\u0333\3\2\2\2pq\b\2\1\2qr\t")
-        buf.write(u"\2\2\2r\u0093\5\2\2\7st\7\35\2\2t\u0093\5\2\2\5u\u0093")
-        buf.write(u"\7_\2\2v\u0093\7`\2\2wy\7a\2\2xw\3\2\2\2yz\3\2\2\2zx")
-        buf.write(u"\3\2\2\2z{\3\2\2\2{\u0093\3\2\2\2|}\7\61\2\2}~\5\16\b")
-        buf.write(u"\2~\177\7\62\2\2\177\u0093\3\2\2\2\u0080\u0081\7_\2\2")
-        buf.write(u"\u0081\u0083\7\61\2\2\u0082\u0084\5\4\3\2\u0083\u0082")
-        buf.write(u"\3\2\2\2\u0083\u0084\3\2\2\2\u0084\u0085\3\2\2\2\u0085")
-        buf.write(u"\u0093\7\62\2\2\u0086\u0087\t\3\2\2\u0087\u0093\5\6\4")
-        buf.write(u"\2\u0088\u0089\7\35\2\2\u0089\u008a\7\61\2\2\u008a\u008b")
-        buf.write(u"\5D#\2\u008b\u008c\7\62\2\2\u008c\u0093\3\2\2\2\u008d")
-        buf.write(u"\u008e\7(\2\2\u008e\u008f\7\61\2\2\u008f\u0090\5D#\2")
-        buf.write(u"\u0090\u0091\7\62\2\2\u0091\u0093\3\2\2\2\u0092p\3\2")
-        buf.write(u"\2\2\u0092s\3\2\2\2\u0092u\3\2\2\2\u0092v\3\2\2\2\u0092")
-        buf.write(u"x\3\2\2\2\u0092|\3\2\2\2\u0092\u0080\3\2\2\2\u0092\u0086")
-        buf.write(u"\3\2\2\2\u0092\u0088\3\2\2\2\u0092\u008d\3\2\2\2\u0093")
-        buf.write(u"\u00a3\3\2\2\2\u0094\u0095\f\f\2\2\u0095\u0096\7\63\2")
-        buf.write(u"\2\u0096\u0097\5\16\b\2\u0097\u0098\7\64\2\2\u0098\u00a2")
-        buf.write(u"\3\2\2\2\u0099\u009a\f\n\2\2\u009a\u009b\7]\2\2\u009b")
-        buf.write(u"\u00a2\7_\2\2\u009c\u009d\f\t\2\2\u009d\u009e\7\\\2\2")
-        buf.write(u"\u009e\u00a2\7_\2\2\u009f\u00a0\f\b\2\2\u00a0\u00a2\t")
-        buf.write(u"\2\2\2\u00a1\u0094\3\2\2\2\u00a1\u0099\3\2\2\2\u00a1")
+        buf.write(u"\2\2\2r\u008d\5\2\2\7st\7\35\2\2t\u008d\5\2\2\5u\u008d")
+        buf.write(u"\7_\2\2v\u008d\7`\2\2wy\7a\2\2xw\3\2\2\2yz\3\2\2\2zx")
+        buf.write(u"\3\2\2\2z{\3\2\2\2{\u008d\3\2\2\2|}\7\61\2\2}~\5\16\b")
+        buf.write(u"\2~\177\7\62\2\2\177\u008d\3\2\2\2\u0080\u0081\t\3\2")
+        buf.write(u"\2\u0081\u008d\5\6\4\2\u0082\u0083\7\35\2\2\u0083\u0084")
+        buf.write(u"\7\61\2\2\u0084\u0085\5D#\2\u0085\u0086\7\62\2\2\u0086")
+        buf.write(u"\u008d\3\2\2\2\u0087\u0088\7(\2\2\u0088\u0089\7\61\2")
+        buf.write(u"\2\u0089\u008a\5D#\2\u008a\u008b\7\62\2\2\u008b\u008d")
+        buf.write(u"\3\2\2\2\u008cp\3\2\2\2\u008cs\3\2\2\2\u008cu\3\2\2\2")
+        buf.write(u"\u008cv\3\2\2\2\u008cx\3\2\2\2\u008c|\3\2\2\2\u008c\u0080")
+        buf.write(u"\3\2\2\2\u008c\u0082\3\2\2\2\u008c\u0087\3\2\2\2\u008d")
+        buf.write(u"\u00a3\3\2\2\2\u008e\u008f\f\f\2\2\u008f\u0090\7\63\2")
+        buf.write(u"\2\u0090\u0091\5\16\b\2\u0091\u0092\7\64\2\2\u0092\u00a2")
+        buf.write(u"\3\2\2\2\u0093\u0094\f\13\2\2\u0094\u0096\7\61\2\2\u0095")
+        buf.write(u"\u0097\5\4\3\2\u0096\u0095\3\2\2\2\u0096\u0097\3\2\2")
+        buf.write(u"\2\u0097\u0098\3\2\2\2\u0098\u00a2\7\62\2\2\u0099\u009a")
+        buf.write(u"\f\n\2\2\u009a\u009b\7]\2\2\u009b\u00a2\7_\2\2\u009c")
+        buf.write(u"\u009d\f\t\2\2\u009d\u009e\7\\\2\2\u009e\u00a2\7_\2\2")
+        buf.write(u"\u009f\u00a0\f\b\2\2\u00a0\u00a2\t\2\2\2\u00a1\u008e")
+        buf.write(u"\3\2\2\2\u00a1\u0093\3\2\2\2\u00a1\u0099\3\2\2\2\u00a1")
         buf.write(u"\u009c\3\2\2\2\u00a1\u009f\3\2\2\2\u00a2\u00a5\3\2\2")
         buf.write(u"\2\u00a3\u00a1\3\2\2\2\u00a3\u00a4\3\2\2\2\u00a4\3\3")
         buf.write(u"\2\2\2\u00a5\u00a3\3\2\2\2\u00a6\u00ab\5\f\7\2\u00a7")
@@ -431,7 +431,7 @@ def serializedATN():
         buf.write(u"\2\u0336\u033a\58\35\2\u0337\u0339\5\22\n\2\u0338\u0337")
         buf.write(u"\3\2\2\2\u0339\u033c\3\2\2\2\u033a\u0338\3\2\2\2\u033a")
         buf.write(u"\u033b\3\2\2\2\u033b\u033d\3\2\2\2\u033c\u033a\3\2\2")
-        buf.write(u"\2\u033d\u033e\5Z.\2\u033eo\3\2\2\2dz\u0083\u0092\u00a1")
+        buf.write(u"\2\u033d\u033e\5Z.\2\u033eo\3\2\2\2dz\u008c\u0096\u00a1")
         buf.write(u"\u00a3\u00ab\u00b4\u00d7\u00d9\u00e3\u00ea\u00f1\u00f9")
         buf.write(u"\u00fc\u0101\u0108\u010f\u0117\u0120\u0124\u012a\u0131")
         buf.write(u"\u0137\u013c\u0140\u0144\u0146\u014d\u0152\u0156\u015a")
@@ -708,8 +708,9 @@ class CParser ( Parser ):
             super(CParser.FunctionExpressionContext, self).__init__(parser)
             self.copyFrom(ctx)
 
-        def Identifier(self):
-            return self.getToken(CParser.Identifier, 0)
+        def unaryExpression(self):
+            return self.getTypedRuleContext(CParser.UnaryExpressionContext,0)
+
         def argumentExpressionList(self):
             return self.getTypedRuleContext(CParser.ArgumentExpressionListContext,0)
 
@@ -1072,8 +1073,8 @@ class CParser ( Parser ):
         self._la = 0 # Token type
         try:
             self.enterOuterAlt(localctx, 1)
-            self.state = 144
-            la_ = self._interp.adaptivePredict(self._input,2,self._ctx)
+            self.state = 138
+            la_ = self._interp.adaptivePredict(self._input,1,self._ctx)
             if la_ == 1:
                 localctx = CParser.PreIncrementExpressionContext(self, localctx)
                 self._ctx = localctx
@@ -1148,63 +1149,44 @@ class CParser ( Parser ):
                 pass
 
             elif la_ == 7:
-                localctx = CParser.FunctionExpressionContext(self, localctx)
-                self._ctx = localctx
-                _prevctx = localctx
-                self.state = 126
-                self.match(CParser.Identifier)
-                self.state = 127
-                self.match(CParser.LeftParen)
-                self.state = 129
-                _la = self._input.LA(1)
-                if (((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << CParser.Sizeof) | (1 << CParser.Alignof) | (1 << CParser.LeftParen) | (1 << CParser.Plus) | (1 << CParser.PlusPlus) | (1 << CParser.Minus) | (1 << CParser.MinusMinus) | (1 << CParser.Star))) != 0) or ((((_la - 66)) & ~0x3f) == 0 and ((1 << (_la - 66)) & ((1 << (CParser.And - 66)) | (1 << (CParser.Not - 66)) | (1 << (CParser.Tilde - 66)) | (1 << (CParser.Identifier - 66)) | (1 << (CParser.Constant - 66)) | (1 << (CParser.StringLiteral - 66)))) != 0):
-                    self.state = 128
-                    self.argumentExpressionList()
-
-
-                self.state = 131
-                self.match(CParser.RightParen)
-                pass
-
-            elif la_ == 8:
                 localctx = CParser.UnaryOperatorExpressionContext(self, localctx)
                 self._ctx = localctx
                 _prevctx = localctx
-                self.state = 132
+                self.state = 126
                 _la = self._input.LA(1)
                 if not(((((_la - 59)) & ~0x3f) == 0 and ((1 << (_la - 59)) & ((1 << (CParser.Plus - 59)) | (1 << (CParser.Minus - 59)) | (1 << (CParser.Star - 59)) | (1 << (CParser.And - 59)) | (1 << (CParser.Not - 59)) | (1 << (CParser.Tilde - 59)))) != 0)):
                     self._errHandler.recoverInline(self)
                 else:
                     self.consume()
-                self.state = 133
+                self.state = 127
                 self.castExpression()
                 pass
 
-            elif la_ == 9:
+            elif la_ == 8:
                 localctx = CParser.SizeOfTypeExpressionContext(self, localctx)
                 self._ctx = localctx
                 _prevctx = localctx
-                self.state = 134
+                self.state = 128
                 self.match(CParser.Sizeof)
-                self.state = 135
+                self.state = 129
                 self.match(CParser.LeftParen)
-                self.state = 136
+                self.state = 130
                 self.typeName()
-                self.state = 137
+                self.state = 131
                 self.match(CParser.RightParen)
                 pass
 
-            elif la_ == 10:
+            elif la_ == 9:
                 localctx = CParser.AlignOfTypeExpressionContext(self, localctx)
                 self._ctx = localctx
                 _prevctx = localctx
-                self.state = 139
+                self.state = 133
                 self.match(CParser.Alignof)
-                self.state = 140
+                self.state = 134
                 self.match(CParser.LeftParen)
-                self.state = 141
+                self.state = 135
                 self.typeName()
-                self.state = 142
+                self.state = 136
                 self.match(CParser.RightParen)
                 pass
 
@@ -1223,19 +1205,39 @@ class CParser ( Parser ):
                     if la_ == 1:
                         localctx = CParser.IndexExpressionContext(self, CParser.UnaryExpressionContext(self, _parentctx, _parentState))
                         self.pushNewRecursionContext(localctx, _startState, self.RULE_unaryExpression)
-                        self.state = 146
+                        self.state = 140
                         if not self.precpred(self._ctx, 10):
                             from antlr4.error.Errors import FailedPredicateException
                             raise FailedPredicateException(self, "self.precpred(self._ctx, 10)")
-                        self.state = 147
+                        self.state = 141
                         self.match(CParser.LeftBracket)
-                        self.state = 148
+                        self.state = 142
                         self.expression()
-                        self.state = 149
+                        self.state = 143
                         self.match(CParser.RightBracket)
                         pass
 
                     elif la_ == 2:
+                        localctx = CParser.FunctionExpressionContext(self, CParser.UnaryExpressionContext(self, _parentctx, _parentState))
+                        self.pushNewRecursionContext(localctx, _startState, self.RULE_unaryExpression)
+                        self.state = 145
+                        if not self.precpred(self._ctx, 9):
+                            from antlr4.error.Errors import FailedPredicateException
+                            raise FailedPredicateException(self, "self.precpred(self._ctx, 9)")
+                        self.state = 146
+                        self.match(CParser.LeftParen)
+                        self.state = 148
+                        _la = self._input.LA(1)
+                        if (((_la) & ~0x3f) == 0 and ((1 << _la) & ((1 << CParser.Sizeof) | (1 << CParser.Alignof) | (1 << CParser.LeftParen) | (1 << CParser.Plus) | (1 << CParser.PlusPlus) | (1 << CParser.Minus) | (1 << CParser.MinusMinus) | (1 << CParser.Star))) != 0) or ((((_la - 66)) & ~0x3f) == 0 and ((1 << (_la - 66)) & ((1 << (CParser.And - 66)) | (1 << (CParser.Not - 66)) | (1 << (CParser.Tilde - 66)) | (1 << (CParser.Identifier - 66)) | (1 << (CParser.Constant - 66)) | (1 << (CParser.StringLiteral - 66)))) != 0):
+                            self.state = 147
+                            self.argumentExpressionList()
+
+
+                        self.state = 150
+                        self.match(CParser.RightParen)
+                        pass
+
+                    elif la_ == 3:
                         localctx = CParser.DotExpressionContext(self, CParser.UnaryExpressionContext(self, _parentctx, _parentState))
                         self.pushNewRecursionContext(localctx, _startState, self.RULE_unaryExpression)
                         self.state = 151
@@ -1248,7 +1250,7 @@ class CParser ( Parser ):
                         self.match(CParser.Identifier)
                         pass
 
-                    elif la_ == 3:
+                    elif la_ == 4:
                         localctx = CParser.ArrowExpressionContext(self, CParser.UnaryExpressionContext(self, _parentctx, _parentState))
                         self.pushNewRecursionContext(localctx, _startState, self.RULE_unaryExpression)
                         self.state = 154
@@ -1261,7 +1263,7 @@ class CParser ( Parser ):
                         self.match(CParser.Identifier)
                         pass
 
-                    elif la_ == 4:
+                    elif la_ == 5:
                         localctx = CParser.PostIncrementExpressionContext(self, CParser.UnaryExpressionContext(self, _parentctx, _parentState))
                         self.pushNewRecursionContext(localctx, _startState, self.RULE_unaryExpression)
                         self.state = 157
@@ -5948,106 +5950,110 @@ class CParser ( Parser ):
          
 
             if predIndex == 1:
-                return self.precpred(self._ctx, 8)
+                return self.precpred(self._ctx, 9)
          
 
             if predIndex == 2:
-                return self.precpred(self._ctx, 7)
+                return self.precpred(self._ctx, 8)
          
 
             if predIndex == 3:
+                return self.precpred(self._ctx, 7)
+         
+
+            if predIndex == 4:
                 return self.precpred(self._ctx, 6)
          
 
     def logicalOrExpression_sempred(self, localctx, predIndex):
-            if predIndex == 4:
+            if predIndex == 5:
                 return self.precpred(self._ctx, 10)
          
 
-            if predIndex == 5:
+            if predIndex == 6:
                 return self.precpred(self._ctx, 9)
          
 
-            if predIndex == 6:
+            if predIndex == 7:
                 return self.precpred(self._ctx, 8)
          
 
-            if predIndex == 7:
+            if predIndex == 8:
                 return self.precpred(self._ctx, 7)
          
 
-            if predIndex == 8:
+            if predIndex == 9:
                 return self.precpred(self._ctx, 6)
          
 
-            if predIndex == 9:
+            if predIndex == 10:
                 return self.precpred(self._ctx, 5)
          
 
-            if predIndex == 10:
+            if predIndex == 11:
                 return self.precpred(self._ctx, 4)
          
 
-            if predIndex == 11:
+            if predIndex == 12:
                 return self.precpred(self._ctx, 3)
          
 
-            if predIndex == 12:
+            if predIndex == 13:
                 return self.precpred(self._ctx, 2)
          
 
-            if predIndex == 13:
+            if predIndex == 14:
                 return self.precpred(self._ctx, 1)
          
 
     def directDeclarator_sempred(self, localctx, predIndex):
-            if predIndex == 14:
+            if predIndex == 15:
                 return self.precpred(self._ctx, 6)
          
 
-            if predIndex == 15:
+            if predIndex == 16:
                 return self.precpred(self._ctx, 5)
          
 
-            if predIndex == 16:
+            if predIndex == 17:
                 return self.precpred(self._ctx, 4)
          
 
-            if predIndex == 17:
+            if predIndex == 18:
                 return self.precpred(self._ctx, 3)
          
 
-            if predIndex == 18:
+            if predIndex == 19:
                 return self.precpred(self._ctx, 2)
          
 
-            if predIndex == 19:
+            if predIndex == 20:
                 return self.precpred(self._ctx, 1)
          
 
     def directAbstractDeclarator_sempred(self, localctx, predIndex):
-            if predIndex == 20:
+            if predIndex == 21:
                 return self.precpred(self._ctx, 5)
          
 
-            if predIndex == 21:
+            if predIndex == 22:
                 return self.precpred(self._ctx, 4)
          
 
-            if predIndex == 22:
+            if predIndex == 23:
                 return self.precpred(self._ctx, 3)
          
 
-            if predIndex == 23:
+            if predIndex == 24:
                 return self.precpred(self._ctx, 2)
          
 
-            if predIndex == 24:
+            if predIndex == 25:
                 return self.precpred(self._ctx, 1)
          
 
     def initializerList_sempred(self, localctx, predIndex):
-            if predIndex == 25:
+            if predIndex == 26:
                 return self.precpred(self._ctx, 1)
          
 

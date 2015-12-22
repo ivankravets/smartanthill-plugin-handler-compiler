@@ -403,6 +403,33 @@ class _WriterVisitor(NodeVisitor):
         # self.visit(node.child_argument_list)
         self._w.write('/* TODO */')
 
+    def visit_BinaryOpExprNode(self, node):
+        assert len(node.child_argument_list.childs_arguments) == 2
+        self.write_expr(node.child_argument_list.childs_arguments[0])
+        self._w.write(node.txt_operator)
+        self.write_expr(node.child_argument_list.childs_arguments[1])
+
+    def visit_UnaryOpExprNode(self, node):
+        assert len(node.child_argument_list.childs_arguments) == 1
+        self._w.write(node.txt_operator)
+        self.write_expr(node.child_argument_list.childs_arguments[0])
+
+    def visit_PostfixOpExprNode(self, node):
+        assert len(node.child_argument_list.childs_arguments) == 1
+        self.write_expr(node.child_argument_list.childs_arguments[0])
+        self._w.write(node.txt_operator)
+
+    def visit_MemberExprNode(self, node):
+
+        self.write_expr(node.child_expression)
+
+        if node.bool_arrow:
+            self._w.write('->')
+        else:
+            self._w.write('.')
+
+        self._w.write(node.txt_name)
+
     def visit_CastExprNode(self, node):
         self._w.write('(')
         self.visit(node.child_cast_type)

@@ -40,8 +40,7 @@ unaryExpression
 //    |   '__builtin_va_arg' '(' unaryExpression ',' typeName ')'
 //    |   '__builtin_offsetof' '(' typeName ',' unaryExpression ')'
     |   unaryExpression '[' expression ']' # IndexExpression
-//    |   unaryExpression '(' argumentExpressionList? ')' # FunctionExpression
-    |   Identifier '(' argumentExpressionList? ')' # FunctionExpression
+    |   unaryExpression '(' argumentExpressionList? ')' # FunctionExpression
     |   unaryExpression '.' Identifier # DotExpression
     |   unaryExpression '->' Identifier # ArrowExpression
     |   unaryExpression ('++'|'--') # PostIncrementExpression

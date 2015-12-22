@@ -93,7 +93,7 @@ def is_typedef(ctx):
 
 
 def get_text(ctx):
-    return ctx.getText()
+    return str(ctx.getText())
 
 # Generated from java-escape by ANTLR 4.5
 # This class defines a complete generic visitor for a parse tree produced
@@ -143,16 +143,21 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
     # Visit a parse tree produced by CParser#FunctionExpression.
     def visitFunctionExpression(self, ctx):
 
+        if not isinstance(ctx.unaryExpression(),
+                          CParser.CParser.IdentifierExpressionContext):
+            self._c.report_error(ctx, "Unsupported function call syntax")
+
         node = self._c.init_node(expr.FunctionCallExprNode(), ctx)
-        node.txt_name = get_identifier_text(self._c, ctx.Identifier(), _prefix)
+        node.txt_name = get_identifier_text(
+            self._c, ctx.unaryExpression().Identifier(), _prefix)
         node.bool_is_blocking = _is_blocking_api_function(node.txt_name)
 
-        args = self._c.init_node(base.ArgumentListNode(), ctx.getChild(1))
-
         if ctx.argumentExpressionList() is not None:
-            for each in ctx.argumentExpressionList().assignmentExpression():
-                arg = self.visit(each)
-                args.add_argument(arg)
+            args = self._make_args(
+                ctx.getChild(1),
+                ctx.argumentExpressionList().assignmentExpression())
+        else:
+            args = self._c.init_node(base.ArgumentListNode(), ctx.getChild(1))
 
         node.set_argument_list(args)
 
@@ -161,15 +166,13 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
     # Visit a parse tree produced by CParser#DotExpression.
     def visitDotExpression(self, ctx):
 
-        node = c_node.DontCareExprNode.create(self._c, ctx)
-        node.child_argument_list.add_argument(
-            self.visit(ctx.unaryExpression()))
+        node = self._c.init_node(c_node.MemberExprNode(), ctx)
+        node.bool_arrow = False
+
+        node.set_expression(self.visit(ctx.unaryExpression()))
 
         tk = ctx.Identifier()
-        member = self._c.init_node(expr.VariableExprNode(), tk)
-        member.txt_name = get_identifier_text(self._c, tk, _prefix)
-
-        node.child_argument_list.add_argument(member)
+        node.txt_name = get_identifier_text(self._c, tk, _prefix)
 
         return node
 
@@ -191,23 +194,27 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
     # Visit a parse tree produced by CParser#PostIncrementExpression.
     def visitPostIncrementExpression(self, ctx):
-        node = c_node.DontCareExprNode.create(self._c, ctx)
-        node.child_argument_list.add_argument(
-            self.visit(ctx.unaryExpression()))
+
+        op = get_text(ctx.getChild(1))
+
+        node = self._c.init_node(expr.PostfixOpExprNode(), ctx)
+        node.txt_operator = op
+
+        args = self._make_args(ctx, [ctx.unaryExpression()])
+        node.set_argument_list(args)
 
         return node
 
     # Visit a parse tree produced by CParser#ArrowExpression.
     def visitArrowExpression(self, ctx):
-        node = c_node.DontCareExprNode.create(self._c, ctx)
-        node.child_argument_list.add_argument(
-            self.visit(ctx.unaryExpression()))
+
+        node = self._c.init_node(c_node.MemberExprNode(), ctx)
+        node.bool_arrow = True
+
+        node.set_expression(self.visit(ctx.unaryExpression()))
 
         tk = ctx.Identifier()
-        member = self._c.init_node(expr.VariableExprNode(), tk)
-        member.txt_name = get_identifier_text(self._c, tk, _prefix)
-
-        node.child_argument_list.add_argument(member)
+        node.txt_name = get_identifier_text(self._c, tk, _prefix)
 
         return node
 
@@ -235,8 +242,14 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
     # Visit a parse tree produced by CParser#UnaryOperatorExpression.
     def visitUnaryOperatorExpression(self, ctx):
-        node = c_node.DontCareExprNode.create(self._c, ctx)
-        node.child_argument_list.add_argument(self.visit(ctx.castExpression()))
+
+        op = get_text(ctx.getChild(0))
+
+        node = self._c.init_node(expr.UnaryOpExprNode(), ctx)
+        node.txt_operator = op
+
+        args = self._make_args(ctx, [ctx.castExpression()])
+        node.set_argument_list(args)
 
         return node
 
@@ -258,9 +271,14 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
     # Visit a parse tree produced by CParser#PreIncrementExpression.
     def visitPreIncrementExpression(self, ctx):
-        node = c_node.DontCareExprNode.create(self._c, ctx)
-        node.child_argument_list.add_argument(
-            self.visit(ctx.unaryExpression()))
+
+        op = get_text(ctx.getChild(0))
+
+        node = self._c.init_node(expr.UnaryOpExprNode(), ctx)
+        node.txt_operator = op
+
+        args = self._make_args(ctx, [ctx.unaryExpression()])
+        node.set_argument_list(args)
 
         return node
 
@@ -287,17 +305,30 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
             return node
 
+    def _make_args(self, ctx, expressions):
+
+        args = self._c.init_node(base.ArgumentListNode(), ctx)
+        for each in expressions:
+            args.add_argument(self.visit(each))
+
+        return args
+
     # Visit a parse tree produced by CParser#logicalOrExpression.
     def visitLogicalOrExpression(self, ctx):
 
         if ctx.castExpression() is not None:
             return self.visit(ctx.castExpression())
         else:
-            node = c_node.DontCareExprNode.create(self._c, ctx)
-            node.child_argument_list.add_argument(
-                self.visit(ctx.logicalOrExpression(0)))
-            node.child_argument_list.add_argument(
-                self.visit(ctx.logicalOrExpression(1)))
+            op = get_text(ctx.getChild(1))
+            if op not in ('&&', '||', '*', '/', '%', '+', '-', '<', '>',
+                          '<=', '>=', '==', '!='):
+                self._c.report_error(ctx, "Unsupported operator '%s'" % op)
+
+            node = self._c.init_node(expr.BinaryOpExprNode(), ctx)
+
+            node.txt_operator = op
+            args = self._make_args(ctx, ctx.logicalOrExpression())
+            node.set_argument_list(args)
 
             return node
 

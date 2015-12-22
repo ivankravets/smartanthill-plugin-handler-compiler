@@ -83,6 +83,30 @@ class CastExprNode(ExpressionNode):
         self.child_expression = child
 
 
+class MemberExprNode(ExpressionNode):
+
+    '''
+    Node class representing a dot member access
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(MemberExprNode, self).__init__()
+        self.txt_name = None
+        self.child_expression = None
+        self.ref_declaration = None
+
+    def set_expression(self, child):
+        '''
+        expression setter
+        '''
+        assert isinstance(child, ExpressionNode)
+        child.set_parent(self)
+        self.child_expression = child
+
+
 class FunctionCallStmtNode(StatementNode):
 
     '''

@@ -286,43 +286,6 @@ class BinaryOpExprNode(OperatorExprNode):
         '''
         super(BinaryOpExprNode, self).__init__()
 
-    @staticmethod
-    def create(compiler, ctx):
-        '''
-        Creates a new instance, and a new argument list
-        '''
-        node = compiler.init_node(BinaryOpExprNode(), ctx)
-        node.set_argument_list(compiler.init_node(ArgumentListNode(), ctx))
-        return node
-
-
-class LogicOpExprNode(OperatorExprNode):
-
-    '''
-    Node class representing a logic operator expression
-    '&&', '||' and '!'
-    '''
-
-    def __init__(self):
-        '''
-        Constructor
-        '''
-        super(LogicOpExprNode, self).__init__()
-
-
-class ArithmeticOpExprNode(OperatorExprNode):
-
-    '''
-    Node class representing an arithmetic operator expression
-    '+', '-, '*', '/' and '%'
-    '''
-
-    def __init__(self):
-        '''
-        Constructor
-        '''
-        super(ArithmeticOpExprNode, self).__init__()
-
 
 class UnaryOpExprNode(OperatorExprNode):
 
@@ -337,15 +300,6 @@ class UnaryOpExprNode(OperatorExprNode):
         '''
         super(UnaryOpExprNode, self).__init__()
 
-    @staticmethod
-    def create(compiler, ctx):
-        '''
-        Creates a new instance, and a new argument list
-        '''
-        node = compiler.init_node(UnaryOpExprNode(), ctx)
-        node.set_argument_list(compiler.init_node(ArgumentListNode(), ctx))
-        return node
-
 
 class PostfixOpExprNode(OperatorExprNode):
 
@@ -359,26 +313,3 @@ class PostfixOpExprNode(OperatorExprNode):
         Constructor
         '''
         super(PostfixOpExprNode, self).__init__()
-
-    @staticmethod
-    def create(compiler, ctx):
-        '''
-        Creates a new instance, and a new argument list
-        '''
-        node = compiler.init_node(PostfixOpExprNode(), ctx)
-        node.set_argument_list(compiler.init_node(ArgumentListNode(), ctx))
-        return node
-
-
-class ComparisonOpExprNode(OperatorExprNode):
-
-    '''
-    Node class representing a comparison operator expression
-    '<', '>', '<=', '>=', '==' and '!='
-    '''
-
-    def __init__(self):
-        '''
-        Constructor
-        '''
-        super(ComparisonOpExprNode, self).__init__()

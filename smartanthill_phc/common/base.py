@@ -377,6 +377,9 @@ class TypeDeclNode(Node):
         print "Node: %s" % type(self).__name__
         assert False
 
+    def to_string(self):
+        return self.txt_name
+
     def lookup_member(self, name):
         '''
         Base method for type member look up

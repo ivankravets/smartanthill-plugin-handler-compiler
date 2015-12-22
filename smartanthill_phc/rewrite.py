@@ -216,7 +216,8 @@ class _RewriteVisitor(CodeVisitor):
                     assert False
 
                 self._w.replaceToken(
-                    node.child_expression.ctx.Identifier().symbol, f)
+                    node.child_expression.ctx.unaryExpression().Identifier()
+                    .symbol, f)
 
             txt = u"\npapi_wait_handler_add_wait_for_%s(sa_wf, %s);" % (
                 w, arg0)
@@ -382,6 +383,12 @@ class _RewriteVisitor(CodeVisitor):
 
     def visit_DontCareExprNode(self, node):
         self.visit(node.child_argument_list)
+
+    def visit_OperatorExprNode(self, node):
+        self.visit(node.child_argument_list)
+
+    def visit_MemberExprNode(self, node):
+        self.visit(node.child_expression)
 
     def visit_CastExprNode(self, node):
         self.visit(node.child_expression)
