@@ -206,6 +206,15 @@ class StmtListNode(StatementNode):
         child.set_parent(self)
         self.childs_statements.insert(index, child)
 
+    def remove_statement_at(self, index):
+        '''
+        statement adder
+        '''
+        assert index >= 0
+        assert index <= len(self.childs_statements)
+
+        return self.childs_statements.pop(index)
+
     def split_at(self, index, other):
         '''
         Splits this StmtListNode,
@@ -433,12 +442,17 @@ class DeclarationListNode(Node):
         child.set_parent(self)
         self.childs_declarations.append(child)
 
-    def add_declaration_list(self, childs):
+    def insert_declaration_at(self, index, child):
         '''
-        add each declaration in list helper
+        statement adder
         '''
-        for each in childs:
-            self.add_declaration(each)
+        assert child is not None
+        assert isinstance(child, Node)
+        assert index >= 0
+        assert index <= len(self.childs_declarations)
+
+        child.set_parent(self)
+        self.childs_declarations.insert(index, child)
 
 
 class ArgumentListNode(Node):
@@ -461,6 +475,18 @@ class ArgumentListNode(Node):
         assert isinstance(child, ExpressionNode)
         child.set_parent(self)
         self.childs_arguments.append(child)
+
+    def insert_argument_at(self, index, child):
+        '''
+        statement adder
+        '''
+        assert child is not None
+        assert isinstance(child, ExpressionNode)
+        assert index >= 0
+        assert index <= len(self.childs_arguments)
+
+        child.set_parent(self)
+        self.childs_arguments.insert(index, child)
 
     def overload_filter(self, compiler, decl_list):
         '''

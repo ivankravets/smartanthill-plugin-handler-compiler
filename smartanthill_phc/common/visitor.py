@@ -227,6 +227,15 @@ class CodeVisitor(NodeVisitor):
 
         self._index[-1] += 1
 
+    def replace_current_statement(self, statement):
+        '''
+        Replace current statement
+        '''
+        self._stmt_list[-1].insert_statement_at(self._index[-1] + 1, statement)
+        old = self._stmt_list[-1].remove_statement_at(self._index[-1])
+
+        return old
+
     def get_current_statement(self):
         '''
         Returns current statement

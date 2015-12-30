@@ -67,19 +67,19 @@ class _WriterVisitor(NodeVisitor):
     def _get_func_return(self):
         if isinstance(self._func.child_return_type.ref_type_declaration,
                       VoidTypeDeclNode):
-            return u"return;"
+            self._w.write_line("return;")
         elif isinstance(self._func.child_return_type.ref_type_declaration,
                         IntTypeDeclNode):
-            return u"return 0;"
+            self._w.write_line("return 0;")
         else:
             assert False
 
     def _format_result_return(self, txt_result):
         if self._sm.ref_state_machine.is_main_machine():
-            return u"\nreturn %s;" % txt_result
+            self._w.write_line("return %s;" % txt_result)
         else:
-            return u"\n*sa_result = %s;\n%s" % (txt_result,
-                                                self._get_func_return())
+            self._w.write_line("*sa_result = %s;" % txt_result)
+            self._get_func_return()
 
     def get_text(self):
         return self._w.get_text()
@@ -160,39 +160,72 @@ class _WriterVisitor(NodeVisitor):
         self._w.end_of_statement()
 
         if node.child_expression.bool_is_blocking:
-            n = node.child_expression.txt_name
-            args = node.child_expression.child_argument_list.childs_arguments
-            assert len(args) >= 1
-#             arg0 = self._get_text(args[0].ctx)
-            arg0 = '/* TODO */'
+            assert False
 
-            if n == "papi_sleep":
-                w = u"timeout"
-#                 self._w.deleteTokens(node.ctx.start, node.ctx.stop)
-            else:
-                if n == "papi_wait_for_spi_send":
-                    f = u"papi_start_sending_spi_command_16"
-                    w = u"spi_send"
-                elif n == "papi_wait_for_i2c_send":
-                    f = u"papi_start_sending_i2c_command_16"
-                    w = u"i2c_send"
-                elif n == "papi_wait_for_spi_receive":
-                    f = u"papi_start_receiving_spi_data_16"
-                    w = u"spi_receive"
-                elif n == "papi_wait_for_i2c_receive":
-                    f = u"papi_start_receiving_i2c_data_16"
-                    w = u"i2c_receive"
-                else:
-                    assert False
+    def visit_PapiWaitStmtNode(self, node):
+        self._w.write(node.txt_name)
+        self.write_expr(node.child_expression)
+        self._w.write(';')
+        self._w.end_of_statement()
 
-                self._w.write_line('/* %s */' % f)
+        self._w.write("papi_wait_handler_add_wait_for_")
+        self._w.write(node.txt_wait_for)
+        self._w.write("(sa_wf,")
+        self.write_expr(node.child_argument_list.childs_arguments[0])
+        self._w.write(')')
+        self._w.write(';')
+        self._w.end_of_statement()
 
-#                 self._w.replaceToken(
-#                     node.child_expression.ctx.Identifier().symbol, f)
+        self._w.write_line("sa_state->sa_next = %s;" % node.int_next_state)
+        self._format_result_return("PLUGIN_WAITING")
 
-            txt = "papi_wait_handler_add_wait_for_%s(sa_wf, %s);" % (
-                w, arg0)
-            self._w.write_line(txt)
+        self._w.write("label_%s:" % node.int_next_state)
+
+        self._w.write("if(papi_wait_handler_is_waiting_for_")
+        self._w.write(node.txt_wait_for)
+        self._w.write("(sa_wf,")
+        self.write_expr(node.child_argument_list.childs_arguments[0])
+        self._w.write('))')
+        self._w.end_of_statement()
+        self._w.write_line('{')
+
+        self._format_result_return("PLUGIN_WAITING")
+
+        self._w.write_line('}')
+
+
+#         if node.ctx.stop.line is not None:
+#             txt += u"//#line %s\n" % node.ctx.stop.line
+
+    def visit_PapiSleepStmtNode(self, node):
+        #         self._w.write('')
+        #         self.write_expr(node.child_expression)
+        #         self._w.write(';')
+        #         self._w.end_of_statement()
+
+        self._w.write("papi_wait_handler_add_wait_for_timeout(sa_wf,")
+        self.write_expr(node.child_argument_list.childs_arguments[0])
+        self._w.write(')')
+        self._w.write(';')
+        self._w.end_of_statement()
+
+        self._w.write_line("sa_state->sa_next = %s;" % node.int_next_state)
+
+        self._format_result_return("PLUGIN_WAITING")
+
+        self._w.write("label_%s:" % node.int_next_state)
+
+        self._w.write("if(papi_wait_handler_is_waiting_for_timeout(0, sa_wf))")
+        self._w.end_of_statement()
+        self._w.write_line('{')
+
+        self._format_result_return("PLUGIN_WAITING")
+
+        self._w.write_line('}')
+
+
+#         if node.ctx.stop.line is not None:
+#             txt += u"//#line %s\n" % node.ctx.stop.line
 
     def visit_WhileStmtNode(self, node):
         self._w.write('while')
@@ -271,7 +304,7 @@ class _WriterVisitor(NodeVisitor):
         nxt = str(node.int_next_state)
         self._w.write_line("sa_state->sa_next = %s;" % nxt)
 
-        self._w.write_line(self._format_result_return("PLUGIN_WAITING"))
+        self._format_result_return("PLUGIN_WAITING")
 
         self._w.write_line("label_%s:" % nxt)
 
@@ -441,7 +474,11 @@ class _WriterVisitor(NodeVisitor):
 
     def visit_VariableExprNode(self, node):
         if node.ref_declaration is not None:
-            self._w.write(node.ref_declaration.txt_name)
+            if self._sm is not None and\
+                    self._sm.is_moved_var_decl(node.ref_declaration):
+                self._w.write("(sa_state->%s)" % node.ref_declaration.txt_name)
+            else:
+                self._w.write(node.ref_declaration.txt_name)
         else:
             self._w.write(node.txt_name)
 

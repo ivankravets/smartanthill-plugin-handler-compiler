@@ -15,7 +15,8 @@
 
 from smartanthill_phc.c_node import CastExprNode, IntTypeDeclNode,\
     VoidTypeDeclNode
-from smartanthill_phc.common.base import StatementNode, ExpressionNode
+from smartanthill_phc.common.base import StatementNode, ExpressionNode,\
+    ArgumentListNode
 from smartanthill_phc.common.expr import VariableExprNode,\
     FunctionCallExprNode
 from smartanthill_phc.common.stmt import VariableDeclarationStmtNode
@@ -237,6 +238,55 @@ class BeforeReturnStmtNode(StatementNode):
         Constructor
         '''
         super(BeforeReturnStmtNode, self).__init__()
+
+
+class PapiWaitStmtNode(StatementNode):
+
+    '''
+    Node class representing a blocking function call statement
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(PapiWaitStmtNode, self).__init__()
+        self.int_next_state = None
+        self.txt_name = None
+        self.txt_wait_for = None
+        self.child_argument_list = None
+        self.ctx_function_name = None
+
+    def set_argument_list(self, child):
+        '''
+        argument_list setter
+        '''
+        assert isinstance(child, ArgumentListNode)
+        child.set_parent(self)
+        self.child_argument_list = child
+
+
+class PapiSleepStmtNode(StatementNode):
+
+    '''
+    Node class representing a blocking function call statement
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(PapiSleepStmtNode, self).__init__()
+        self.int_next_state = None
+        self.child_argument_list = None
+
+    def set_argument_list(self, child):
+        '''
+        argument_list setter
+        '''
+        assert isinstance(child, ArgumentListNode)
+        child.set_parent(self)
+        self.child_argument_list = child
 
 
 class LoopsHelper(object):
@@ -609,7 +659,40 @@ class _StatementsVisitor(CodeVisitor):
         if self._nb.has_states(node.child_expression.ref_declaration):
             self._substates_around_current(node.ctx)
         elif node.child_expression.bool_is_blocking:
-            self._wait_after_current(node.child_expression, node.ctx)
+            d = node.child_expression.ref_declaration
+            n = d.txt_name
+            if n == "papi_sleep":
+                s = self._c.init_node(PapiSleepStmtNode(), node.ctx)
+            else:
+                if n == "papi_wait_for_spi_send":
+                    f = u"papi_start_sending_spi_command_16"
+                    w = u"spi_send"
+                elif n == "papi_wait_for_i2c_send":
+                    f = u"papi_start_sending_i2c_command_16"
+                    w = u"i2c_send"
+                elif n == "papi_wait_for_spi_receive":
+                    f = u"papi_start_receiving_spi_data_16"
+                    w = u"spi_receive"
+                elif n == "papi_wait_for_i2c_receive":
+                    f = u"papi_start_receiving_i2c_data_16"
+                    w = u"i2c_receive"
+                else:
+                    assert False
+
+                s = self._c.init_node(PapiWaitStmtNode(), node.ctx)
+                s.txt_name = f
+                s.txt_wait_for = w
+                s.ctx_function_name = node.child_expression.ctx.\
+                    unaryExpression().Identifier()
+
+            s.set_argument_list(node.child_expression.child_argument_list)
+            s.int_next_state = self._sm.increment_state()
+
+            node.child_expression.child_argument_list = None
+            old = self.replace_current_statement(s)
+            self._c.remove_nodes(old)
+
+#             self._wait_after_current(node.child_expression, node.ctx)
         elif self._split_all:
             self._debug_after_current(node.ctx)
 

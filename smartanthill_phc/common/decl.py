@@ -30,10 +30,10 @@ class FunctionDeclNode(Node, ResolutionHelper):
         Constructor
         '''
         super(FunctionDeclNode, self).__init__()
+        self.txt_name = None
         self.child_return_type = None
         self.child_stmt_list = None
         self.child_argument_decl_list = None
-        self.txt_name = None
         self.add_scope(ReturnStmtScope, ReturnStmtScope(self))
         self.add_scope(StatementListScope, None)  # stop scope recursion
         self.add_scope(FunctionScope, FunctionScope(self))

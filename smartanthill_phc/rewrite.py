@@ -191,37 +191,77 @@ class _RewriteVisitor(CodeVisitor):
         self.visit(node.child_expression)
 
         if node.child_expression.bool_is_blocking:
-            n = node.child_expression.txt_name
-            args = node.child_expression.child_argument_list.childs_arguments
-            assert len(args) >= 1
-            arg0 = self._get_text(args[0].ctx)
+            assert False
 
-            if n == "papi_sleep":
-                w = u"timeout"
-                self._w.deleteTokens(node.ctx.start, node.ctx.stop)
-            else:
-                if n == "papi_wait_for_spi_send":
-                    f = u"papi_start_sending_spi_command_16"
-                    w = u"spi_send"
-                elif n == "papi_wait_for_i2c_send":
-                    f = u"papi_start_sending_i2c_command_16"
-                    w = u"i2c_send"
-                elif n == "papi_wait_for_spi_receive":
-                    f = u"papi_start_receiving_spi_data_16"
-                    w = u"spi_receive"
-                elif n == "papi_wait_for_i2c_receive":
-                    f = u"papi_start_receiving_i2c_data_16"
-                    w = u"i2c_receive"
-                else:
-                    assert False
+    def visit_PapiWaitStmtNode(self, node):
 
-                self._w.replaceToken(
-                    node.child_expression.ctx.unaryExpression().Identifier()
-                    .symbol, f)
+        self.visit(node.child_argument_list)
 
-            txt = u"\npapi_wait_handler_add_wait_for_%s(sa_wf, %s);" % (
-                w, arg0)
-            self._w.insertAfterToken(node.ctx.stop, txt)
+        args = node.child_argument_list.childs_arguments
+        assert len(args) >= 1
+        arg0 = self._get_text(args[0].ctx)
+
+        self._w.replaceToken(
+            node.ctx_function_name.symbol, node.txt_name)
+
+        txt = u"\npapi_wait_handler_add_wait_for_%s(sa_wf, %s);" % (
+            node.txt_wait_for, arg0)
+        self._w.insertAfterToken(node.ctx.stop, txt)
+
+        nxt = str(node.int_next_state)
+        txt = u"\nsa_state->sa_next = %s;" % nxt
+
+        txt += self._format_result_return("PLUGIN_WAITING")
+
+        txt += u"\n\nlabel_%s:" % nxt
+
+        args = node.child_argument_list.childs_arguments
+        assert len(args) >= 1
+        arg0 = self._get_text(args[0].ctx)
+
+        txt += u"\nif(papi_wait_handler_is_waiting_for_%s(sa_wf, %s)) {" % (
+            node.txt_wait_for, arg0)
+        txt += self._format_result_return("PLUGIN_WAITING")
+        txt += u"\n}\n"
+
+        if node.ctx.stop.line is not None:
+            txt += u"//#line %s\n" % node.ctx.stop.line
+
+        self._w.insertAfterToken(node.ctx.stop, txt)
+
+    def visit_PapiSleepStmtNode(self, node):
+
+        self.visit(node.child_argument_list)
+
+        args = node.child_argument_list.childs_arguments
+        assert len(args) >= 1
+        arg0 = self._get_text(args[0].ctx)
+
+        self._w.deleteTokens(node.ctx.start, node.ctx.stop)
+
+        txt = u"\npapi_wait_handler_add_wait_for_timeout(sa_wf, %s);" % (
+            arg0)
+        self._w.insertAfterToken(node.ctx.stop, txt)
+
+        nxt = str(node.int_next_state)
+        txt = u"\nsa_state->sa_next = %s;" % nxt
+
+        txt += self._format_result_return("PLUGIN_WAITING")
+
+        txt += u"\n\nlabel_%s:" % nxt
+
+        args = node.child_argument_list.childs_arguments
+        assert len(args) >= 1
+        arg0 = self._get_text(args[0].ctx)
+
+        txt += u"\nif(papi_wait_handler_is_waiting_for_timeout(0, sa_wf)) {"
+        txt += self._format_result_return("PLUGIN_WAITING")
+        txt += u"\n}\n"
+
+        if node.ctx.stop.line is not None:
+            txt += u"//#line %s\n" % node.ctx.stop.line
+
+        self._w.insertAfterToken(node.ctx.stop, txt)
 
     def visit_LoopStmtNode(self, node):
         self.visit_childs(node)
