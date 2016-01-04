@@ -133,6 +133,11 @@ class _ResolveVisitor(CodeVisitor):
         for decl in node.childs_declarations:
             self.visit(decl)
 
+    def visit_PreprocessorDirectiveNode(self, node):
+        # pylint: disable=unused-argument
+        # pylint: disable=no-self-use
+        pass
+
     def visit_ArgumentDeclNode(self, node):
         # pylint: disable=no-self-use
         if node.begin_resolution():

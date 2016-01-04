@@ -80,6 +80,6 @@ def process_file(file_name, prefix, split_all, dump, new_writer):
     header = write_header(c, root, helper.token_stream)
     async2 = None
     if new_writer:
-        async2 = writer.write_code(c, root)
+        async2 = writer.write_code(c, root, file_name)
 
     return (async, header, async2)

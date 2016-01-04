@@ -679,3 +679,12 @@ class CListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by CParser#preprocessorDirective.
+    def enterPreprocessorDirective(self, ctx):
+        pass
+
+    # Exit a parse tree produced by CParser#preprocessorDirective.
+    def exitPreprocessorDirective(self, ctx):
+        pass
+
+

@@ -851,8 +851,8 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
             decls = self.visit(ctx.declaration())
             for each in decls:
                 self._s.child_declaration_list.add_declaration(each)
-
-        return None
+        elif ctx.preprocessorDirective() is not None:
+            self.visit(ctx.preprocessorDirective())
 
     def _process_arg_list(self, parameterTypeList, al):
         if parameterTypeList is not None:
@@ -930,6 +930,9 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
         return None
 
-    # Visit a parse tree produced by CParser#declarationList.
-    def visitDeclarationList(self, ctx):
-        return self.visitChildren(ctx)
+    # Visit a parse tree produced by CParser#preprocessorDirective.
+    def visitPreprocessorDirective(self, ctx):
+
+        node = self._c.init_node(c_node.PreprocessorDirectiveNode(), ctx)
+        node.txt_body = get_text(ctx)
+        self._s.child_declaration_list.add_declaration(node)

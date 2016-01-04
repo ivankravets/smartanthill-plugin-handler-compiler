@@ -359,3 +359,17 @@ class TypedefStmtNode(StatementNode, ResolutionHelper):
         assert isinstance(child, TypeNode)
         child.set_parent(self)
         self.child_type = child
+
+
+class PreprocessorDirectiveNode(Node):
+
+    '''
+    Node class representing a preprocessor directive
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(PreprocessorDirectiveNode, self).__init__()
+        self.txt_body = None

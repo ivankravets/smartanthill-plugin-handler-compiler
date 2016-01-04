@@ -377,12 +377,21 @@ compilationUnit
 externalDeclaration
     :   functionDefinition
     |   declaration
+    |   preprocessorDirective
     |   ';' // stray ;
     ;
 
 functionDefinition
     :   declarationSpecifier* declarator declaration* compoundStatement
     ;
+
+preprocessorDirective
+    :   LineDirective
+    |   PragmaDirective
+    |   IncludeDirective
+    |   DefineDirective
+    ;
+
 
 Auto : 'auto';
 Break : 'break';
@@ -722,23 +731,19 @@ SChar
     ;
 
 LineDirective
-    :   '#' Whitespace? DecimalConstant Whitespace? StringLiteral ~[\r\n]*
-        -> channel(HIDDEN)
+    :   '#' [ \t]* 'line' [ \t]* DecimalConstant [ \t]* StringLiteral ~[\r\n]*
     ;
 
 PragmaDirective
-    :   '#' Whitespace? 'pragma' Whitespace ~[\r\n]*
-        -> channel(HIDDEN)
+    :   '#' [ \t]* 'pragma' [ \t]+ ~[\r\n]*
     ;
 
 IncludeDirective
-    :   '#' Whitespace? 'include' Whitespace ~[\r\n]*
-        -> channel(HIDDEN)
+    :   '#' [ \t]* 'include' [ \t]+ ~[\r\n]*
     ;
 
 DefineDirective
-    :   '#' Whitespace? 'define' Whitespace ~[\r\n]*
-        -> channel(HIDDEN)
+    :   '#' [ \t]* 'define' [ \t]+ ~[\r\n]*
     ;
 
 Whitespace

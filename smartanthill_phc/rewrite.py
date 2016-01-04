@@ -138,6 +138,11 @@ class _RewriteVisitor(CodeVisitor):
         for each in node.childs_declarations:
             self.visit(each)
 
+    def visit_PreprocessorDirectiveNode(self, node):
+        # pylint: disable=unused-argument
+        # pylint: disable=no-self-use
+        pass
+
     def visit_FunctionDeclNode(self, node):
 
         self._func = node

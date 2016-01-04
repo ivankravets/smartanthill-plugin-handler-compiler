@@ -380,3 +380,8 @@ class CVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by CParser#preprocessorDirective.
+    def visitPreprocessorDirective(self, ctx):
+        return self.visitChildren(ctx)
+
+
