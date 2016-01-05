@@ -64,7 +64,7 @@ class _WriterVisitor(NodeVisitor):
         else:
             assert False
 
-    def _get_func_return(self):
+    def _write_func_return(self):
         if isinstance(self._func.child_return_type.ref_type_declaration,
                       VoidTypeDeclNode):
             self._w.write_line("return;")
@@ -74,12 +74,12 @@ class _WriterVisitor(NodeVisitor):
         else:
             assert False
 
-    def _format_result_return(self, txt_result):
+    def _write_result_return(self, txt_result):
         if self._sm.ref_state_machine.is_main_machine():
             self._w.write_line("return %s;" % txt_result)
         else:
             self._w.write_line("*sa_result = %s;" % txt_result)
-            self._get_func_return()
+            self._write_func_return()
 
     def get_text(self):
         return self._w.get_text()
@@ -111,6 +111,12 @@ class _WriterVisitor(NodeVisitor):
         self._w.write('(')
 
         first = True
+        if self._sm is not None and\
+                not self._sm.ref_state_machine.is_main_machine():
+            self._w.write(
+                "void* sa_state0,waiting_for* sa_wf,uint8_t* sa_result")
+            first = False
+
         for each in node.child_argument_decl_list.childs_declarations:
 
             if not first:
@@ -137,7 +143,7 @@ class _WriterVisitor(NodeVisitor):
         # pylint: disable=unused-argument
         # Nothing to do here
         self._w.write(';')
-        self._w.end_of_statement(node.ctx.symbol)
+        self._w.end_of_statement(node.ctx.stop)
 
     def visit_VariableDeclarationStmtNode(self, node):
 
@@ -180,7 +186,7 @@ class _WriterVisitor(NodeVisitor):
 
     def visit_PapiWaitStmtNode(self, node):
         self._w.write(node.txt_name)
-        self.write_expr(node.child_expression)
+        self.write_expr(node.child_argument_list)
         self._w.write(';')
         self._w.end_of_statement(node.ctx.stop)
 
@@ -193,7 +199,7 @@ class _WriterVisitor(NodeVisitor):
         self._w.end_of_statement(None)
 
         self._w.write_line("sa_state->sa_next = %s;" % node.int_next_state)
-        self._format_result_return("PLUGIN_WAITING")
+        self._write_result_return("PLUGIN_WAITING")
 
         self._w.write("label_%s:" % node.int_next_state)
 
@@ -205,7 +211,7 @@ class _WriterVisitor(NodeVisitor):
         self._w.end_of_statement(None)
         self._w.write_line('{')
 
-        self._format_result_return("PLUGIN_WAITING")
+        self._write_result_return("PLUGIN_WAITING")
 
         self._w.write_line('}')
 
@@ -227,7 +233,7 @@ class _WriterVisitor(NodeVisitor):
 
         self._w.write_line("sa_state->sa_next = %s;" % node.int_next_state)
 
-        self._format_result_return("PLUGIN_WAITING")
+        self._write_result_return("PLUGIN_WAITING")
 
         self._w.write("label_%s:" % node.int_next_state)
 
@@ -235,7 +241,7 @@ class _WriterVisitor(NodeVisitor):
         self._w.end_of_statement(None)
         self._w.write_line('{')
 
-        self._format_result_return("PLUGIN_WAITING")
+        self._write_result_return("PLUGIN_WAITING")
 
         self._w.write_line('}')
 
@@ -322,7 +328,7 @@ class _WriterVisitor(NodeVisitor):
         nxt = str(node.int_next_state)
         self._w.write_line("sa_state->sa_next = %s;" % nxt)
 
-        self._format_result_return("PLUGIN_WAITING")
+        self._write_result_return("PLUGIN_WAITING")
 
         self._w.write_line("label_%s:" % nxt)
 
@@ -346,7 +352,7 @@ class _WriterVisitor(NodeVisitor):
             assert False
 
         self._w.write_line("if(papi_wait_handler_is_waiting_for_%s) {" % f)
-        self._w.write_line(self._format_result_return("PLUGIN_WAITING"))
+        self._write_result_return("PLUGIN_WAITING")
         self._w.write_line("}")
 
 #         if node.ctx.stop.line is not None:
@@ -357,7 +363,7 @@ class _WriterVisitor(NodeVisitor):
         nxt = str(node.int_next_state)
         self._w.write_line("sa_state->sa_next = %s;" % nxt)
 
-        self._w.write_line(self._format_result_return("PLUGIN_DEBUG"))
+        self._write_result_return("PLUGIN_DEBUG")
 
         # we add a nop here, because C compiler will complain if next
         # statement is a declaration.
@@ -386,7 +392,7 @@ class _WriterVisitor(NodeVisitor):
         if self._sm.ref_state_machine.is_main_machine():
             self._w.write_line("return *sa_result;")
         else:
-            self._w.write_line(self._get_func_return())
+            self._write_func_return()
 
 #         self._w.insertAfterToken(node.ctx.stop, txt)
 
@@ -409,14 +415,14 @@ class _WriterVisitor(NodeVisitor):
         self._w.write('=')
         self.visit(node.child_expression)
         self._w.write(';')
-        self._w.end_of_statement()
+        self._w.end_of_statement(node.ctx.stop)
 
         self._w.write_line("if(*(uint8_t*)(sa_state + 1) != 0)")
 
         if self._sm.ref_state_machine.is_main_machine():
             self._w.write_line("return *sa_result;")
         else:
-            self._w.write_line(self._get_func_return())
+            self._write_func_return()
 
 #        self._w.insertBeforeToken(node.ctx.start, txt)
 
@@ -506,16 +512,8 @@ class _WriterVisitor(NodeVisitor):
             self._w.write(node.ref_declaration.txt_name)
         else:
             self._w.write(node.txt_name)
-        self._w.write('(')
 
-        first = True
-        for each in node.child_argument_list.childs_arguments:
-            if not first:
-                self._w.write(',')
-            first = False
-            self.write_expr(each)
-
-        self._w.write(')')
+        self.visit(node.child_argument_list)
 
     def visit_FunctionCallSubExprNode(self, node):
 
@@ -524,7 +522,27 @@ class _WriterVisitor(NodeVisitor):
 #         self._w.replaceTokens(node.ctx.start, node.ctx.stop,
 #                               u"(%s)" % node.ref_declaration.txt_name)
 
+    def visit_StatefullCallArgumentExprNode(self, node):
+        # pylint: disable=unused-argument
+        self._w.write("(void*)(sa_state + 1), sa_wf, sa_result")
+
+    def visit_ArgumentListNode(self, node):
+
+        self._w.write('(')
+
+        first = True
+        for each in node.childs_arguments:
+            if not first:
+                self._w.write(',')
+            first = False
+            self.write_expr(each)
+
+        self._w.write(')')
+
     def visit_SimpleTypeNode(self, node):
+
+        if node.bool_const:
+            self._w.write("const ")
 
         self._w.write(node.txt_name)
 
@@ -532,6 +550,8 @@ class _WriterVisitor(NodeVisitor):
 
         self.visit(node.child_pointed_type)
         self._w.write('*')
+        if node.bool_const:
+            self._w.write(" const")
 
 
 class _Writer(object):
@@ -546,14 +566,20 @@ class _Writer(object):
         '''
         super(_Writer, self).__init__()
         self._source_file = source_file
-        self._buffer = []
+        self._buffer = banner.get_copyright_banner2()
         self._current = ''
-        self._line = 1
+        self._line = 0
+
+        self._buffer.append("")
 
     def end_of_statement(self, ctx):
         if len(self._current) != 0:
             if ctx is not None:
-                if ctx.line == self._line:
+                if self._line == 0:
+                    self._buffer.append('#line %s "%s"' % (ctx.line,
+                                                           self._source_file))
+                    self._line = ctx.line
+                elif ctx.line == self._line:
                     pass
                 elif ctx.line > self._line and ctx.line < self._line + 4:
                     while ctx.line != self._line:
@@ -571,9 +597,7 @@ class _Writer(object):
     def get_text(self):
         assert self._current == ''
 
-        txt = banner.get_copyright_banner()
-        txt += "\n"
-
+        txt = ""
         for each in self._buffer:
             txt += each
             txt += '\n'
@@ -590,5 +614,6 @@ class _Writer(object):
         '''
 
         assert self._current == ''
+        assert line is not None
         self._buffer.append(line)
         self._line += 1

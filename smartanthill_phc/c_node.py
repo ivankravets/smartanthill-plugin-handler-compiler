@@ -286,6 +286,21 @@ class SimpleTypeNode(TypeNode):
         '''
         super(SimpleTypeNode, self).__init__()
         self.txt_name = None
+        self.bool_const = False
+
+    def add_qualifier(self, compiler, ctx, qualifier):
+        '''
+        Add qualifiers to this type.
+        '''
+        # pylint: disable=no-self-use
+        if qualifier == "const":
+            if not self.bool_const:
+                self.bool_const = True
+            else:
+                compiler.report_error(
+                    ctx, "Duplicate qualifier '%s'" % qualifier)
+        else:
+            super(SimpleTypeNode, self).add_qualifier(compiler, ctx, qualifier)
 
 
 class InvalidTypeNode(TypeNode):
@@ -314,6 +329,7 @@ class PointerTypeNode(TypeNode):
         '''
         super(PointerTypeNode, self).__init__()
         self.child_pointed_type = None
+        self.bool_const = False
 
     def set_pointed_type(self, child):
         '''
@@ -322,6 +338,21 @@ class PointerTypeNode(TypeNode):
         assert isinstance(child, TypeNode)
         child.set_parent(self)
         self.child_pointed_type = child
+
+    def add_qualifier(self, compiler, ctx, qualifier):
+        '''
+        Add qualifiers to this type.
+        '''
+        # pylint: disable=no-self-use
+        if qualifier == "const":
+            if not self.bool_const:
+                self.bool_const = True
+            else:
+                compiler.report_error(
+                    ctx, "Duplicate qualifier '%s'" % qualifier)
+        else:
+            super(PointerTypeNode, self).add_qualifier(
+                compiler, ctx, qualifier)
 
 
 class PapiFunctionDeclNode(Node):

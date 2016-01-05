@@ -16,9 +16,7 @@
 
 from smartanthill_phc import c_node, root
 from smartanthill_phc.antlr_parser import CVisitor, CParser
-from smartanthill_phc.common import base, decl
-from smartanthill_phc.common import expr
-from smartanthill_phc.common import stmt
+from smartanthill_phc.common import base, decl, expr, stmt
 from smartanthill_phc.common.antlr_helper import get_identifier_text
 
 
@@ -379,17 +377,14 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
     def _process_specifiers(self, ctxs):
 
         t = None
+        q = []
         for each in ctxs:
             if each.storageClassSpecifier() is not None:
                 self._c.report_error(
                     each, "keyword '%s' not supported" %
                     each.storageClassSpecifier().getText())
             elif each.typeQualifier() is not None:
-                # TODO
-                pass
-#                 self._c.report_error(
-#                     each, "keyword '%s' not supported" %
-#                     each.typeQualifier().getText())
+                q.append(each.typeQualifier())
             elif each.functionSpecifier() is not None:
                 self._c.report_error(
                     each, "keyword '%s' not supported" %
@@ -406,6 +401,13 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
             else:
                 assert False
         assert t is not None
+        if t is None:
+            self._c.report_error(ctxs[0], "Missing type")
+            t = self._c.init_node(c_node.InvalidTypeNode(), ctxs[0])
+        else:
+            for each in q:
+                t.add_qualifier(self._c, each, get_text(each))
+
         return t
 
     # Visit a parse tree produced by CParser#declaration.
@@ -502,7 +504,9 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
             else:
                 self._c.report_error(ctx, "Invalid type")
         elif ctx.typeQualifier():
-            q.append(get_text(ctx.typeQualifier()))
+            q.append(ctx.typeQualifier())
+        else:
+            assert False
 
         if ctx.specifierQualifierList() is not None:
             return self._specifierQualifierListHelper(
@@ -520,8 +524,9 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
         if t is None:
             self._c.report_error(ctx, "Invalid type")
             t = self._c.init_node(c_node.InvalidTypeNode(), ctx)
-
-        t.add_qualifiers(self._c, q)
+        else:
+            for each in q:
+                t.add_qualifier(self._c, each, get_text(each))
 
         return t
 
@@ -547,10 +552,6 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
     # Visit a parse tree produced by CParser#atomicTypeSpecifier.
     def visitAtomicTypeSpecifier(self, ctx):
-        return self.visitChildren(ctx)
-
-    # Visit a parse tree produced by CParser#typeQualifier.
-    def visitTypeQualifier(self, ctx):
         return self.visitChildren(ctx)
 
     # Visit a parse tree produced by CParser#functionSpecifier.
@@ -610,11 +611,12 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
         ptr = self._c.init_node(c_node.PointerTypeNode(), ctx)
         ptr.set_pointed_type(t)
 
-        q = []
         for each in ctx.typeQualifier():
-            q.append(get_text(each))
-
-        ptr.add_qualifiers(self._c, q)
+            q = get_text(each)
+            if q == "const":
+                ptr.bool_const = True
+            else:
+                self._c.report_error(ctx, "Unsupported qualifier '%s'" % q)
 
         if ctx.pointer() is None:
             return ptr

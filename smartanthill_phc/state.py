@@ -226,6 +226,20 @@ class FunctionCallSubExprNode(ExpressionNode):
         self.ref_declaration = None
 
 
+class StatefullCallArgumentExprNode(ExpressionNode):
+
+    '''
+    Node class representing the extra arguments needed when doing an statefull
+    function call
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(StatefullCallArgumentExprNode, self).__init__()
+
+
 class BeforeReturnStmtNode(StatementNode):
 
     '''
@@ -643,6 +657,11 @@ class _StatementsVisitor(CodeVisitor):
                     self._nb.has_states(init_expr.ref_declaration):
 
                 visit_node(self, init_expr.child_argument_list)
+
+                a = self._c.init_node(
+                    StatefullCallArgumentExprNode(), init_expr.ctx)
+                init_expr.child_argument_list.insert_argument_at(0, a)
+
                 self._substates_around_current(node.ctx)
                 return
 
@@ -662,7 +681,11 @@ class _StatementsVisitor(CodeVisitor):
         self.visit(node.child_expression.child_argument_list)
 
         if self._nb.has_states(node.child_expression.ref_declaration):
+            a = self._c.init_node(
+                StatefullCallArgumentExprNode(), node.child_expression.ctx)
+            node.child_expression.child_argument_list.insert_argument_at(0, a)
             self._substates_around_current(node.ctx)
+
         elif node.child_expression.bool_is_blocking:
             d = node.child_expression.ref_declaration
             n = d.txt_name
@@ -751,6 +774,9 @@ class _StatementsVisitor(CodeVisitor):
 
         if self._nb.has_states(node.ref_declaration):
             ctx = self.get_current_statement().ctx
+            a = self._c.init_node(StatefullCallArgumentExprNode(), node.ctx)
+            node.child_argument_list.insert_argument_at(0, a)
+
             s = self._c.init_node(FunctionCallSubStmtNode(), ctx)
             s.int_next_state = self._sm.increment_state()
             s.set_expression(node)

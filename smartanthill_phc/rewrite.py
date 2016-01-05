@@ -375,7 +375,7 @@ class _RewriteVisitor(CodeVisitor):
 
         args = node.child_expression.child_argument_list
         txt_args = u"(void*)(sa_state + 1), sa_wf, sa_result"
-        if len(args.childs_arguments) >= 1:
+        if len(args.childs_arguments) >= 2:
             txt_args += u", "
         self._w.insertAfterToken(args.ctx.symbol, txt_args)
 
@@ -457,7 +457,7 @@ class _RewriteVisitor(CodeVisitor):
         if self._nb.has_states(node.ref_declaration):
             args = node.child_argument_list
             txt = u"(void*)(sa_state + 1), sa_wf, sa_result"
-            if len(args.childs_arguments) >= 1:
+            if len(args.childs_arguments) >= 2:
                 txt += u", "
 
             self._w.insertAfterToken(args.ctx.symbol, txt)
@@ -466,6 +466,9 @@ class _RewriteVisitor(CodeVisitor):
 
         self._w.replaceTokens(node.ctx.start, node.ctx.stop,
                               u"(%s)" % node.ref_declaration.txt_name)
+
+    def visit_StatefullCallArgumentExprNode(self, node):
+        pass
 
     def visit_ArgumentListNode(self, node):
         for each in node.childs_arguments:

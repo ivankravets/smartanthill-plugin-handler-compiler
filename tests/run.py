@@ -26,7 +26,7 @@ and then run this script
 '''
 
 
-def make_non_blocking(prefix, split_all, debug_dump, new_write=False):
+def make_non_blocking(prefix, split_all, debug_dump, new_write=True):
 
     c_file = "%s.c" % prefix
     nb_file = "%s_non_blocking.c" % prefix

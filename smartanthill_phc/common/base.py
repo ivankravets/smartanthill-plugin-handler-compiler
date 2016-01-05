@@ -312,14 +312,13 @@ class TypeNode(Node):
 
         self.ref_type_declaration = type_ref
 
-    def add_qualifiers(self, compiler, qualifiers):
+    def add_qualifier(self, compiler, ctx, qualifier):
         '''
         Add qualifiers to this type.
         To be implemented by derived classes
         '''
         # pylint: disable=no-self-use
-        # pylint: disable=unused-argument
-        pass
+        compiler.report_error(ctx, "Unsupported qualifier '%s'" % qualifier)
 
 
 class TypeDeclNode(Node):
