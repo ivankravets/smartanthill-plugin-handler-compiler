@@ -24,15 +24,16 @@ def composer_test(prefix):
     h_file = "%s_parser.h" % prefix
     xml_file = "manifest.xml"
 
+    print os.getcwd()
     os.chdir("tests/%s" % prefix)
+    try:
+        plugin = ZeptoPlugin(xml_file)
+        code = write_composer_file(prefix, plugin)
 
-    plugin = ZeptoPlugin(xml_file)
-    code = write_composer_file(prefix, plugin)
-
-    f = open(h_file, 'rb')
-    assert code == f.read()
-
-    os.chdir("../..")
+        f = open(h_file, 'rb')
+        assert code == f.read()
+    finally:
+        os.chdir("../..")
 
 
 def non_blocking_test(prefix, split_all):
@@ -41,17 +42,19 @@ def non_blocking_test(prefix, split_all):
     nb_file = "%s_non_blocking.c" % prefix
     h_file = "%s_state.h" % prefix
 
+    print os.getcwd()
+
     os.chdir("tests/%s" % prefix)
+    try:
+        code, header, c2 = api.process_file(c_file, prefix, split_all, False)
 
-    code, header, c2 = api.process_file(c_file, prefix, split_all, False)
+        f = open(nb_file, 'rb')
+        assert code.splitlines() == f.read().splitlines()
 
-    f = open(nb_file, 'rb')
-    assert code.splitlines() == f.read().splitlines()
-
-    h = open(h_file, 'rb')
-    assert header.splitlines() == h.read().splitlines()
-
-    os.chdir("../..")
+        h = open(h_file, 'rb')
+        assert header.splitlines() == h.read().splitlines()
+    finally:
+        os.chdir("../..")
 
 
 def test_blink():
