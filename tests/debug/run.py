@@ -19,7 +19,7 @@ from tests import run
 
 def main():
 
-    run.make_non_blocking('debug', True, False)
+    run.make_non_blocking('debug', True)
     run.build_and_run('debug')
 
 

@@ -16,11 +16,10 @@
 from antlr4.ParserRuleContext import ParserRuleContext
 from antlr4.tree.Tree import TerminalNodeImpl
 
-from smartanthill_phc import banner
 from smartanthill_phc.TokenStreamRewriter import TokenStreamRewriter
 from smartanthill_phc.c_node import VoidTypeDeclNode, IntTypeDeclNode
-from smartanthill_phc.common.visitor import visit_node, NodeVisitor
-from smartanthill_phc.parser import get_declarator_name
+from smartanthill_phc.common.visitor import visit_node, CodeVisitor
+from smartanthill_phc.parser import get_declarator_identifier
 from smartanthill_phc.root import NonBlockingData
 
 
@@ -39,50 +38,7 @@ def rewrite_code(compiler, root, token_stream):
     return text
 
 
-def write_header(compiler, root, token_stream):
-    '''
-    Write header file
-    '''
-    nb = root.get_scope(NonBlockingData)
-    text = _write_header_file(token_stream, nb)
-
-    compiler.check_stage('header')
-
-    return text
-
-
-def _write_header_file(token_stream, nb):
-
-    txt = banner.get_copyright_banner()
-
-    txt += "\n"
-
-    txt += "#if !defined %s\n" % nb.include_guard
-    txt += "#define %s\n\n" % nb.include_guard
-
-    txt += "#include <stdint.h>\n\n\n"
-
-    for f in nb.functions_with_states:
-
-        txt += "typedef struct _%s {\n" % f.txt_struct_name
-
-        txt += "uint8_t sa_next;\n"
-
-        for v in f.refs_moved_var_decls:
-            start = v.ctx.declarationSpecifier(0).start
-            stop = v.ctx.declarationSpecifier(0).stop
-
-            tk = token_stream.getText((start.tokenIndex, stop.tokenIndex))
-            txt += "%s %s;\n" % (str(tk), v.txt_name)
-
-        txt += "} %s;\n\n" % f.txt_struct_name
-
-    txt += "#endif // %s\n" % nb.include_guard
-
-    return txt
-
-
-class _RewriteVisitor(NodeVisitor):
+class _RewriteVisitor(CodeVisitor):
 
     '''
     Visitor class for plugin rewrite
@@ -138,21 +94,26 @@ class _RewriteVisitor(NodeVisitor):
         for each in node.childs_declarations:
             self.visit(each)
 
+    def visit_PreprocessorDirectiveNode(self, node):
+        # pylint: disable=unused-argument
+        # pylint: disable=no-self-use
+        pass
+
     def visit_FunctionDeclNode(self, node):
 
         self._func = node
         self._sm = self._nb.get_state_machine_data(node)
-        self.visit(node.child_statement_list)
+        self.visit(node.child_stmt_list)
 
         if self._sm is not None:
             if not self._sm.ref_state_machine.is_main_machine():
                 txt = u"void* sa_state0"
                 txt += u", waiting_for* sa_wf, uint8_t* sa_result"
-                if len(node.child_argument_list.childs_declarations) >= 1:
+                if len(node.child_argument_decl_list.childs_declarations) >= 1:
                     txt += u", "
 
                 self._w.insertAfterToken(
-                    node.child_argument_list.ctx.symbol, txt)
+                    node.child_argument_decl_list.ctx.symbol, txt)
 
     def visit_StmtListNode(self, node):
         for each in node.childs_statements:
@@ -170,18 +131,18 @@ class _RewriteVisitor(NodeVisitor):
                 decl_list = node.ctx.initDeclaratorList()
                 assert decl_list is not None
                 assert len(decl_list.initDeclarator()) == 1
-                tk = get_declarator_name(
+                tk = get_declarator_identifier(
                     decl_list.initDeclarator(0).declarator())
 
-                if node.child_initializer is not None:
+                if node.child_initializer_expression is not None:
                     self._w.replaceTokens(
                         node.ctx.start, tk.symbol,
                         u"sa_state->%s" % node.txt_name)
                 else:
                     self._w.deleteTokens(node.ctx.start, node.ctx.stop)
 
-            if node.child_initializer is not None:
-                self.visit(node.child_initializer)
+            if node.child_initializer_expression is not None:
+                self.visit(node.child_initializer_expression)
 
     def visit_ExpressionStmtNode(self, node):
         self.visit(node.child_expression)
@@ -191,50 +152,86 @@ class _RewriteVisitor(NodeVisitor):
         self.visit(node.child_expression)
 
         if node.child_expression.bool_is_blocking:
-            n = node.child_expression.txt_name
-            args = node.child_expression.child_argument_list.childs_arguments
-            assert len(args) >= 1
-            arg0 = self._get_text(args[0].ctx)
+            assert False
 
-            if n == "papi_sleep":
-                w = u"timeout"
-                self._w.deleteTokens(node.ctx.start, node.ctx.stop)
-            else:
-                if n == "papi_wait_for_spi_send":
-                    f = u"papi_start_sending_spi_command_16"
-                    w = u"spi_send"
-                elif n == "papi_wait_for_i2c_send":
-                    f = u"papi_start_sending_i2c_command_16"
-                    w = u"i2c_send"
-                elif n == "papi_wait_for_spi_receive":
-                    f = u"papi_start_receiving_spi_data_16"
-                    w = u"spi_receive"
-                elif n == "papi_wait_for_i2c_receive":
-                    f = u"papi_start_receiving_i2c_data_16"
-                    w = u"i2c_receive"
-                else:
-                    assert False
+    def visit_PapiWaitStmtNode(self, node):
 
-                self._w.replaceToken(
-                    node.child_expression.ctx.Identifier().symbol, f)
+        self.visit(node.child_argument_list)
 
-            txt = u"\npapi_wait_handler_add_wait_for_%s(sa_wf, %s);" % (
-                w, arg0)
-            self._w.insertAfterToken(node.ctx.stop, txt)
+        args = node.child_argument_list.childs_arguments
+        assert len(args) >= 1
+        arg0 = self._get_text(args[0].ctx)
+
+        self._w.replaceToken(
+            node.ctx_function_name.symbol, node.txt_name)
+
+        txt = u"\npapi_wait_handler_add_wait_for_%s(sa_wf, %s);" % (
+            node.txt_wait_for, arg0)
+        self._w.insertAfterToken(node.ctx.stop, txt)
+
+        nxt = str(node.int_next_state)
+        txt = u"\nsa_state->sa_next = %s;" % nxt
+
+        txt += self._format_result_return("PLUGIN_WAITING")
+
+        txt += u"\n\nlabel_%s:" % nxt
+
+        args = node.child_argument_list.childs_arguments
+        assert len(args) >= 1
+        arg0 = self._get_text(args[0].ctx)
+
+        txt += u"\nif(papi_wait_handler_is_waiting_for_%s(sa_wf, %s)) {" % (
+            node.txt_wait_for, arg0)
+        txt += self._format_result_return("PLUGIN_WAITING")
+        txt += u"\n}\n"
+
+        if node.ctx.stop.line is not None:
+            txt += u"//#line %s\n" % node.ctx.stop.line
+
+        self._w.insertAfterToken(node.ctx.stop, txt)
+
+    def visit_PapiSleepStmtNode(self, node):
+
+        self.visit(node.child_argument_list)
+
+        args = node.child_argument_list.childs_arguments
+        assert len(args) >= 1
+        arg0 = self._get_text(args[0].ctx)
+
+        self._w.deleteTokens(node.ctx.start, node.ctx.stop)
+
+        txt = u"\npapi_wait_handler_add_wait_for_timeout(sa_wf, %s);" % (
+            arg0)
+        self._w.insertAfterToken(node.ctx.stop, txt)
+
+        nxt = str(node.int_next_state)
+        txt = u"\nsa_state->sa_next = %s;" % nxt
+
+        txt += self._format_result_return("PLUGIN_WAITING")
+
+        txt += u"\n\nlabel_%s:" % nxt
+
+        args = node.child_argument_list.childs_arguments
+        assert len(args) >= 1
+        arg0 = self._get_text(args[0].ctx)
+
+        txt += u"\nif(papi_wait_handler_is_waiting_for_timeout(0, sa_wf)) {"
+        txt += self._format_result_return("PLUGIN_WAITING")
+        txt += u"\n}\n"
+
+        if node.ctx.stop.line is not None:
+            txt += u"//#line %s\n" % node.ctx.stop.line
+
+        self._w.insertAfterToken(node.ctx.stop, txt)
 
     def visit_LoopStmtNode(self, node):
-        self.visit(node.child_expression)
-        self.visit(node.child_statement_list)
+        self.visit_childs(node)
 
     def visit_ReturnStmtNode(self, node):
-        if node.child_expression is not None:
-            self.visit(node.child_expression)
+        self.visit_childs(node)
 
     def visit_IfElseStmtNode(self, node):
-        self.visit(node.child_expression)
-        self.visit(node.child_if_branch)
-        if node.child_else_branch is not None:
-            self.visit(node.child_else_branch)
+        self.visit_childs(node)
 
     def visit_StateMachineStmtNode(self, node):
 
@@ -334,7 +331,7 @@ class _RewriteVisitor(NodeVisitor):
 
         args = node.child_expression.child_argument_list
         txt_args = u"(void*)(sa_state + 1), sa_wf, sa_result"
-        if len(args.childs_arguments) >= 1:
+        if len(args.childs_arguments) >= 2:
             txt_args += u", "
         self._w.insertAfterToken(args.ctx.symbol, txt_args)
 
@@ -386,10 +383,15 @@ class _RewriteVisitor(NodeVisitor):
         self._w.insertAfterToken(node.ctx, txt)
 
     def visit_DontCareExprNode(self, node):
-        for each in node.childs_expressions:
-            self.visit(each)
+        self.visit(node.child_argument_list)
 
-    def visit_TypeCastExprNode(self, node):
+    def visit_OperatorExprNode(self, node):
+        self.visit(node.child_argument_list)
+
+    def visit_MemberExprNode(self, node):
+        self.visit(node.child_expression)
+
+    def visit_CastExprNode(self, node):
         self.visit(node.child_expression)
 
     def visit_LiteralExprNode(self, node):
@@ -398,12 +400,12 @@ class _RewriteVisitor(NodeVisitor):
 
     def visit_VariableExprNode(self, node):
 
-        if node.ref_decl is not None:
+        if node.ref_declaration is not None:
             if self._sm is not None:
-                if self._sm.is_moved_var_decl(node.ref_decl):
+                if self._sm.is_moved_var_decl(node.ref_declaration):
                     self._w.replaceToken(
                         node.ctx.symbol,
-                        u"(sa_state->%s)" % node.ref_decl.txt_name)
+                        u"(sa_state->%s)" % node.ref_declaration.txt_name)
 
     def visit_FunctionCallExprNode(self, node):
         self.visit(node.child_argument_list)
@@ -411,7 +413,7 @@ class _RewriteVisitor(NodeVisitor):
         if self._nb.has_states(node.ref_declaration):
             args = node.child_argument_list
             txt = u"(void*)(sa_state + 1), sa_wf, sa_result"
-            if len(args.childs_arguments) >= 1:
+            if len(args.childs_arguments) >= 2:
                 txt += u", "
 
             self._w.insertAfterToken(args.ctx.symbol, txt)
@@ -420,6 +422,9 @@ class _RewriteVisitor(NodeVisitor):
 
         self._w.replaceTokens(node.ctx.start, node.ctx.stop,
                               u"(%s)" % node.ref_declaration.txt_name)
+
+    def visit_StatefullCallArgumentExprNode(self, node):
+        pass
 
     def visit_ArgumentListNode(self, node):
         for each in node.childs_arguments:

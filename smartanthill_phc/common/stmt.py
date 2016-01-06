@@ -14,9 +14,8 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-from smartanthill_phc.common.base import ArgumentListNode, ExpressionNode,\
-    ResolutionHelper, StatementNode, StmtListNode
-from smartanthill_phc.common.lookup import StatementListScope, RootScope
+from smartanthill_phc.common.base import ExpressionNode,\
+    ResolutionHelper, StatementNode, StmtListNode, TypeNode
 
 
 def make_statement_list(compiler, statement):
@@ -95,6 +94,15 @@ class ReturnStmtNode(StatementNode):
         # pylint: disable=no-self-use
         return True
 
+    def get_return_type(self, void_type):
+        '''
+        Returns the type returned by this return, or void_type if no expression
+        '''
+        if self.child_expression is not None:
+            return self.child_expression.get_type()
+        else:
+            return void_type
+
 
 class VariableDeclarationStmtNode(StatementNode, ResolutionHelper):
 
@@ -108,7 +116,16 @@ class VariableDeclarationStmtNode(StatementNode, ResolutionHelper):
         '''
         super(VariableDeclarationStmtNode, self).__init__()
         self.txt_name = None
-        self.child_initializer = None
+        self.child_declaration_type = None
+        self.child_initializer_expression = None
+
+    def set_declaration_type(self, child):
+        '''
+        statement list setter
+        '''
+        assert isinstance(child, TypeNode)
+        child.set_parent(self)
+        self.child_declaration_type = child
 
     def set_initializer(self, child):
         '''
@@ -116,7 +133,7 @@ class VariableDeclarationStmtNode(StatementNode, ResolutionHelper):
         '''
         assert isinstance(child, ExpressionNode)
         child.set_parent(self)
-        self.child_initializer = child
+        self.child_initializer_expression = child
 
     def get_static_value(self):
         '''
@@ -124,40 +141,10 @@ class VariableDeclarationStmtNode(StatementNode, ResolutionHelper):
         Returns None otherwise
         '''
 
-        if self.child_initializer is not None:
-            return self.child_initializer.get_static_value()
+        if self.child_initializer_expression is not None:
+            return self.child_initializer_expression.get_static_value()
         else:
             return None
-
-
-class ParameterDeclarationStmtNode(StatementNode, ResolutionHelper):
-
-    '''
-    Node class representing a place holder for a parametric (late bind) value
-    '''
-
-    def __init__(self):
-        '''
-        Constructor
-        '''
-        super(ParameterDeclarationStmtNode, self).__init__()
-        self.txt_name = None
-
-    def do_resolve_declaration(self, compiler):
-
-        # we are adding variable name after resolution of initializer
-        # because we don't allow that kind of resolution cycle
-        self.get_scope(RootScope).add_parameter(
-            compiler, self.txt_name, self)
-
-        return self.get_scope(RootScope).get_type('_zc_parameter')
-
-    def get_static_value(self):
-        '''
-        Always returns None, since value will be binded later
-        '''
-        # pylint: disable=no-self-use
-        return None
 
 
 class ExpressionStmtNode(StatementNode):
@@ -194,9 +181,9 @@ class IfElseStmtNode(StatementNode):
         Constructor
         '''
         super(IfElseStmtNode, self).__init__()
-        self.child_expression = None
-        self.child_if_branch = None
-        self.child_else_branch = None
+        self.child0_expression = None
+        self.child1_if_stmt_list = None
+        self.child2_else_stmt_list = None
 
     def set_expression(self, child):
         '''
@@ -204,31 +191,31 @@ class IfElseStmtNode(StatementNode):
         '''
         assert isinstance(child, ExpressionNode)
         child.set_parent(self)
-        self.child_expression = child
+        self.child0_expression = child
 
-    def set_if_branch(self, child):
+    def set_if_stmt_list(self, child):
         '''
         if_branch setter
         '''
         assert isinstance(child, StmtListNode)
         child.set_parent(self)
-        self.child_if_branch = child
+        self.child1_if_stmt_list = child
 
-    def set_else_branch(self, child):
+    def set_else_stmt_list(self, child):
         '''
         else_branch setter
         '''
         assert isinstance(child, StmtListNode)
         child.set_parent(self)
-        self.child_else_branch = child
+        self.child2_else_stmt_list = child
 
     def is_closed_stmt(self):
         '''
         Returns true when last statement is closed
         '''
-        if self.child_else_branch is not None:
-            return self.child_if_branch.is_closed_stmt() and\
-                self.child_else_branch.is_closed_stmt()
+        if self.child2_else_stmt_list is not None:
+            return self.child1_if_stmt_list.is_closed_stmt() and\
+                self.child2_else_stmt_list.is_closed_stmt()
         else:
             return False
 
@@ -238,105 +225,3 @@ class IfElseStmtNode(StatementNode):
 #             compiler.report_error(
 #                 self.ctx, "Condition can not be evaluated to boolean")
         # no need to raise here
-
-
-class McuSleepStmtNode(StatementNode):
-
-    '''
-    Node class representing 'mcu_sleep' statement
-    '''
-
-    def __init__(self):
-        '''
-        Constructor
-        '''
-        super(McuSleepStmtNode, self).__init__()
-        self.child_argument_list = None
-        self._ref_decl = None
-
-    def set_argument_list(self, child):
-        '''
-        argument_list setter
-        '''
-        assert isinstance(child, ArgumentListNode)
-        child.set_parent(self)
-        self.child_argument_list = child
-
-    def resolve(self, compiler):
-        compiler.resolve_node(self.child_argument_list)
-        decl = self.get_scope(RootScope).lookup_function('mcu_sleep')
-        assert decl  # is built in function
-
-        self.child_argument_list.make_match(compiler,
-                                            decl.child_parameter_list)
-
-        self._ref_decl = decl
-
-    def get_delay_value(self):
-        # if resultion was ok, then we have a single arg, and it is a literal
-        assert len(self.child_argument_list.childs_arguments) == 1
-        v = self.child_argument_list.childs_arguments[0].get_static_value()
-        assert v
-        return v
-
-
-class SimpleForStmtNode(StatementNode):
-
-    '''
-    Node class representing a very simple for loop
-    declaring a counter variable, with begin and end as integer constants
-    incrementing by one at each loop.
-
-    for(int i = 0; i < *N*; i++) {}
-    '''
-
-    def __init__(self):
-        '''
-        Constructor
-        '''
-        super(SimpleForStmtNode, self).__init__()
-        self.txt_name = None
-        self.child_begin_expression = None
-        self.child_end_expression = None
-        self.child_statement_list = None
-        self.add_scope(StatementListScope, StatementListScope(self))
-
-    def set_begin_expression(self, child):
-        '''
-        begin_expression setter
-        '''
-        assert isinstance(child, ExpressionNode)
-        child.set_parent(self)
-        self.child_begin_expression = child
-
-    def set_end_expression(self, child):
-        '''
-        end_expression setter
-        '''
-        assert isinstance(child, ExpressionNode)
-        child.set_parent(self)
-        self.child_end_expression = child
-
-    def set_statement_list(self, child):
-        '''
-        statement_list setter
-        '''
-        assert isinstance(child, StmtListNode)
-        child.set_parent(self)
-        self.child_statement_list = child
-
-    def get_scope(self, kind):
-        ''''
-        Returns this node scope
-        '''
-        if kind == StatementListScope:
-            assert self._scope
-            return self._scope
-        else:
-            return super(SimpleForStmtNode, self).get_scope(kind)
-
-    def resolve(self, compiler):
-        pass
-#         resolve_expression(compiler, self, 'child_begin_expression')
-#         resolve_expression(compiler, self, 'child_end_expression')
-#         compiler.resolve_node(self.child_statement_list)

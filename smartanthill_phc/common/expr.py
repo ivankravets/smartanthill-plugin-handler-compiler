@@ -213,14 +213,17 @@ class VariableExprNode(ExpressionNode):
         '''
         super(VariableExprNode, self).__init__()
         self.txt_name = None
-        self.ref_decl = None
+        self.ref_declaration = None
 
     def get_static_value(self):
         '''
         Returns compile-time value of this expression is possible,
         Returns None otherwise
         '''
-        return self.ref_decl.get_static_value() if self.ref_decl else None
+        if self.ref_declaration is not None:
+            return self.ref_declaration.get_static_value()
+        else:
+            return None
 
 
 class AssignmentExprNode(ExpressionNode):
@@ -235,16 +238,16 @@ class AssignmentExprNode(ExpressionNode):
         '''
         super(AssignmentExprNode, self).__init__()
         self.txt_name = None
-        self.child_rhs = None
-        self.ref_decl = None
+        self.child_rhs_expression = None
+        self.ref_declaration = None
 
-    def set_rhs(self, child):
+    def set_rhs_expression(self, child):
         '''
         rhs setter
         '''
         assert isinstance(child, ExpressionNode)
         child.set_parent(self)
-        self.child_rhs = child
+        self.child_rhs_expression = child
 
 
 class OperatorExprNode(ExpressionNode):
@@ -260,7 +263,7 @@ class OperatorExprNode(ExpressionNode):
         super(OperatorExprNode, self).__init__()
         self.txt_operator = None
         self.child_argument_list = None
-        self.ref_decl = None
+        self.ref_declaration = None
 
     def set_argument_list(self, child):
         '''
@@ -283,43 +286,6 @@ class BinaryOpExprNode(OperatorExprNode):
         '''
         super(BinaryOpExprNode, self).__init__()
 
-    @staticmethod
-    def create(compiler, ctx):
-        '''
-        Creates a new instance, and a new argument list
-        '''
-        node = compiler.init_node(BinaryOpExprNode(), ctx)
-        node.set_argument_list(compiler.init_node(ArgumentListNode(), ctx))
-        return node
-
-
-class LogicOpExprNode(OperatorExprNode):
-
-    '''
-    Node class representing a logic operator expression
-    '&&', '||' and '!'
-    '''
-
-    def __init__(self):
-        '''
-        Constructor
-        '''
-        super(LogicOpExprNode, self).__init__()
-
-
-class ArithmeticOpExprNode(OperatorExprNode):
-
-    '''
-    Node class representing an arithmetic operator expression
-    '+', '-, '*', '/' and '%'
-    '''
-
-    def __init__(self):
-        '''
-        Constructor
-        '''
-        super(ArithmeticOpExprNode, self).__init__()
-
 
 class UnaryOpExprNode(OperatorExprNode):
 
@@ -334,15 +300,6 @@ class UnaryOpExprNode(OperatorExprNode):
         '''
         super(UnaryOpExprNode, self).__init__()
 
-    @staticmethod
-    def create(compiler, ctx):
-        '''
-        Creates a new instance, and a new argument list
-        '''
-        node = compiler.init_node(UnaryOpExprNode(), ctx)
-        node.set_argument_list(compiler.init_node(ArgumentListNode(), ctx))
-        return node
-
 
 class PostfixOpExprNode(OperatorExprNode):
 
@@ -356,26 +313,3 @@ class PostfixOpExprNode(OperatorExprNode):
         Constructor
         '''
         super(PostfixOpExprNode, self).__init__()
-
-    @staticmethod
-    def create(compiler, ctx):
-        '''
-        Creates a new instance, and a new argument list
-        '''
-        node = compiler.init_node(PostfixOpExprNode(), ctx)
-        node.set_argument_list(compiler.init_node(ArgumentListNode(), ctx))
-        return node
-
-
-class ComparisonOpExprNode(OperatorExprNode):
-
-    '''
-    Node class representing a comparison operator expression
-    '<', '>', '<=', '>=', '==' and '!='
-    '''
-
-    def __init__(self):
-        '''
-        Constructor
-        '''
-        super(ComparisonOpExprNode, self).__init__()

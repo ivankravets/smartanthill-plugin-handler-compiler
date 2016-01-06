@@ -315,6 +315,16 @@ class CVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by CParser#initExpression.
+    def visitInitExpression(self, ctx):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by CParser#iterationExpression.
+    def visitIterationExpression(self, ctx):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by CParser#WhileStatement.
     def visitWhileStatement(self, ctx):
         return self.visitChildren(ctx)
@@ -367,6 +377,11 @@ class CVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by CParser#functionDefinition.
     def visitFunctionDefinition(self, ctx):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by CParser#preprocessorDirective.
+    def visitPreprocessorDirective(self, ctx):
         return self.visitChildren(ctx)
 
 

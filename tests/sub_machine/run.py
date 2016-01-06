@@ -19,7 +19,7 @@ from tests import run
 
 def main():
 
-    run.make_non_blocking('sub_machine', True, False)
+    run.make_non_blocking('sub_machine', True)
     run.build_and_run('sub_machine')
 
 

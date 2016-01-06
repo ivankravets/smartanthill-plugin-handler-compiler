@@ -26,13 +26,13 @@ and then run this script
 '''
 
 
-def make_non_blocking(prefix, split_all, debug_dump):
+def make_non_blocking(prefix, split_all):
 
     c_file = "%s.c" % prefix
     nb_file = "%s_non_blocking.c" % prefix
     h_file = "%s_state.h" % prefix
 
-    code, header = api.process_file(c_file, prefix, split_all, debug_dump)
+    code, header, c2 = api.process_file(c_file, prefix, split_all, True)
 
     f = open(nb_file, 'wb')
     f.write(code)

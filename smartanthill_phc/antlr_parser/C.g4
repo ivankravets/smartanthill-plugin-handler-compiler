@@ -40,8 +40,7 @@ unaryExpression
 //    |   '__builtin_va_arg' '(' unaryExpression ',' typeName ')'
 //    |   '__builtin_offsetof' '(' typeName ',' unaryExpression ')'
     |   unaryExpression '[' expression ']' # IndexExpression
-//    |   unaryExpression '(' argumentExpressionList? ')' # FunctionExpression
-    |   Identifier '(' argumentExpressionList? ')' # FunctionExpression
+    |   unaryExpression '(' argumentExpressionList? ')' # FunctionExpression
     |   unaryExpression '.' Identifier # DotExpression
     |   unaryExpression '->' Identifier # ArrowExpression
     |   unaryExpression ('++'|'--') # PostIncrementExpression
@@ -143,11 +142,11 @@ typeSpecifier
     |   'signed'
     |   'unsigned'
     |   '_Bool'
-    |   '_Complex'
-    |   '__m128'
-    |   '__m128d'
-    |   '__m128i')
-    |   '__extension__' '(' ('__m128' | '__m128d' | '__m128i') ')'
+    |   '_Complex')
+//    |   '__m128'
+//    |   '__m128d'
+//    |   '__m128i')
+//    |   '__extension__' '(' ('__m128' | '__m128d' | '__m128i') ')'
     |   atomicTypeSpecifier
     |   structOrUnionSpecifier
     |   enumSpecifier
@@ -353,11 +352,14 @@ selectionStatement
     |   'switch' '(' expression ')' statement # SwitchStatement
     ;
 
+initExpression : expression;
+iterationExpression: expression;
+
 iterationStatement
     :   'while' '(' expression ')' statement # WhileStatement
     |   'do' statement 'while' '(' expression ')' ';' # DoWhileStatement
-    |   'for' '(' expression? ';' expression? ';' expression? ')' statement # ForStatement
-    |   'for' '(' declaration expression? ';' expression? ')' statement # DeclForStatement
+    |   'for' '(' initExpression? ';' expression? ';' iterationExpression? ')' statement # ForStatement
+    |   'for' '(' declaration expression? ';' iterationExpression? ')' statement # DeclForStatement
     ;
 
 jumpStatement
@@ -375,12 +377,21 @@ compilationUnit
 externalDeclaration
     :   functionDefinition
     |   declaration
+    |   preprocessorDirective
     |   ';' // stray ;
     ;
 
 functionDefinition
     :   declarationSpecifier* declarator declaration* compoundStatement
     ;
+
+preprocessorDirective
+    :   LineDirective
+    |   PragmaDirective
+    |   IncludeDirective
+    |   DefineDirective
+    ;
+
 
 Auto : 'auto';
 Break : 'break';
@@ -720,23 +731,19 @@ SChar
     ;
 
 LineDirective
-    :   '#' Whitespace? DecimalConstant Whitespace? StringLiteral ~[\r\n]*
-        -> channel(HIDDEN)
+    :   '#' [ \t]* 'line' [ \t]* DecimalConstant [ \t]* StringLiteral ~[\r\n]*
     ;
 
 PragmaDirective
-    :   '#' Whitespace? 'pragma' Whitespace ~[\r\n]*
-        -> channel(HIDDEN)
+    :   '#' [ \t]* 'pragma' [ \t]+ ~[\r\n]*
     ;
 
 IncludeDirective
-    :   '#' Whitespace? 'include' Whitespace ~[\r\n]*
-        -> channel(HIDDEN)
+    :   '#' [ \t]* 'include' [ \t]+ ~[\r\n]*
     ;
 
 DefineDirective
-    :   '#' Whitespace? 'define' Whitespace ~[\r\n]*
-        -> channel(HIDDEN)
+    :   '#' [ \t]* 'define' [ \t]+ ~[\r\n]*
     ;
 
 Whitespace

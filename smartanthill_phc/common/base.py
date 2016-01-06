@@ -206,6 +206,15 @@ class StmtListNode(StatementNode):
         child.set_parent(self)
         self.childs_statements.insert(index, child)
 
+    def remove_statement_at(self, index):
+        '''
+        statement adder
+        '''
+        assert index >= 0
+        assert index <= len(self.childs_statements)
+
+        return self.childs_statements.pop(index)
+
     def split_at(self, index, other):
         '''
         Splits this StmtListNode,
@@ -303,6 +312,14 @@ class TypeNode(Node):
 
         self.ref_type_declaration = type_ref
 
+    def add_qualifier(self, compiler, ctx, qualifier):
+        '''
+        Add qualifiers to this type.
+        To be implemented by derived classes
+        '''
+        # pylint: disable=no-self-use
+        compiler.report_error(ctx, "Unsupported qualifier '%s'" % qualifier)
+
 
 class TypeDeclNode(Node):
 
@@ -345,8 +362,8 @@ class TypeDeclNode(Node):
         Inserts a cast to the target type
         Only implemented by types that return true to can_cast_to
         '''
-        # pylint: disable=no-self-use
         # pylint: disable=unused-argument
+        print "Node: %s" % type(self).__name__
         assert False
 
     def can_cast_from(self, source_type):
@@ -364,9 +381,12 @@ class TypeDeclNode(Node):
         Inserts a cast from the source type
         Only implemented by types that return true to can_cast_from
         '''
-        # pylint: disable=no-self-use
         # pylint: disable=unused-argument
+        print "Node: %s" % type(self).__name__
         assert False
+
+    def to_string(self):
+        return self.txt_name
 
     def lookup_member(self, name):
         '''
@@ -421,12 +441,17 @@ class DeclarationListNode(Node):
         child.set_parent(self)
         self.childs_declarations.append(child)
 
-    def add_declaration_list(self, childs):
+    def insert_declaration_at(self, index, child):
         '''
-        add each declaration in list helper
+        statement adder
         '''
-        for each in childs:
-            self.add_declaration(each)
+        assert child is not None
+        assert isinstance(child, Node)
+        assert index >= 0
+        assert index <= len(self.childs_declarations)
+
+        child.set_parent(self)
+        self.childs_declarations.insert(index, child)
 
 
 class ArgumentListNode(Node):
@@ -449,6 +474,18 @@ class ArgumentListNode(Node):
         assert isinstance(child, ExpressionNode)
         child.set_parent(self)
         self.childs_arguments.append(child)
+
+    def insert_argument_at(self, index, child):
+        '''
+        statement adder
+        '''
+        assert child is not None
+        assert isinstance(child, ExpressionNode)
+        assert index >= 0
+        assert index <= len(self.childs_arguments)
+
+        child.set_parent(self)
+        self.childs_arguments.insert(index, child)
 
     def overload_filter(self, compiler, decl_list):
         '''
@@ -546,57 +583,3 @@ class ArgumentListNode(Node):
                 compiler.report_error(
                     self.ctx, "Invalid argument type at %s" % i)
                 compiler.raise_error()
-
-
-class ParameterDeclNode(Node, ResolutionHelper):
-
-    '''
-    Node class used as container of a parameter in a function declaration
-    '''
-
-    def __init__(self, type_name):
-        '''
-        Constructor
-        '''
-        super(ParameterDeclNode, self).__init__()
-        self.txt_type_name = type_name
-
-
-class ParameterListNode(Node):
-
-    '''
-    Node class used as container of parameters in function declarations
-    '''
-
-    def __init__(self):
-        '''
-        Constructor
-        '''
-        super(ParameterListNode, self).__init__()
-        self.childs_parameters = []
-        self._already_resolved = False
-
-    def add_parameter(self, child):
-        '''
-        argument adder
-        '''
-        assert isinstance(child, ParameterDeclNode)
-        child.set_parent(self)
-        self.childs_parameters.append(child)
-
-    def get_size(self):
-        return len(self.childs_parameters)
-
-    def get_type_at(self, i):
-        return self.childs_parameters[i].get_type()
-
-
-def create_parameter_list(compiler, ctx, type_list):
-    '''
-    Creates a ParameterListNode with type_list elements
-    '''
-    pl = compiler.init_node(ParameterListNode(), ctx)
-    for type_name in type_list:
-        pl.add_parameter(compiler.init_node(ParameterDeclNode(type_name), ctx))
-
-    return pl

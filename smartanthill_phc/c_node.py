@@ -13,11 +13,10 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from smartanthill_phc.common.lookup import ReturnStmtScope,\
-    StatementListScope
+from smartanthill_phc.common import base
 from smartanthill_phc.common.base import ExpressionNode,\
     Node, StmtListNode,\
-    StatementNode, DeclarationListNode, TypeDeclNode,\
+    StatementNode, TypeDeclNode,\
     TypeNode, ResolutionHelper
 
 
@@ -32,19 +31,28 @@ class DontCareExprNode(ExpressionNode):
         Constructor
         '''
         super(DontCareExprNode, self).__init__()
-        self.childs_expressions = []
+        self.child_argument_list = None
 
-    def add_expression(self, child):
+    def set_argument_list(self, child):
         '''
-        expression adder
+        argument_list setter
         '''
-        assert child is not None
-        assert isinstance(child, ExpressionNode)
+        assert isinstance(child, base.ArgumentListNode)
         child.set_parent(self)
-        self.childs_expressions.append(child)
+        self.child_argument_list = child
+
+    @staticmethod
+    def create(compiler, ctx):
+        '''
+        Creates a new instance, and a new argument list
+        '''
+        node = compiler.init_node(DontCareExprNode(), ctx)
+        node.set_argument_list(
+            compiler.init_node(base.ArgumentListNode(), ctx))
+        return node
 
 
-class TypeCastExprNode(ExpressionNode):
+class CastExprNode(ExpressionNode):
 
     '''
     Node class representing an explicit type cast
@@ -54,8 +62,17 @@ class TypeCastExprNode(ExpressionNode):
         '''
         Constructor
         '''
-        super(TypeCastExprNode, self).__init__()
+        super(CastExprNode, self).__init__()
+        self.child_cast_type = None
         self.child_expression = None
+
+    def set_cast_type(self, child):
+        '''
+        expression setter
+        '''
+        assert isinstance(child, TypeNode)
+        child.set_parent(self)
+        self.child_cast_type = child
 
     def set_expression(self, child):
         '''
@@ -66,61 +83,28 @@ class TypeCastExprNode(ExpressionNode):
         self.child_expression = child
 
 
-class FunctionDeclNode(Node, ResolutionHelper):
+class MemberExprNode(ExpressionNode):
 
     '''
-    Node class representing a function declaration
-    '''
-
-    def __init__(self):
-        '''
-        Constructor
-        '''
-        super(FunctionDeclNode, self).__init__()
-        self.child_return_type = None
-        self.child_statement_list = None
-        self.child_argument_list = None
-        self.txt_name = None
-        self.add_scope(ReturnStmtScope, ReturnStmtScope(self))
-        self.add_scope(StatementListScope, None)
-
-    def set_return_type(self, child):
-        '''
-        statement list setter
-        '''
-        assert isinstance(child, TypeNode)
-        child.set_parent(self)
-        self.child_return_type = child
-
-    def set_statement_list(self, child):
-        '''
-        statement list setter
-        '''
-        assert isinstance(child, StmtListNode)
-        child.set_parent(self)
-        self.child_statement_list = child
-
-    def set_argument_list(self, child):
-        '''
-        argument list setter
-        '''
-        assert isinstance(child, DeclarationListNode)
-        child.set_parent(self)
-        self.child_argument_list = child
-
-
-class ArgumentDeclNode(Node):
-
-    '''
-    Node class representing a function argument declaration
+    Node class representing a dot member access
     '''
 
     def __init__(self):
         '''
         Constructor
         '''
-        super(ArgumentDeclNode, self).__init__()
+        super(MemberExprNode, self).__init__()
         self.txt_name = None
+        self.child_expression = None
+        self.ref_declaration = None
+
+    def set_expression(self, child):
+        '''
+        expression setter
+        '''
+        assert isinstance(child, ExpressionNode)
+        child.set_parent(self)
+        self.child_expression = child
 
 
 class FunctionCallStmtNode(StatementNode):
@@ -148,13 +132,7 @@ class FunctionCallStmtNode(StatementNode):
 class LoopStmtNode(StatementNode):
 
     '''
-    Node class representing a loop, it can be a 'while', a 'do-while' or
-    a 'for' with expression and not declaration.
-    So far we don't care too much about the specific type of loop,
-    we only need a basic understanding of the code structure
-        for (i = 0;...) {...}
-        while(...) {...}
-        do {...} while(...);
+    Base class for loop nodes
     '''
 
     def __init__(self):
@@ -162,8 +140,21 @@ class LoopStmtNode(StatementNode):
         Constructor
         '''
         super(LoopStmtNode, self).__init__()
-        self.child_expression = None
-        self.child_statement_list = None
+
+
+class WhileStmtNode(LoopStmtNode):
+
+    '''
+    Node class representing a 'while' loop
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(WhileStmtNode, self).__init__()
+        self.child0_expression = None
+        self.child1_stmt_list = None
 
     def set_expression(self, child):
         '''
@@ -171,7 +162,7 @@ class LoopStmtNode(StatementNode):
         '''
         assert isinstance(child, ExpressionNode)
         child.set_parent(self)
-        self.child_expression = child
+        self.child0_expression = child
 
     def set_statement_list(self, child):
         '''
@@ -179,7 +170,69 @@ class LoopStmtNode(StatementNode):
         '''
         assert isinstance(child, StmtListNode)
         child.set_parent(self)
-        self.child_statement_list = child
+        self.child1_stmt_list = child
+
+
+class DoWhileStmtNode(WhileStmtNode):
+
+    '''
+    Node class representing a 'do-while' loop
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(DoWhileStmtNode, self).__init__()
+
+
+class ForStmtNode(LoopStmtNode):
+
+    '''
+    Node class representing a 'for' with expression and not declaration.
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(ForStmtNode, self).__init__()
+        self.child0_init_expression = None
+        self.child1_condition_expression = None
+        self.child2_iteration_expression = None
+        self.child3_stmt_list = None
+
+    def set_init_expression(self, child):
+        '''
+        expression setter
+        '''
+        assert isinstance(child, ExpressionNode)
+        child.set_parent(self)
+        self.child0_init_expression = child
+
+    def set_condition_expression(self, child):
+        '''
+        expression setter
+        '''
+        assert isinstance(child, ExpressionNode)
+        child.set_parent(self)
+        self.child1_condition_expression = child
+
+    def set_iteration_expression(self, child):
+        '''
+        expression setter
+        '''
+        assert isinstance(child, ExpressionNode)
+        child.set_parent(self)
+        self.child2_iteration_expression = child
+
+    def set_statement_list(self, child):
+        '''
+        statement_list setter
+        '''
+        assert isinstance(child, StmtListNode)
+        child.set_parent(self)
+        self.child3_stmt_list = child
 
 
 class BasicTypeDeclNode(TypeDeclNode):
@@ -233,6 +286,73 @@ class SimpleTypeNode(TypeNode):
         '''
         super(SimpleTypeNode, self).__init__()
         self.txt_name = None
+        self.bool_const = False
+
+    def add_qualifier(self, compiler, ctx, qualifier):
+        '''
+        Add qualifiers to this type.
+        '''
+        # pylint: disable=no-self-use
+        if qualifier == "const":
+            if not self.bool_const:
+                self.bool_const = True
+            else:
+                compiler.report_error(
+                    ctx, "Duplicate qualifier '%s'" % qualifier)
+        else:
+            super(SimpleTypeNode, self).add_qualifier(compiler, ctx, qualifier)
+
+
+class InvalidTypeNode(TypeNode):
+
+    '''
+    Node class representing an error while parsing a type
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(InvalidTypeNode, self).__init__()
+        self.txt_name = None
+
+
+class PointerTypeNode(TypeNode):
+
+    '''
+    Node class representing an pointer to type
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(PointerTypeNode, self).__init__()
+        self.child_pointed_type = None
+        self.bool_const = False
+
+    def set_pointed_type(self, child):
+        '''
+        expression setter
+        '''
+        assert isinstance(child, TypeNode)
+        child.set_parent(self)
+        self.child_pointed_type = child
+
+    def add_qualifier(self, compiler, ctx, qualifier):
+        '''
+        Add qualifiers to this type.
+        '''
+        # pylint: disable=no-self-use
+        if qualifier == "const":
+            if not self.bool_const:
+                self.bool_const = True
+            else:
+                compiler.report_error(
+                    ctx, "Duplicate qualifier '%s'" % qualifier)
+        else:
+            super(PointerTypeNode, self).add_qualifier(
+                compiler, ctx, qualifier)
 
 
 class PapiFunctionDeclNode(Node):
@@ -270,3 +390,17 @@ class TypedefStmtNode(StatementNode, ResolutionHelper):
         assert isinstance(child, TypeNode)
         child.set_parent(self)
         self.child_type = child
+
+
+class PreprocessorDirectiveNode(Node):
+
+    '''
+    Node class representing a preprocessor directive
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(PreprocessorDirectiveNode, self).__init__()
+        self.txt_body = None

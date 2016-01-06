@@ -13,20 +13,19 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-import cProfile
 import sys
-
 from tests import run
 
 
 def main():
 
     run.make_composer('blink')
-    run.make_non_blocking('blink', False, True)
+    run.make_non_blocking('blink', False)
     run.build_and_run('blink')
 
 
 # temporary entrance
 if __name__ == "__main__":
-    cProfile.run("main()", sort="cumulative")
+    #    cProfile.run("main()", sort="cumulative")
+    main()
     sys.exit()

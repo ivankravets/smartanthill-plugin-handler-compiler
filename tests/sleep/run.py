@@ -19,7 +19,7 @@ from tests import run
 
 def main():
 
-    run.make_non_blocking('sleep', True, False)
+    run.make_non_blocking('sleep', True)
     run.build_and_run('sleep')
 
 

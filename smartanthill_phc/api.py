@@ -15,6 +15,7 @@
 
 import antlr4
 
+from smartanthill_phc import writer
 from smartanthill_phc.antlr_parser import CLexer, CParser
 from smartanthill_phc.builtin import create_builtins
 from smartanthill_phc.common.antlr_helper import dump_antlr_tree
@@ -23,7 +24,7 @@ from smartanthill_phc.common.visitor import dump_tree,\
     check_all_nodes_reachables
 from smartanthill_phc.parser import c_parse_tree_to_syntax_tree
 from smartanthill_phc.resolve import resolve_tree
-from smartanthill_phc.rewrite import rewrite_code, write_header
+from smartanthill_phc.rewrite import rewrite_code
 from smartanthill_phc.root import RootNode, NonBlockingData
 from smartanthill_phc.state import create_states
 
@@ -75,7 +76,8 @@ def process_file(file_name, prefix, split_all, dump):
         print
         print '\n'.join(dump_tree(root))
 
-    async = rewrite_code(c, root, helper.token_stream)
-    header = write_header(c, root, helper.token_stream)
+    async2 = rewrite_code(c, root, helper.token_stream)
+    header = writer.write_header(c, root, file_name)
+    async = writer.write_code(c, root, file_name)
 
-    return (async, header)
+    return (async, header, async2)

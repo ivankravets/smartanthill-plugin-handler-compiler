@@ -562,6 +562,24 @@ class CListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by CParser#initExpression.
+    def enterInitExpression(self, ctx):
+        pass
+
+    # Exit a parse tree produced by CParser#initExpression.
+    def exitInitExpression(self, ctx):
+        pass
+
+
+    # Enter a parse tree produced by CParser#iterationExpression.
+    def enterIterationExpression(self, ctx):
+        pass
+
+    # Exit a parse tree produced by CParser#iterationExpression.
+    def exitIterationExpression(self, ctx):
+        pass
+
+
     # Enter a parse tree produced by CParser#WhileStatement.
     def enterWhileStatement(self, ctx):
         pass
@@ -658,6 +676,15 @@ class CListener(ParseTreeListener):
 
     # Exit a parse tree produced by CParser#functionDefinition.
     def exitFunctionDefinition(self, ctx):
+        pass
+
+
+    # Enter a parse tree produced by CParser#preprocessorDirective.
+    def enterPreprocessorDirective(self, ctx):
+        pass
+
+    # Exit a parse tree produced by CParser#preprocessorDirective.
+    def exitPreprocessorDirective(self, ctx):
         pass
 
 

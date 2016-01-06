@@ -57,13 +57,13 @@ def walk_node_childs(walker, node):
     assert isinstance(node, Node)
     names = dir(node)
     for current in names:
-        if current.startswith('child_') or current.startswith('ch_'):
-            ch = getattr(node, current)
-            if ch:
-                walker.walk_node(ch)
-        elif current.startswith('childs_'):
+        if current.startswith('childs') or current.startswith('chlist'):
             chs = getattr(node, current)
             for ch in chs:
+                walker.walk_node(ch)
+        elif current.startswith('child'):
+            ch = getattr(node, current)
+            if ch:
                 walker.walk_node(ch)
 
 
@@ -97,8 +97,8 @@ class NodeVisitor(object):
         '''
         Default action when a node specific action is not found
         '''
-        # pylint: disable=unused-argument
-        # pylint: disable=no-self-use
+        print "Node   : %s" % type(node).__name__
+        print "Visitor: %s" % type(self).__name__
         assert False
 
 
@@ -185,6 +185,27 @@ class CodeVisitor(NodeVisitor):
             # visit again (replacement)
             self._visit_expression_list_item(parent, expr_list, i)
 
+    def visit_childs(self, node):
+        '''
+        Dynamic version of node walker using reflection
+        Trivial implementation
+        '''
+        assert isinstance(node, Node)
+        names = dir(node)
+        for current in names:
+            if current.startswith('child') and\
+                    not current.startswith('childs'):
+                if current.endswith('expression'):
+                    self.visit_expression(node, current)
+                elif current.endswith('stmt_list'):
+                    stmt_list = getattr(node, current)
+                    if stmt_list is not None:
+                        self.visit_stmt_list(stmt_list)
+                else:
+                    ch = getattr(node, current)
+                    if ch is not None:
+                        self.visit(ch)
+
     def insert_before_current(self, statement):
         '''
         Insert statement before current one
@@ -205,6 +226,15 @@ class CodeVisitor(NodeVisitor):
         self._stmt_list[-1].insert_statement_at(self._index[-1] + 1, statement)
 
         self._index[-1] += 1
+
+    def replace_current_statement(self, statement):
+        '''
+        Replace current statement
+        '''
+        self._stmt_list[-1].insert_statement_at(self._index[-1] + 1, statement)
+        old = self._stmt_list[-1].remove_statement_at(self._index[-1])
+
+        return old
 
     def get_current_statement(self):
         '''
@@ -265,9 +295,13 @@ class _CheckReachableWalker(NodeWalker):
                 expected += 1
             elif current == expected - 1:
                 print 'Node %i has been reached again' % current
-            elif current > expected:
+            elif current == expected + 1:
+                print 'Node %i has not been reached' % expected
+                expected = current + 1
+            elif current > expected + 1:
                 print ('Node range %i to %i has not been reached' %
-                       (expected, current + 1))
+                       (expected, current - 1))
+                expected = current + 1
             else:
                 assert False
 
