@@ -277,7 +277,7 @@ class _WriterVisitor(NodeVisitor):
         self._w.write('while')
         self._w.write('(')
         self.write_expr(node.child0_expression)
-        self._w.write(')')
+        self._w.write(');')
         self._w.end_of_statement(node.ctx.stop)
 
     def visit_ForStmtNode(self, node):

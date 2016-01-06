@@ -76,8 +76,8 @@ def process_file(file_name, prefix, split_all, dump):
         print
         print '\n'.join(dump_tree(root))
 
-    async = rewrite_code(c, root, helper.token_stream)
+    async2 = rewrite_code(c, root, helper.token_stream)
     header = writer.write_header(c, root, file_name)
-    async2 = writer.write_code(c, root, file_name)
+    async = writer.write_code(c, root, file_name)
 
     return (async, header, async2)
