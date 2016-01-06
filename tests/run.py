@@ -26,25 +26,19 @@ and then run this script
 '''
 
 
-def make_non_blocking(prefix, split_all, debug_dump, new_write=True):
+def make_non_blocking(prefix, split_all):
 
     c_file = "%s.c" % prefix
     nb_file = "%s_non_blocking.c" % prefix
-    nb2_file = "%s_non_blocking_2.c" % prefix
     h_file = "%s_state.h" % prefix
 
-    code, header, code2 = api.process_file(
-        c_file, prefix, split_all, debug_dump, new_write)
+    code, header = api.process_file(c_file, prefix, split_all, True)
 
     f = open(nb_file, 'wb')
     f.write(code)
 
     h = open(h_file, 'wb')
     h.write(header)
-
-    if new_write:
-        f2 = open(nb2_file, 'wb')
-        f2.write(code2)
 
 
 def make_composer(prefix):

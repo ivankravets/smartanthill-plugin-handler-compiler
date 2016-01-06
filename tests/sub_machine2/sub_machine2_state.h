@@ -1,6 +1,6 @@
 /*****************************************************************************
     Copyright (C) 2015 OLogN Technologies AG
-
+    
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License version 2 as
     published by the Free Software Foundation.
@@ -36,6 +36,7 @@ uint8_t sa_next;
 
 typedef struct _sub_machine2_plugin_state {
 uint8_t sa_next;
+#line 72 "sub_machine2.c"
 uint8_t res;
 } sub_machine2_plugin_state;
 

@@ -24,7 +24,7 @@ from smartanthill_phc.common.visitor import dump_tree,\
     check_all_nodes_reachables
 from smartanthill_phc.parser import c_parse_tree_to_syntax_tree
 from smartanthill_phc.resolve import resolve_tree
-from smartanthill_phc.rewrite import rewrite_code, write_header
+from smartanthill_phc.rewrite import rewrite_code
 from smartanthill_phc.root import RootNode, NonBlockingData
 from smartanthill_phc.state import create_states
 
@@ -44,7 +44,7 @@ class _Helper(object):
         self.cparser = CParser.CParser(self.token_stream)
 
 
-def process_file(file_name, prefix, split_all, dump, new_writer):
+def process_file(file_name, prefix, split_all, dump):
     '''
     Process a c input file, and returns an string with output text
     '''
@@ -77,9 +77,7 @@ def process_file(file_name, prefix, split_all, dump, new_writer):
         print '\n'.join(dump_tree(root))
 
     async = rewrite_code(c, root, helper.token_stream)
-    header = write_header(c, root, helper.token_stream)
-    async2 = None
-    if new_writer:
-        async2 = writer.write_code(c, root, file_name)
+    header = writer.write_header(c, root, file_name)
+    async2 = writer.write_code(c, root, file_name)
 
     return (async, header, async2)

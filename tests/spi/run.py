@@ -19,7 +19,7 @@ from tests import run
 
 def main():
 
-    run.make_non_blocking('spi', False, False)
+    run.make_non_blocking('spi', False)
     run.build_and_run('spi')
 
 

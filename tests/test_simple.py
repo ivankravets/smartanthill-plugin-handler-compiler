@@ -13,35 +13,45 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+import os
+
 from smartanthill_phc import api
 from smartanthill_phc.parse_write import ZeptoPlugin, write_composer_file
 
 
 def composer_test(prefix):
 
-    h_file = "tests/%s/%s_parser.h" % (prefix, prefix)
-    xml_file = "tests/%s/manifest.xml" % prefix
-    plugin = ZeptoPlugin(xml_file)
+    h_file = "%s_parser.h" % prefix
+    xml_file = "manifest.xml"
 
+    os.chdir("tests/%s" % prefix)
+
+    plugin = ZeptoPlugin(xml_file)
     code = write_composer_file(prefix, plugin)
 
     f = open(h_file, 'rb')
     assert code == f.read()
 
+    os.chdir("../..")
+
 
 def non_blocking_test(prefix, split_all):
 
-    c_file = "tests/%s/%s.c" % (prefix, prefix)
-    nb_file = "tests/%s/%s_non_blocking.c" % (prefix, prefix)
-    h_file = "tests/%s/%s_state.h" % (prefix, prefix)
-    code, header, c2 = api.process_file(
-        c_file, prefix, split_all, False, False)
+    c_file = "%s.c" % prefix
+    nb_file = "%s_non_blocking.c" % prefix
+    h_file = "%s_state.h" % prefix
+
+    os.chdir("tests/%s" % prefix)
+
+    code, header, c2 = api.process_file(c_file, prefix, split_all, False)
 
     f = open(nb_file, 'rb')
     assert code.splitlines() == f.read().splitlines()
 
     h = open(h_file, 'rb')
     assert header.splitlines() == h.read().splitlines()
+
+    os.chdir("../..")
 
 
 def test_blink():

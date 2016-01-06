@@ -14,14 +14,13 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 import sys
-
 from tests import run
 
 
 def main():
 
     run.make_composer('loop')
-    run.make_non_blocking('loop', False, True)
+    run.make_non_blocking('loop', False)
     run.build_and_run('loop')
 
 

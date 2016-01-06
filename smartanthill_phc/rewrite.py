@@ -16,7 +16,6 @@
 from antlr4.ParserRuleContext import ParserRuleContext
 from antlr4.tree.Tree import TerminalNodeImpl
 
-from smartanthill_phc import banner
 from smartanthill_phc.TokenStreamRewriter import TokenStreamRewriter
 from smartanthill_phc.c_node import VoidTypeDeclNode, IntTypeDeclNode
 from smartanthill_phc.common.visitor import visit_node, CodeVisitor
@@ -37,49 +36,6 @@ def rewrite_code(compiler, root, token_stream):
     compiler.check_stage('rewrite')
 
     return text
-
-
-def write_header(compiler, root, token_stream):
-    '''
-    Write header file
-    '''
-    nb = root.get_scope(NonBlockingData)
-    text = _write_header_file(token_stream, nb)
-
-    compiler.check_stage('header')
-
-    return text
-
-
-def _write_header_file(token_stream, nb):
-
-    txt = banner.get_copyright_banner()
-
-    txt += "\n"
-
-    txt += "#if !defined %s\n" % nb.include_guard
-    txt += "#define %s\n\n" % nb.include_guard
-
-    txt += "#include <stdint.h>\n\n\n"
-
-    for f in nb.functions_with_states:
-
-        txt += "typedef struct _%s {\n" % f.txt_struct_name
-
-        txt += "uint8_t sa_next;\n"
-
-        for v in f.refs_moved_var_decls:
-            start = v.ctx.declarationSpecifier(0).start
-            stop = v.ctx.declarationSpecifier(0).stop
-
-            tk = token_stream.getText((start.tokenIndex, stop.tokenIndex))
-            txt += "%s %s;\n" % (str(tk), v.txt_name)
-
-        txt += "} %s;\n\n" % f.txt_struct_name
-
-    txt += "#endif // %s\n" % nb.include_guard
-
-    return txt
 
 
 class _RewriteVisitor(CodeVisitor):

@@ -1,6 +1,6 @@
 /*****************************************************************************
     Copyright (C) 2015 OLogN Technologies AG
-
+    
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License version 2 as
     published by the Free Software Foundation.
@@ -24,6 +24,7 @@
 
 typedef struct _spi_plugin_state {
 uint8_t sa_next;
+#line 46 "spi.c"
 uint16_t response;
 } spi_plugin_state;
 

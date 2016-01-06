@@ -1,6 +1,6 @@
 /*****************************************************************************
     Copyright (C) 2015 OLogN Technologies AG
-
+    
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License version 2 as
     published by the Free Software Foundation.
@@ -24,7 +24,9 @@
 
 typedef struct _debug_plugin_state {
 uint8_t sa_next;
+#line 39 "debug.c"
 uint16_t data;
+#line 46 "debug.c"
 uint16_t response;
 } debug_plugin_state;
 

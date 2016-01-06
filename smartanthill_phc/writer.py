@@ -24,7 +24,7 @@ from smartanthill_phc.root import NonBlockingData
 
 def write_code(compiler, root, source_file):
     '''
-    Rewrites code tree
+    Writes code tree
     '''
     visitor = _WriterVisitor(compiler, source_file)
     visit_node(visitor, root)
@@ -32,6 +32,19 @@ def write_code(compiler, root, source_file):
     text = visitor.get_text()
 
     compiler.check_stage('write')
+
+    return text
+
+
+def write_header(compiler, root, source_file):
+    '''
+    Write header file
+    '''
+    visitor = _HeaderWriterVisitor(compiler, source_file)
+    visit_node(visitor, root)
+
+    text = visitor.get_text()
+    compiler.check_stage('header')
 
     return text
 
@@ -114,13 +127,13 @@ class _WriterVisitor(NodeVisitor):
         if self._sm is not None and\
                 not self._sm.ref_state_machine.is_main_machine():
             self._w.write(
-                "void* sa_state0,waiting_for* sa_wf,uint8_t* sa_result")
+                "void* sa_state0, waiting_for* sa_wf, uint8_t* sa_result")
             first = False
 
         for each in node.child_argument_decl_list.childs_declarations:
 
             if not first:
-                self._w.write(',')
+                self._w.write(', ')
             first = False
             self.visit(each.child_argument_type)
             self._w.write(' ')
@@ -154,7 +167,7 @@ class _WriterVisitor(NodeVisitor):
                 self._w.write('sa_state->')
                 self._w.write(node.txt_name)
 
-                self._w.write('=')
+                self._w.write(' = ')
                 self.write_expr(node.child_initializer_expression)
 
                 self._w.write(';')
@@ -165,7 +178,7 @@ class _WriterVisitor(NodeVisitor):
             self._w.write(' ')
             self._w.write(node.txt_name)
             if node.child_initializer_expression is not None:
-                self._w.write('=')
+                self._w.write(' = ')
                 self.write_expr(node.child_initializer_expression)
 
             self._w.write(';')
@@ -192,7 +205,7 @@ class _WriterVisitor(NodeVisitor):
 
         self._w.write("papi_wait_handler_add_wait_for_")
         self._w.write(node.txt_wait_for)
-        self._w.write("(sa_wf,")
+        self._w.write("(sa_wf, ")
         self.write_expr(node.child_argument_list.childs_arguments[0])
         self._w.write(')')
         self._w.write(';')
@@ -205,7 +218,7 @@ class _WriterVisitor(NodeVisitor):
 
         self._w.write("if(papi_wait_handler_is_waiting_for_")
         self._w.write(node.txt_wait_for)
-        self._w.write("(sa_wf,")
+        self._w.write("(sa_wf, ")
         self.write_expr(node.child_argument_list.childs_arguments[0])
         self._w.write('))')
         self._w.end_of_statement(None)
@@ -225,7 +238,7 @@ class _WriterVisitor(NodeVisitor):
         #         self._w.write(';')
         #         self._w.end_of_statement()
 
-        self._w.write("papi_wait_handler_add_wait_for_timeout(sa_wf,")
+        self._w.write("papi_wait_handler_add_wait_for_timeout(sa_wf, ")
         self.write_expr(node.child_argument_list.childs_arguments[0])
         self._w.write(')')
         self._w.write(';')
@@ -274,9 +287,11 @@ class _WriterVisitor(NodeVisitor):
             self.write_expr(node.child0_init_expression)
         self._w.write(';')
         if node.child1_condition_expression is not None:
+            self._w.write(' ')
             self.write_expr(node.child1_condition_expression)
-        self._w.write(';')
+        self._w.write('; ')
         if node.child2_iteration_expression is not None:
+            self._w.write(' ')
             self.write_expr(node.child2_iteration_expression)
         self._w.write(')')
         self._w.end_of_statement(node.ctx.start)
@@ -412,7 +427,7 @@ class _WriterVisitor(NodeVisitor):
         self.visit(node.child_expression.ref_declaration.child_return_type)
         self._w.write(' ')
         self._w.write(node.txt_name)
-        self._w.write('=')
+        self._w.write(' = ')
         self.visit(node.child_expression)
         self._w.write(';')
         self._w.end_of_statement(node.ctx.stop)
@@ -533,7 +548,7 @@ class _WriterVisitor(NodeVisitor):
         first = True
         for each in node.childs_arguments:
             if not first:
-                self._w.write(',')
+                self._w.write(', ')
             first = False
             self.write_expr(each)
 
@@ -552,6 +567,51 @@ class _WriterVisitor(NodeVisitor):
         self._w.write('*')
         if node.bool_const:
             self._w.write(" const")
+
+
+class _HeaderWriterVisitor(_WriterVisitor):
+
+    '''
+    Visitor class for plugin header write
+    '''
+
+    def __init__(self, compiler, source_file):
+        '''
+        Constructor
+        '''
+        super(_HeaderWriterVisitor, self).__init__(compiler, source_file)
+
+    def visit_RootNode(self, node):
+
+        nb = node.get_scope(NonBlockingData)
+
+        self._w.write_line("#if !defined %s" % nb.include_guard)
+        self._w.write_line("#define %s" % nb.include_guard)
+        self._w.write_line("")
+
+        self._w.write_line("#include <stdint.h>")
+        self._w.write_line("")
+        self._w.write_line("")
+
+        for f in nb.functions_with_states:
+
+            self._w.write_line("typedef struct _%s {" % f.txt_struct_name)
+
+            self._w.write_line("uint8_t sa_next;")
+
+            for v in f.refs_moved_var_decls:
+
+                self.visit(v.child_declaration_type)
+                self._w.write(' ')
+                self._w.write(v.txt_name)
+
+                self._w.write(';')
+                self._w.end_of_statement(v.ctx.stop)
+
+            self._w.write_line("} %s;" % f.txt_struct_name)
+            self._w.write_line("")
+
+        self._w.write_line("#endif // %s" % nb.include_guard)
 
 
 class _Writer(object):

@@ -1,6 +1,6 @@
 /*****************************************************************************
     Copyright (C) 2015 OLogN Technologies AG
-
+    
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License version 2 as
     published by the Free Software Foundation.
@@ -24,8 +24,11 @@
 
 typedef struct _loop_plugin_state {
 uint8_t sa_next;
+#line 49 "loop.c"
 loop_plugin_data req;
+
 uint8_t i;
+#line 59 "loop.c"
 uint8_t i1;
 } loop_plugin_state;
 
