@@ -235,23 +235,21 @@ class _RewriteVisitor(CodeVisitor):
 
     def visit_StateMachineStmtNode(self, node):
 
-        if node.has_states():
+        txt = u"\n\nswitch(sa_state->sa_next) {"
 
-            txt = u"\n\nswitch(sa_state->sa_next) {"
+        txt += u"\ncase 0: break;"
+        for i in range(1, node.int_last_state + 1):
 
-            txt += u"\ncase 0: break;"
-            for i in range(1, node.get_last_state() + 1):
-
-                txt += u"\ncase %s: goto label_%s;" % (str(i), str(i))
+            txt += u"\ncase %s: goto label_%s;" % (str(i), str(i))
     #            visit_node(self, each.child_statement_list)
 
-            txt += u"\ndefault: ZEPTO_ASSERT(0);"
-            txt += u"\n}\n\n"
+        txt += u"\ndefault: ZEPTO_ASSERT(0);"
+        txt += u"\n}\n\n"
 
-            if node.ctx.line is not None:
-                txt += u"\n//#line %s\n" % node.ctx.line
+        if node.ctx.line is not None:
+            txt += u"\n//#line %s\n" % node.ctx.line
 
-            self._w.insertAfterToken(node.ctx, txt)
+        self._w.insertAfterToken(node.ctx, txt)
 
     def visit_WaitStateStmtNode(self, node):
 
@@ -388,13 +386,25 @@ class _RewriteVisitor(CodeVisitor):
     def visit_OperatorExprNode(self, node):
         self.visit(node.child_argument_list)
 
+    def visit_MemberOperatorExprNode(self, node):
+        self.visit(node.child0_expression)
+        self.visit(node.child1_argument_list)
+
     def visit_MemberExprNode(self, node):
         self.visit(node.child_expression)
 
     def visit_CastExprNode(self, node):
-        self.visit(node.child_expression)
+        self.visit(node.child1_expression)
 
     def visit_LiteralExprNode(self, node):
+        # nothing to do here
+        pass
+
+    def visit_AssignmentExprNode(self, node):
+        # nothing to do here
+        pass
+
+    def visit_TrivialCastExprNode(self, node):
         # nothing to do here
         pass
 

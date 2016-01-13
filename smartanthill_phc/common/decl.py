@@ -14,12 +14,44 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 from smartanthill_phc.common.base import Node, ResolutionHelper, TypeNode,\
-    StmtListNode, DeclarationListNode
+    StmtListNode, DeclarationListNode, TypeDeclNode
 from smartanthill_phc.common.lookup import ReturnStmtScope, StatementListScope,\
     FunctionScope
 
 
-class FunctionDeclNode(Node, ResolutionHelper):
+class CallableDeclNode(Node):
+
+    '''
+    Base class for declarations that can match an argument list
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(CallableDeclNode, self).__init__()
+
+    def can_match_arguments(self, compiler, ctx, args):
+        '''
+        Base method for argument matching
+        Returns where this declaration can be called with given expressions
+        as arguments 
+        '''
+        # pylint: disable=no-self-use
+        # pylint: disable=unused-argument
+        return TypeDeclNode.NO_MATCH
+
+    def make_arguments_match(self, compiler, ctx, args):
+        '''
+        Base method for argument matching
+        Adds any necesary cast to make the types of the given arguments match
+        '''
+        # pylint: disable=no-self-use
+        # pylint: disable=unused-argument
+        assert False
+
+
+class FunctionDeclNode(CallableDeclNode, ResolutionHelper):
 
     '''
     Node class representing a function declaration
@@ -40,7 +72,7 @@ class FunctionDeclNode(Node, ResolutionHelper):
 
     def set_return_type(self, child):
         '''
-        child setter
+        Setter
         '''
         assert isinstance(child, TypeNode)
         child.set_parent(self)
@@ -48,7 +80,7 @@ class FunctionDeclNode(Node, ResolutionHelper):
 
     def set_statement_list(self, child):
         '''
-        child setter
+        Setter
         '''
         assert isinstance(child, StmtListNode)
         child.set_parent(self)
@@ -56,7 +88,7 @@ class FunctionDeclNode(Node, ResolutionHelper):
 
     def set_argument_decl_list(self, child):
         '''
-        child setter
+        Setter
         '''
         assert isinstance(child, ArgumentDeclListNode)
         child.set_parent(self)
@@ -79,7 +111,7 @@ class ArgumentDeclNode(Node, ResolutionHelper):
 
     def set_argument_type(self, child):
         '''
-        child setter
+        Setter
         '''
         assert isinstance(child, TypeNode)
         child.set_parent(self)

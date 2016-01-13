@@ -32,7 +32,9 @@ grammar C;
 
 unaryExpression
     :   Identifier # IdentifierExpression
-    |   Constant   # LiteralExpression
+    |   IntegerConstant   # IntegerLiteralExpression
+    |   FloatingConstant   # FloatingLiteralExpression
+    |   CharacterConstant   # CharacterLiteralExpression
     |   StringLiteral+ # StringLiteralExpression
     |   '(' expression ')' # ParenthesizedExpression
 //    |   '_Generic' '(' assignmentExpression ',' genericAssociation ( ',' genericAssociation )* ')'
@@ -529,14 +531,7 @@ HexQuad
     :   HexadecimalDigit HexadecimalDigit HexadecimalDigit HexadecimalDigit
     ;
 
-Constant
-    :   IntegerConstant
-    |   FloatingConstant
-    //|   EnumerationConstant
-    |   CharacterConstant
-    ;
 
-fragment
 IntegerConstant
     :   DecimalConstant IntegerSuffix?
     |   OctalConstant IntegerSuffix?
@@ -601,7 +596,6 @@ LongLongSuffix
     :   'll' | 'LL'
     ;
 
-fragment
 FloatingConstant
     :   DecimalFloatingConstant
     |   HexadecimalFloatingConstant
@@ -663,7 +657,6 @@ FloatingSuffix
     :   'f' | 'l' | 'F' | 'L'
     ;
 
-fragment
 CharacterConstant
     :   '\'' CCharSequence '\''
     |   'L\'' CCharSequence '\''

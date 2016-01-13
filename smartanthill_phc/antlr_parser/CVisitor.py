@@ -20,13 +20,18 @@ class CVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by CParser#LiteralExpression.
-    def visitLiteralExpression(self, ctx):
+    # Visit a parse tree produced by CParser#FloatingLiteralExpression.
+    def visitFloatingLiteralExpression(self, ctx):
         return self.visitChildren(ctx)
 
 
     # Visit a parse tree produced by CParser#PostIncrementExpression.
     def visitPostIncrementExpression(self, ctx):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by CParser#CharacterLiteralExpression.
+    def visitCharacterLiteralExpression(self, ctx):
         return self.visitChildren(ctx)
 
 
@@ -62,6 +67,11 @@ class CVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by CParser#SizeOfExpression.
     def visitSizeOfExpression(self, ctx):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by CParser#IntegerLiteralExpression.
+    def visitIntegerLiteralExpression(self, ctx):
         return self.visitChildren(ctx)
 
 

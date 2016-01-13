@@ -83,6 +83,11 @@ def test_spi():
     non_blocking_test('spi', False)
 
 
+def test_stateless():
+
+    non_blocking_test('stateless', False)
+
+
 def test_sub_machine():
 
     non_blocking_test('sub_machine', True)

@@ -17,6 +17,21 @@
 from smartanthill_phc.common.base import ArgumentListNode, ExpressionNode
 
 
+class ErrorExprNode(ExpressionNode):
+
+    '''
+    Node class representing a syntax error or unsupported contruct
+    Used as a place holder when we can not return a real expression,
+    and returning None is neither possible
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(ErrorExprNode, self).__init__()
+
+
 class FunctionCallExprNode(ExpressionNode):
 
     '''
@@ -34,7 +49,7 @@ class FunctionCallExprNode(ExpressionNode):
 
     def set_argument_list(self, child):
         '''
-        argument_list setter
+        Setter
         '''
         assert isinstance(child, ArgumentListNode)
         child.set_parent(self)
@@ -59,7 +74,7 @@ class MemberAccessExprNode(ExpressionNode):
 
     def set_expression(self, child):
         '''
-        argument_list setter
+        Setter
         '''
         assert isinstance(child, ExpressionNode)
         child.set_parent(self)
@@ -86,49 +101,6 @@ class LiteralExprNode(ExpressionNode):
         self.txt_literal = None
 
 
-class NumberLiteralExprNode(ExpressionNode):
-
-    '''
-    Node class representing a number literal
-    '''
-
-    def __init__(self):
-        '''
-        Constructor
-        '''
-        super(NumberLiteralExprNode, self).__init__()
-        self.txt_literal = None
-
-    def get_static_value(self):
-        '''
-        Returns the float value of this literal
-        Used for complile-time evaluation of expressions
-        TODO check literal for validity
-        '''
-        return float(self.txt_literal)
-
-
-class BooleanLiteralExprNode(ExpressionNode):
-
-    '''
-    Node class representing a boolean literal
-    '''
-
-    def __init__(self):
-        '''
-        Constructor
-        '''
-        super(BooleanLiteralExprNode, self).__init__()
-        self.boolean_value = False
-
-    def get_static_value(self):
-        '''
-        Returns the float value of this literal
-        Used for complile-time evaluation of expressions
-        '''
-        return self.boolean_value
-
-
 class StaticEvaluatedExprNode(ExpressionNode):
 
     '''
@@ -145,7 +117,7 @@ class StaticEvaluatedExprNode(ExpressionNode):
 
     def set_replaced(self, child):
         '''
-        replaced setter
+        Setter
         '''
         assert isinstance(child, ExpressionNode)
         child.set_parent(self)
@@ -180,7 +152,7 @@ class TrivialCastExprNode(ExpressionNode):
 
     def set_expression(self, child):
         '''
-        argument_list setter
+        Setter
         '''
         assert isinstance(child, ExpressionNode)
         child.set_parent(self)
@@ -237,23 +209,73 @@ class AssignmentExprNode(ExpressionNode):
         Constructor
         '''
         super(AssignmentExprNode, self).__init__()
-        self.txt_name = None
-        self.child_rhs_expression = None
+        self.child0_left_expression = None
+        self.child1_right_expression = None
         self.ref_declaration = None
 
-    def set_rhs_expression(self, child):
+    def set_left_expression(self, child):
         '''
-        rhs setter
+        Setter
         '''
         assert isinstance(child, ExpressionNode)
         child.set_parent(self)
-        self.child_rhs_expression = child
+        self.child0_left_expression = child
+
+    def set_right_expression(self, child):
+        '''
+        Setter
+        '''
+        assert isinstance(child, ExpressionNode)
+        child.set_parent(self)
+        self.child1_right_expression = child
+
+
+class ConditionalExprNode(ExpressionNode):
+
+    '''
+    Node class representing a conditional expression
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(ConditionalExprNode, self).__init__()
+        self.child0_condition_expression = None
+        self.child1_true_expression = None
+        self.child2_false_expression = None
+
+    def set_condition_expression(self, child):
+        '''
+        Setter
+        '''
+        assert isinstance(child, ExpressionNode)
+        child.set_parent(self)
+        self.child0_condition_expression = child
+
+    def set_true_expression(self, child):
+        '''
+        Setter
+        '''
+        assert isinstance(child, ExpressionNode)
+        child.set_parent(self)
+        self.child1_true_expression = child
+
+    def set_false_expression(self, child):
+        '''
+        Setter
+        '''
+        assert isinstance(child, ExpressionNode)
+        child.set_parent(self)
+        self.child2_false_expression = child
 
 
 class OperatorExprNode(ExpressionNode):
 
     '''
-    Node class representing a operator expression
+    Node class representing a non-member operator expression
+    Currently all binary operators are non-member, as they may cast any
+    of the arguments
     '''
 
     def __init__(self):
@@ -267,11 +289,47 @@ class OperatorExprNode(ExpressionNode):
 
     def set_argument_list(self, child):
         '''
-        argument_list setter
+        Setter
         '''
         assert isinstance(child, ArgumentListNode)
         child.set_parent(self)
         self.child_argument_list = child
+
+
+class MemberOperatorExprNode(ExpressionNode):
+
+    '''
+    Node class representing a member operator expression
+    Currently member operators are all that can not trigger a convertion
+    on the first argument.
+    Mostly unary operators
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(MemberOperatorExprNode, self).__init__()
+        self.txt_operator = None
+        self.child0_expression = None
+        self.child1_argument_list = None
+        self.ref_declaration = None
+
+    def set_expression(self, child):
+        '''
+        Setter
+        '''
+        assert isinstance(child, ExpressionNode)
+        child.set_parent(self)
+        self.child0_expression = child
+
+    def set_argument_list(self, child):
+        '''
+        Setter
+        '''
+        assert isinstance(child, ArgumentListNode)
+        child.set_parent(self)
+        self.child1_argument_list = child
 
 
 class BinaryOpExprNode(OperatorExprNode):
@@ -287,7 +345,7 @@ class BinaryOpExprNode(OperatorExprNode):
         super(BinaryOpExprNode, self).__init__()
 
 
-class UnaryOpExprNode(OperatorExprNode):
+class UnaryOpExprNode(MemberOperatorExprNode):
 
     '''
     Node class representing an unary arithmetic operator expression
@@ -301,7 +359,7 @@ class UnaryOpExprNode(OperatorExprNode):
         super(UnaryOpExprNode, self).__init__()
 
 
-class PostfixOpExprNode(OperatorExprNode):
+class PostUnaryOpExprNode(MemberOperatorExprNode):
 
     '''
     Node class representing a postfix unary operator expression
@@ -312,4 +370,17 @@ class PostfixOpExprNode(OperatorExprNode):
         '''
         Constructor
         '''
-        super(PostfixOpExprNode, self).__init__()
+        super(PostUnaryOpExprNode, self).__init__()
+
+
+class IndexOpExprNode(MemberOperatorExprNode):
+
+    '''
+    Node class representing an index operator expression
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(IndexOpExprNode, self).__init__()

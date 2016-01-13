@@ -13,7 +13,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from smartanthill_phc.common import errors
+from smartanthill_phc.common import errors, decl
 from smartanthill_phc.common.base import ResolutionHelper,\
     expression_type_match, TypeDeclNode
 from smartanthill_phc.common.lookup import lookup_type, RootScope,\
@@ -39,6 +39,86 @@ def resolve_tree(compiler, root):
 
     walker = _ResolutionCheckWalker()
     walker.walk_node(root)
+
+
+def overload_filter(compiler, ctx, args, decl_list_list):
+    '''
+    From a list declarations, returns one that can match the arguments,
+    if no candidate is found, reports error an raises
+    '''
+    exact_match = []
+    cast_match = []
+    for current in decl_list_list:
+        r = current.can_match_arguments(
+            compiler, ctx, args)
+
+        if r == TypeDeclNode.NO_MATCH:
+            pass
+        elif r == TypeDeclNode.EXACT_MATCH:
+            exact_match.append(current)
+        elif r == TypeDeclNode.CAST_MATCH:
+            cast_match.append(current)
+        else:
+            assert False
+
+    if len(exact_match) == 0:
+        if len(cast_match) == 0:
+            compiler.report_error(
+                ctx, "None of candidates can match the arguments")
+            compiler.raise_error()
+        elif len(cast_match) == 1:
+            return cast_match[0]
+        else:
+            compiler.report_error(
+                ctx, "More than a candidate can match the arguments")
+            compiler.raise_error()
+    elif len(exact_match) == 1:
+        return exact_match[0]
+    else:
+        compiler.report_error(
+            ctx, "More than a candidate can match the arguments")
+        compiler.raise_error()
+
+
+def _can_match(compiler, ctx, args, decls, make_match):
+    '''
+    If this argument list can not used to initialize given argument list
+    Returns TypeDeclNode.NO_MATCH when there is no chance to make it match
+    TypeDeclNode.EXACT_MATCH when match does not need any cast
+    and TypeDeclNode.CAST_MATCH when it can match but casting needed
+    '''
+
+    if len(args) != len(decls):
+        if make_match:
+            compiler.report_error(
+                ctx, "Wrong number of arguments, need %s but given %s" % (
+                    len(args),
+                    len(decls)))
+            compiler.raise_error()
+
+        return TypeDeclNode.NO_MATCH
+
+    result = TypeDeclNode.EXACT_MATCH
+    for i in range(len(args)):
+
+        source = args[i].get_type()
+        target = decls[i].get_type()
+
+        if source == target:
+            pass
+        elif source.can_cast_to(target):
+            result = TypeDeclNode.CAST_MATCH
+        elif target.can_cast_from(source):
+            result = TypeDeclNode.CAST_MATCH
+        else:
+            if make_match:
+                compiler.report_error(
+                    ctx, "Bad argument type at position %s" % i)
+                compiler.raise_error()
+
+            return TypeDeclNode.NO_MATCH
+
+    return result
 
 
 class _ResolutionCheckWalker(NodeWalker):
@@ -117,6 +197,22 @@ class _ResolveVisitor(CodeVisitor):
 
         self.visit(node.child_source)
 
+    def visit_TypeDeclNode(self, node):
+        self.visit_childs(node)
+        node.get_scope(RootScope).add_type(self._c, node.txt_name, node)
+
+    def visit_OperatorDeclNode(self, node):
+        if node.begin_resolution():
+
+            #             node.get_scope(StatementListScope).add_variable(
+            #                 self._c, node.txt_name, node)
+
+            self.visit_childs(node)
+            node.set_type(node.child0_return_type.get_type())
+
+    def visit_TrivialCastRuleNode(self, node):
+        self.visit_childs(node)
+
     def visit_StmtListNode(self, node):
         self.visit_stmt_list(node)
 
@@ -141,8 +237,9 @@ class _ResolveVisitor(CodeVisitor):
     def visit_ArgumentDeclNode(self, node):
         # pylint: disable=no-self-use
         if node.begin_resolution():
-            node.get_scope(FunctionScope).add_argument(
-                self._c, node.txt_name, node)
+            if node.txt_name is not None:
+                node.get_scope(FunctionScope).add_argument(
+                    self._c, node.txt_name, node)
 
             self.visit(node.child_argument_type)
             node.set_type(node.child_argument_type.get_type())
@@ -227,6 +324,11 @@ class _ResolveVisitor(CodeVisitor):
     def visit_ForStmtNode(self, node):
         self.visit_childs(node)
 
+    def visit_RefTypeNode(self, node):
+
+        # pylint: disable=no-self-use
+        assert node.get_type() is not None
+
     def visit_SimpleTypeNode(self, node):
         # pylint: disable=no-self-use
 
@@ -252,9 +354,6 @@ class _ResolveVisitor(CodeVisitor):
 
     def visit_PapiFunctionDeclNode(self, node):
         node.get_scope(RootScope).add_function(self._c, node.txt_name, node)
-
-    def visit_TypeDeclNode(self, node):
-        node.get_scope(RootScope).add_type(self._c, node.txt_name, node)
 
     def visit_FunctionCallExprNode(self, node):
         self.visit(node.child_argument_list)
@@ -283,17 +382,14 @@ class _ResolveVisitor(CodeVisitor):
         t = self.on_demand_resolve(node.member_decl)
         node.set_type(t)
 
-    def visit_LiteralExprNode(self, node):
-        node.set_type(self._zc_dont_care)
-
-    def visit_NumberLiteralExprNode(self, node):
+    def visit_IntegerLiteralExprNode(self, node):
         # pylint: disable=no-self-use
-        t = node.get_scope(RootScope).get_type('_zc_number_literal')
+        t = node.get_scope(RootScope).get_type('sa_int_literal')
         node.set_type(t)
 
     def visit_BooleanLiteralExprNode(self, node):
         # pylint: disable=no-self-use
-        t = node.get_scope(RootScope).get_type('_zc_boolean_literal')
+        t = node.get_scope(RootScope).get_type('sa_bool_literal')
         node.set_type(t)
 
     def visit_VariableExprNode(self, node):
@@ -320,32 +416,26 @@ class _ResolveVisitor(CodeVisitor):
 
         self.visit_childs(node)
 
-        sc = node.get_scope(StatementListScope)
-        decl = sc.lookup_variable(node.txt_name)
-        if decl is None:
-            self._c.report_error(
-                node.ctx, "Unresolved variable '%s'" % node.txt_name)
-            self._c.raise_error()
+        t = node.child0_left_expression.get_type()
 
-        node.ref_declaration = decl
-        t = self.on_demand_resolve(node.ref_declaration)
+        if not expression_type_match(self._c, t, node,
+                                     'child1_right_expression'):
+            self._c.report_error(node.ctx, "Type mismatch on assignment")
 
-        if not expression_type_match(self._c, t, node, 'child_rhs_expression'):
-            self._c.report_error(
-                node.ctx, "Type mismatch on assignment of variable '%s'" %
-                node.txt_name)
-            # no need to raise here
+        # allow chained assignment
+        node.set_type(t)
 
-        # don't allow chained assignment
-        node.set_type(self._void)
+    def visit_ConditionalExprNode(self, node):
+        self.visit_childs(node)
+        node.set_type(self._zc_dont_care)
 
     def visit_OperatorExprNode(self, node):
 
-        self.visit(node.child_argument_list)
+        self.visit_childs(node)
         candidates = node.get_scope(
             RootScope).lookup_operator(node.txt_operator)
 
-        if len(candidates) == 0:
+        if candidates is None or len(candidates) == 0:
             if False:
                 self._c.report_error(
                     node.ctx, "Unresolved operator '%s'" % node.txt_operator)
@@ -354,20 +444,59 @@ class _ResolveVisitor(CodeVisitor):
                 node.set_type(self._zc_dont_care)
                 return
 
-        node.ref_decl = node.child_argument_list.overload_filter(
-            self._c, candidates)
-        node.child_argument_list.make_match(
-            self._c, node.ref_declaration.child_parameter_list)
+        d = overload_filter(
+            self._c, node.ctx, node.child_argument_list.childs_arguments,
+            candidates)
 
-        node.ref_declaration.static_evaluate(self._c, node,
-                                             node.child_argument_list)
-
-        t = self.on_demand_resolve(node.ref_declaration)
+        t = self.on_demand_resolve(d)
+        node.ref_declaration = d
         node.set_type(t)
+
+        d.make_arguments_match(
+            self._c, node.ctx, node.child_argument_list.childs_arguments)
+#         r = d.static_evaluate(self._c, node.child_argument_list)
+#         if r is not None:
+#             self.replace_expression(r)
+
+    def visit_MemberOperatorExprNode(self, node):
+
+        self.visit_childs(node)
+
+        ref_type = node.child0_expression.get_type()
+
+        candidates = ref_type.lookup_operator(node.txt_operator)
+
+        if candidates is None or len(candidates) == 0:
+            if False:
+                self._c.report_error(
+                    node.ctx, "Unresolved operator '%s'" % node.txt_operator)
+                self._c.raise_error()
+            else:
+                node.set_type(self._zc_dont_care)
+                return
+
+        d = overload_filter(
+            self._c, node.ctx, node.child1_argument_list.childs_arguments,
+            candidates)
+
+        t = self.on_demand_resolve(d)
+        node.ref_declaration = d
+        node.set_type(t)
+
+        d.make_arguments_match(
+            self._c, node.ctx, node.child1_argument_list.childs_arguments)
+#         r = d.static_evaluate(self._c, node.child1_argument_list)
+#         if r is not None:
+#             self.replace_expression(r)
 
     def visit_DontCareExprNode(self, node):
 
         self.visit(node.child_argument_list)
+        node.set_type(self._zc_dont_care)
+
+    def visit_IndexExprNode(self, node):
+
+        self.visit_childs(node)
         node.set_type(self._zc_dont_care)
 
     def visit_MemberExprNode(self, node):
@@ -394,7 +523,7 @@ class _ResolveVisitor(CodeVisitor):
     def visit_CastExprNode(self, node):
 
         self.visit_childs(node)
-        node.set_type(node.child_cast_type.get_type())
+        node.set_type(node.child0_cast_type.get_type())
 
     def visit_ArgumentListNode(self, node):
         self.visit_expression_list(node, node.childs_arguments)

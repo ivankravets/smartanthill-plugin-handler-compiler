@@ -178,29 +178,32 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
     def visitParenthesizedExpression(self, ctx):
 
         node = self.visit(ctx.expression())
-        node.has_parenthesis = True
+        node.bool_parenthesis = True
 
         return node
 
     # Visit a parse tree produced by CParser#LiteralExpression.
-    def visitLiteralExpression(self, ctx):
+    def visitFloatingLiteralExpression(self, ctx):
 
-        node = self._c.init_node(expr.LiteralExprNode(), ctx)
-        node.txt_literal = str(ctx.Constant().getText())
-
+        self._c.report_error(ctx, "Floating literals not supported")
+        node = self._c.init_node(expr.ErrorExprNode(), ctx)
         return node
 
     # Visit a parse tree produced by CParser#PostIncrementExpression.
     def visitPostIncrementExpression(self, ctx):
 
-        op = get_text(ctx.getChild(1))
+        node = self._c.init_node(expr.PostUnaryOpExprNode(), ctx)
+        node.txt_operator = 'post' + get_text(ctx.getChild(1))
+        node.set_expression(self.visit(ctx.unaryExpression()))
+        node.set_argument_list(self._make_args(ctx, []))
 
-        node = self._c.init_node(expr.PostfixOpExprNode(), ctx)
-        node.txt_operator = op
+        return node
 
-        args = self._make_args(ctx, [ctx.unaryExpression()])
-        node.set_argument_list(args)
+    # Visit a parse tree produced by CParser#CharacterLiteralExpression.
+    def visitCharacterLiteralExpression(self, ctx):
 
+        self._c.report_error(ctx, "Character literals not supported")
+        node = self._c.init_node(expr.ErrorExprNode(), ctx)
         return node
 
     # Visit a parse tree produced by CParser#ArrowExpression.
@@ -218,16 +221,23 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
     # Visit a parse tree produced by CParser#IndexExpression.
     def visitIndexExpression(self, ctx):
-        node = c_node.DontCareExprNode.create(self._c, ctx)
-        node.child_argument_list.add_argument(
-            self.visit(ctx.unaryExpression()))
-        node.child_argument_list.add_argument(self.visit(ctx.expression()))
+
+        node = self._c.init_node(expr.IndexOpExprNode(), ctx)
+        node.txt_operator = '[]'
+        node.set_expression(self.visit(ctx.unaryExpression()))
+
+        args = self._make_args(ctx, [ctx.expression()])
+        node.set_argument_list(args)
 
         return node
 
     # Visit a parse tree produced by CParser#SizeOfTypeExpression.
     def visitSizeOfTypeExpression(self, ctx):
-        return c_node.DontCareExprNode.create(self._c, ctx)
+
+        self._c.report_error(ctx, "sizeof not supported")
+        node = self._c.init_node(expr.ErrorExprNode(), ctx)
+
+        return node
 
     # Visit a parse tree produced by CParser#IdentifierExpression.
     def visitIdentifierExpression(self, ctx):
@@ -241,42 +251,45 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
     # Visit a parse tree produced by CParser#UnaryOperatorExpression.
     def visitUnaryOperatorExpression(self, ctx):
 
-        op = get_text(ctx.getChild(0))
-
         node = self._c.init_node(expr.UnaryOpExprNode(), ctx)
-        node.txt_operator = op
-
-        args = self._make_args(ctx, [ctx.castExpression()])
-        node.set_argument_list(args)
+        node.txt_operator = get_text(ctx.getChild(0))
+        node.set_expression(self.visit(ctx.castExpression()))
+        node.set_argument_list(self._make_args(ctx, []))
 
         return node
 
     # Visit a parse tree produced by CParser#AlignOfTypeExpression.
     def visitAlignOfTypeExpression(self, ctx):
-        return c_node.DontCareExprNode.create(self._c, ctx)
+        self._c.report_error(ctx, "_Alignof not supported")
+        node = self._c.init_node(expr.ErrorExprNode(), ctx)
+        return node
 
     # Visit a parse tree produced by CParser#SizeOfExpression.
     def visitSizeOfExpression(self, ctx):
-        node = c_node.DontCareExprNode.create(self._c, ctx)
-        node.child_argument_list.add_argument(
-            self.visit(ctx.unaryExpression()))
+        self._c.report_error(ctx, "sizeof not supported")
+        node = self._c.init_node(expr.ErrorExprNode(), ctx)
+        return node
+
+    # Visit a parse tree produced by CParser#IntegerLiteralExpression.
+    def visitIntegerLiteralExpression(self, ctx):
+        node = self._c.init_node(c_node.IntegerLiteralExprNode(), ctx)
+        node.txt_literal = get_text(ctx.IntegerConstant())
 
         return node
 
     # Visit a parse tree produced by CParser#StringLiteralExpression.
     def visitStringLiteralExpression(self, ctx):
-        return c_node.DontCareExprNode.create(self._c, ctx)
+        self._c.report_error(ctx, "string literal not supported")
+        node = self._c.init_node(expr.ErrorExprNode(), ctx)
+        return node
 
     # Visit a parse tree produced by CParser#PreIncrementExpression.
     def visitPreIncrementExpression(self, ctx):
 
-        op = get_text(ctx.getChild(0))
-
         node = self._c.init_node(expr.UnaryOpExprNode(), ctx)
-        node.txt_operator = op
-
-        args = self._make_args(ctx, [ctx.unaryExpression()])
-        node.set_argument_list(args)
+        node.txt_operator = get_text(ctx.getChild(0))
+        node.set_expression(self.visit(ctx.unaryExpression()))
+        node.set_argument_list(self._make_args(ctx, []))
 
         return node
 
@@ -320,7 +333,7 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
             op = get_text(ctx.getChild(1))
             if op not in ('&&', '||', '*', '/', '%', '+', '-', '<', '>',
                           '<=', '>=', '==', '!='):
-                self._c.report_error(ctx, "Unsupported operator '%s'" % op)
+                self._c.report_error(ctx, "Operator '%s' not supported" % op)
 
             node = self._c.init_node(expr.BinaryOpExprNode(), ctx)
 
@@ -337,12 +350,11 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
             return self.visit(ctx.logicalOrExpression())
         else:
-            node = c_node.DontCareExprNode.create(self._c, ctx)
-            node.child_argument_list.add_argument(
+            node = self._c.init_node(expr.ConditionalExprNode(), ctx)
+            node.set_condition_expression(
                 self.visit(ctx.logicalOrExpression()))
-            node.child_argument_list.add_argument(self.visit(ctx.expression()))
-            node.child_argument_list.add_argument(
-                self.visit(ctx.conditionalExpression()))
+            node.set_true_expression(self.visit(ctx.expression()))
+            node.set_false_expression(self.visit(ctx.conditionalExpression()))
 
             return node
 
@@ -351,24 +363,34 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
         if ctx.conditionalExpression() is not None:
             return self.visit(ctx.conditionalExpression())
         else:
-            node = c_node.DontCareExprNode.create(self._c, ctx)
-            node.child_argument_list.add_argument(
-                self.visit(ctx.unaryExpression()))
-            node.child_argument_list.add_argument(
-                self.visit(ctx.assignmentExpression()))
+            op = get_text(ctx.getChild(1))
+            if op == '=':
 
-            return node
+                node = self._c.init_node(expr.AssignmentExprNode(), ctx)
+
+                node.set_left_expression(self.visit(ctx.unaryExpression()))
+                node.set_right_expression(
+                    self.visit(ctx.assignmentExpression()))
+                return node
+            else:
+                if op not in ('*=', '/=', '%=', '+=', '-=', '<<=', '>>=',
+                              '&=', '^=', '|='):
+                    self._c.report_error(
+                        ctx, "Operator '%s' not supported" % op)
+
+                node = self._c.init_node(expr.BinaryOpExprNode(), ctx)
+                node.txt_operator = op
+                args = self._make_args(
+                    ctx, [ctx.unaryExpression(), ctx.assignmentExpression()])
+                node.set_argument_list(args)
+                return node
 
     # Visit a parse tree produced by CParser#expr.
     def visitExpression(self, ctx):
-        if len(ctx.assignmentExpression()) == 1:
-            return self.visit(ctx.assignmentExpression(0))
-        else:
-            node = c_node.DontCareExprNode.create(self._c, ctx)
-            for each in ctx.assignmentExpression():
-                node.child_argument_list.add_argument(self.visit(each))
+        if len(ctx.assignmentExpression()) > 1:
+            self._c.report_errot(ctx, "Comma expression not supported")
 
-            return node
+        return self.visit(ctx.assignmentExpression(0))
 
     # Visit a parse tree produced by CParser#constantExpression.
     def visitConstantExpression(self, ctx):

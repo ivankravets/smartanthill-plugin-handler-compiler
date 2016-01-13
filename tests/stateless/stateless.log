@@ -1,0 +1,15 @@
+--- Build ---
+gcc -fno-exceptions -g -Os -Wall -ffunction-sections -fdata-sections -std=c99 -I.. -DSA_PLUGIN_ID=stateless -include stateless.h -o stateless.exe ../runner.c stateless.c
+Ok
+
+---  Run  ---
+Ok
+
+
+*** Non Blocking ***
+--- Build ---
+gcc -fno-exceptions -g -Os -Wall -ffunction-sections -fdata-sections -std=c99 -I.. -DSA_PLUGIN_ID=stateless -include stateless.h -o stateless_non_blocking.exe ../runner.c stateless_non_blocking.c
+Ok
+
+---  Run  ---
+Ok

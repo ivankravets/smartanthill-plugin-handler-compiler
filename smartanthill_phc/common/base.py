@@ -148,7 +148,7 @@ class Node(object):
         '''
         parent getter
         '''
-        assert self._parent
+        assert self._parent is not None
         return self._parent
 
 
@@ -252,7 +252,7 @@ class ExpressionNode(Node):
         '''
         super(ExpressionNode, self).__init__()
         self._resolved_type = None
-        self.has_parenthesis = False
+        self.bool_parenthesis = False
 
     def set_type(self, resolved_type):
         '''
@@ -376,7 +376,7 @@ class TypeDeclNode(Node):
         # pylint: disable=unused-argument
         return False
 
-    def insert_cast_from(self, compiler, source_type, expression):
+    def insert_cast(self, compiler, source_type, expression):
         '''
         Inserts a cast from the source type
         Only implemented by types that return true to can_cast_from
@@ -396,6 +396,14 @@ class TypeDeclNode(Node):
         # pylint: disable=unused-argument
         return None
 
+    def lookup_operator(self, name):
+        '''
+        Base method for type operator look up
+        '''
+        # pylint: disable=no-self-use
+        # pylint: disable=unused-argument
+        return None
+
 
 def expression_type_match(compiler, lhs_type, parent, child_name):
     '''
@@ -409,8 +417,8 @@ def expression_type_match(compiler, lhs_type, parent, child_name):
 
     if expr_type == lhs_type:
         return True
-    elif expr_type.can_cast_to(lhs_type):
-        cast = expr_type.insert_cast_to(compiler, lhs_type, e)
+    elif lhs_type.can_cast_from(expr_type):
+        cast = lhs_type.insert_cast(compiler, expr_type, e)
         cast.set_parent(parent)
         setattr(parent, child_name, cast)
         return True
@@ -486,100 +494,3 @@ class ArgumentListNode(Node):
 
         child.set_parent(self)
         self.childs_arguments.insert(index, child)
-
-    def overload_filter(self, compiler, decl_list):
-        '''
-        From a list declarations, returns one that can match the arguments,
-        if no candidate is found, reports error an raises
-        '''
-        exact_match = []
-        cast_match = []
-        for current in decl_list:
-            r = self.can_match(current.child_parameter_list)
-
-            if r == TypeDeclNode.NO_MATCH:
-                pass
-            elif r == TypeDeclNode.EXACT_MATCH:
-                exact_match.append(current)
-            elif r == TypeDeclNode.CAST_MATCH:
-                cast_match.append(current)
-            else:
-                assert False
-
-        if len(exact_match) == 1:
-            return exact_match[0]
-        elif len(exact_match) == 0:
-            if len(cast_match) == 1:
-                return cast_match[0]
-            elif len(cast_match) == 0:
-                compiler.report_error(
-                    self.ctx, "None of candidates can match the arguments")
-                compiler.raise_error()
-            elif len(cast_match) > 1:
-                compiler.report_error(
-                    self.ctx, "More than a candidate can match the arguments")
-                compiler.raise_error()
-            else:
-                assert False
-        else:
-            assert False
-
-    def can_match(self, params):
-        '''
-        If this argument list can not used to initialize given argument list
-        Returns TypeDeclNode.NO_MATCH when there is no chance to make it match
-        TypeDeclNode.EXACT_MATCH when match does not need any cast
-        and TypeDeclNode.CAST_MATCH when it can match but casting needed
-        '''
-        if len(self.childs_arguments) != params.get_size():
-            return TypeDeclNode.NO_MATCH
-
-        result = TypeDeclNode.EXACT_MATCH
-        for i in range(len(self.childs_arguments)):
-
-            source = self.childs_arguments[i].get_type()
-            target = params.get_type_at(i)
-
-            if source == target:
-                pass
-            elif source.can_cast_to(target):
-                result = TypeDeclNode.CAST_MATCH
-            elif target.can_cast_from(source):
-                result = TypeDeclNode.CAST_MATCH
-            else:
-                return TypeDeclNode.NO_MATCH
-
-        return result
-
-    def make_match(self, compiler, params):
-        '''
-        Makes this argument list to initialize given declaration,
-        inserting casts if required.
-        '''
-
-        if len(self.childs_arguments) != params.get_size():
-            compiler.report_error(
-                self.ctx, "Wrong number of arguments, need %s but given %s" % (
-                    str(params.get_size()), str(len(self.childs_arguments))))
-            compiler.raise_error()
-
-        for i in range(len(self.childs_arguments)):
-            target = params.get_type_at(i)
-            source = self.childs_arguments[i].get_type()
-
-            if source == target:
-                pass
-            elif source.can_cast_to(target):
-                e = source.insert_cast_to(
-                    compiler, target, self.childs_arguments[i])
-                e.set_parent(self)
-                self.childs_arguments[i] = e
-            elif target.can_cast_from(source):
-                e = target.insert_cast_from(
-                    compiler, source, self.childs_arguments[i])
-                e.set_parent(self)
-                self.childs_arguments[i] = e
-            else:
-                compiler.report_error(
-                    self.ctx, "Invalid argument type at %s" % i)
-                compiler.raise_error()

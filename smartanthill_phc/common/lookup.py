@@ -262,7 +262,7 @@ class RootScope(object):
         '''
         Looks up an operator
         '''
-        return self._operators[name] if name in self._operators else []
+        return self._operators[name] if name in self._operators else None
 
     def add_function(self, compiler, name, node):
         '''

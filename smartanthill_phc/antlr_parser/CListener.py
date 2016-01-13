@@ -31,12 +31,12 @@ class CListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CParser#LiteralExpression.
-    def enterLiteralExpression(self, ctx):
+    # Enter a parse tree produced by CParser#FloatingLiteralExpression.
+    def enterFloatingLiteralExpression(self, ctx):
         pass
 
-    # Exit a parse tree produced by CParser#LiteralExpression.
-    def exitLiteralExpression(self, ctx):
+    # Exit a parse tree produced by CParser#FloatingLiteralExpression.
+    def exitFloatingLiteralExpression(self, ctx):
         pass
 
 
@@ -46,6 +46,15 @@ class CListener(ParseTreeListener):
 
     # Exit a parse tree produced by CParser#PostIncrementExpression.
     def exitPostIncrementExpression(self, ctx):
+        pass
+
+
+    # Enter a parse tree produced by CParser#CharacterLiteralExpression.
+    def enterCharacterLiteralExpression(self, ctx):
+        pass
+
+    # Exit a parse tree produced by CParser#CharacterLiteralExpression.
+    def exitCharacterLiteralExpression(self, ctx):
         pass
 
 
@@ -109,6 +118,15 @@ class CListener(ParseTreeListener):
 
     # Exit a parse tree produced by CParser#SizeOfExpression.
     def exitSizeOfExpression(self, ctx):
+        pass
+
+
+    # Enter a parse tree produced by CParser#IntegerLiteralExpression.
+    def enterIntegerLiteralExpression(self, ctx):
+        pass
+
+    # Exit a parse tree produced by CParser#IntegerLiteralExpression.
+    def exitIntegerLiteralExpression(self, ctx):
         pass
 
 

@@ -13,8 +13,10 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+from smartanthill_phc import c_node
 from smartanthill_phc.c_node import VoidTypeDeclNode, IntTypeDeclNode,\
     BasicTypeDeclNode, PapiFunctionDeclNode
+from smartanthill_phc.common import decl
 from smartanthill_phc.common.base import DeclarationListNode
 
 
@@ -26,15 +28,17 @@ def create_builtins(compiler, ctx):
     decls = compiler.init_node(DeclarationListNode(), ctx)
     decls.add_declaration(
         compiler.init_node(VoidTypeDeclNode(), ctx))
-    decls.add_declaration(
-        compiler.init_node(IntTypeDeclNode('uint8_t'), ctx))
-    decls.add_declaration(
-        compiler.init_node(IntTypeDeclNode('bool'), ctx))
-    decls.add_declaration(
-        compiler.init_node(IntTypeDeclNode('_Bool'), ctx))
 
     decls.add_declaration(
         compiler.init_node(BasicTypeDeclNode('_zc_dont_care'), ctx))
+
+    decls.add_declaration(
+        compiler.init_node(BasicTypeDeclNode('sa_int_literal'), ctx))
+    decls.add_declaration(
+        compiler.init_node(BasicTypeDeclNode('sa_bool_literal'), ctx))
+
+    _make_integer(compiler, ctx, decls)
+    _make_bool(compiler, ctx, decls)
 
     decls.add_declaration(compiler.init_node(
         PapiFunctionDeclNode('papi_sleep'), ctx))
@@ -50,3 +54,124 @@ def create_builtins(compiler, ctx):
     compiler.check_stage('built_in')
 
     return decls
+
+
+def _make_integer(compiler, ctx, decls):
+
+    tn = compiler.init_node(IntTypeDeclNode('uint8_t'), ctx)
+    ol = compiler.init_node(DeclarationListNode(), ctx)
+    tn.set_operator_decl_list(ol)
+
+    decls.add_declaration(tn)
+    _make_integer_operators(compiler, ctx, tn, decls, ol)
+
+    casts = compiler.init_node(DeclarationListNode(), ctx)
+
+    c0 = compiler.init_node(c_node.TrivialCastRuleNode(), ctx)
+    t0 = compiler.init_node(c_node.SimpleTypeNode(), ctx)
+    t0.txt_name = 'sa_int_literal'
+    c0.set_type(t0)
+
+    casts.add_declaration(c0)
+    tn.set_cast_rule_list(casts)
+
+
+def _make_integer_operators(compiler, ctx, tn, decls, membs):
+
+    decls.add_declaration(_make_op(compiler, ctx, '+', tn, [tn, tn]))
+    decls.add_declaration(_make_op(compiler, ctx, '-', tn, [tn, tn]))
+    decls.add_declaration(_make_op(compiler, ctx, '*', tn, [tn, tn]))
+    decls.add_declaration(_make_op(compiler, ctx, '/', tn, [tn, tn]))
+    decls.add_declaration(_make_op(compiler, ctx, '%', tn, [tn, tn]))
+
+    decls.add_declaration(_make_op(compiler, ctx, '<', tn, [tn, tn]))
+    decls.add_declaration(_make_op(compiler, ctx, '>', tn, [tn, tn]))
+    decls.add_declaration(_make_op(compiler, ctx, '<=', tn, [tn, tn]))
+    decls.add_declaration(_make_op(compiler, ctx, '>=', tn, [tn, tn]))
+    decls.add_declaration(_make_op(compiler, ctx, '==', tn, [tn, tn]))
+    decls.add_declaration(_make_op(compiler, ctx, '!=', tn, [tn, tn]))
+
+    decls.add_declaration(_make_op(compiler, ctx, '&', tn, [tn, tn]))
+    decls.add_declaration(_make_op(compiler, ctx, '^', tn, [tn, tn]))
+    decls.add_declaration(_make_op(compiler, ctx, '|', tn, [tn, tn]))
+
+#     g.append(_make_op(compiler, ctx, '>>', tn, [tn, tn]))
+#     g.append(_make_op(compiler, ctx, '<<', tn, [tn, tn]))
+
+    membs.add_declaration(_make_op(compiler, ctx, '+', tn, []))
+    membs.add_declaration(_make_op(compiler, ctx, '-', tn, []))
+    membs.add_declaration(_make_op(compiler, ctx, '~', tn, []))
+
+    membs.add_declaration(_make_op(compiler, ctx, '++', tn, []))
+    membs.add_declaration(_make_op(compiler, ctx, '--', tn, []))
+    membs.add_declaration(_make_op(compiler, ctx, 'post++', tn, []))
+    membs.add_declaration(_make_op(compiler, ctx, 'post--', tn, []))
+
+    decls.add_declaration(_make_op(compiler, ctx, '+=', tn, [tn, tn]))
+    decls.add_declaration(_make_op(compiler, ctx, '-=', tn, [tn, tn]))
+    decls.add_declaration(_make_op(compiler, ctx, '*=', tn, [tn, tn]))
+    decls.add_declaration(_make_op(compiler, ctx, '/=', tn, [tn, tn]))
+    decls.add_declaration(_make_op(compiler, ctx, '%=', tn, [tn, tn]))
+
+    decls.add_declaration(_make_op(compiler, ctx, '&=', tn, [tn, tn]))
+    decls.add_declaration(_make_op(compiler, ctx, '^=', tn, [tn, tn]))
+    decls.add_declaration(_make_op(compiler, ctx, '|=', tn, [tn, tn]))
+
+#     m.append(_make_op(compiler, ctx, '<<=', tn, [tn]))
+#     m.append(_make_op(compiler, ctx, '>>=', tn, [tn]))
+
+    membs.add_declaration(_make_op(compiler, ctx, '[]', tn, [tn]))
+
+
+def _make_bool(compiler, ctx, decls):
+
+    tn = compiler.init_node(IntTypeDeclNode('bool'), ctx)
+    ol = compiler.init_node(DeclarationListNode(), ctx)
+    tn.set_operator_decl_list(ol)
+
+    decls.add_declaration(tn)
+    _make_bool_operators(compiler, ctx, tn, decls)
+
+    casts = compiler.init_node(DeclarationListNode(), ctx)
+
+    c0 = compiler.init_node(c_node.TrivialCastRuleNode(), ctx)
+    t0 = compiler.init_node(c_node.SimpleTypeNode(), ctx)
+    t0.txt_name = 'sa_bool_literal'
+    c0.set_type(t0)
+
+    casts.add_declaration(c0)
+    tn.set_cast_rule_list(casts)
+
+
+def _make_bool_operators(compiler, ctx, tn, decls):
+
+    decls.add_declaration(_make_op(compiler, ctx, '==', tn, [tn, tn]))
+    decls.add_declaration(_make_op(compiler, ctx, '!=', tn, [tn, tn]))
+
+    decls.add_declaration(_make_op(compiler, ctx, '&&', tn, [tn, tn]))
+    decls.add_declaration(_make_op(compiler, ctx, '||', tn, [tn, tn]))
+    decls.add_declaration(_make_op(compiler, ctx, '!', tn, [tn]))
+
+
+def _make_op(compiler, ctx, op_name, return_type, arg_types):
+
+    d = compiler.init_node(c_node.OperatorDeclNode(), ctx)
+    d.txt_name = op_name
+
+    rt = compiler.init_node(c_node.RefTypeNode(), ctx)
+    rt.set_type(return_type)
+
+    d.set_return_type(rt)
+
+    args = compiler.init_node(decl.ArgumentDeclListNode(), ctx)
+    for each in arg_types:
+        a = compiler.init_node(decl.ArgumentDeclNode(), ctx)
+        at = compiler.init_node(c_node.RefTypeNode(), ctx)
+        at.set_type(each)
+
+        a.set_argument_type(at)
+        args.add_declaration(a)
+
+    d.set_argument_decl_list(args)
+
+    return d
