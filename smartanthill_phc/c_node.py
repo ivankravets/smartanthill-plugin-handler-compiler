@@ -335,7 +335,7 @@ class IntTypeDeclNode(TypeDeclNode):
         Otherwise returns False
         '''
         for each in self.child1_cast_rules_list.declarations:
-            if each.can_cast_from(source_type):
+            if each.get().can_cast_from(source_type):
                 return True
         return False
 
@@ -346,15 +346,15 @@ class IntTypeDeclNode(TypeDeclNode):
         '''
         # pylint: disable=unused-argument
         for each in self.child1_cast_rules_list.declarations:
-            if each.can_cast_from(source_type):
-                return each.insert_cast(compiler, self, expression)
+            if each.get().can_cast_from(source_type):
+                return each.get().insert_cast(compiler, self, expression)
         assert False
 
     def lookup_operator(self, name):
         result = []
         for each in self.child0_operator_decl_list.declarations:
-            if each.txt_name == name:
-                result.append(each)
+            if each.get().txt_name == name:
+                result.append(each.get())
         return result
 
 
@@ -580,12 +580,12 @@ class OperatorDeclNode(decl.CallableDeclNode, ResolutionHelper):
 
     def can_match_arguments(self, compiler, ctx, args):
 
-        return resolve._can_match(
+        return resolve.can_match_helper(
             compiler, ctx, args,
             self.child1_argument_decl_list.declarations, False)
 
     def make_arguments_match(self, compiler, ctx, args):
 
-        return resolve._can_match(
+        return resolve.can_match_helper(
             compiler, ctx, args,
             self.child1_argument_decl_list.declarations, True)

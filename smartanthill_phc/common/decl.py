@@ -35,7 +35,7 @@ class CallableDeclNode(Node):
         '''
         Base method for argument matching
         Returns where this declaration can be called with given expressions
-        as arguments 
+        as arguments
         '''
         # pylint: disable=no-self-use
         # pylint: disable=unused-argument

@@ -147,6 +147,9 @@ class _NodeIdsWalker(NodeWalker):
         '''
         self.node_ids = []
 
+    def do_child(self, child):
+        self.walk_node(child.get())
+
     def walk_node(self, node):
         assert node
         self.node_ids.append(node.node_id)

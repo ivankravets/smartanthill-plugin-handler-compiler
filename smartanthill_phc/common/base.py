@@ -103,7 +103,7 @@ class Child(object):
     Intermediate instance to hold a child reference
     '''
 
-    def __init__(self, parent, allowed_type, optional=False):
+    def __init__(self, parent, allowed_type, optional=False, list_item=False):
         '''
         Constructor
         '''
@@ -113,7 +113,8 @@ class Child(object):
         self._allowed_type = allowed_type
         self._optional = optional
 
-        parent.add_child(self)
+        if not list_item:
+            parent.add_child(self)
 
     def set(self, child):
         '''
@@ -130,6 +131,12 @@ class Child(object):
         Returns where there is a child here
         '''
         return self._child_node is None
+
+    def is_kind(self, some_kind):
+        '''
+        Returns where there is a child here
+        '''
+        return self._allowed_type == some_kind
 
     def get(self):
         '''
@@ -155,12 +162,12 @@ class Child(object):
         self._child_node = None
         return temp
 
-    def walk(self, walker):
+    def call(self, doer):
         '''
         Walks this child
         '''
         if self._child_node is not None:
-            walker.walk_node(self._child_node)
+            doer.do_child(self)
 
 
 class ChildList(object):
@@ -186,6 +193,14 @@ class ChildList(object):
         '''
         return self._child_list.__iter__()
 
+    def _make(self, child):
+        '''
+        Helper method
+        '''
+        box = Child(self._parent, self._allowed_type, False, True)
+        box.set(child)
+        return box
+
     def get_size(self):
         '''
         Returns the child count
@@ -196,9 +211,7 @@ class ChildList(object):
         '''
         Adds a child
         '''
-        assert isinstance(child, self._allowed_type)
-        child.set_parent(self._parent)
-        self._child_list.append(child)
+        self._child_list.append(self._make(child))
 
     def add_all(self, childs):
         '''
@@ -211,22 +224,19 @@ class ChildList(object):
         '''
         Returns a child
         '''
-        return self._child_list[index]
+        return self._child_list[index].get()
 
     def insert_at(self, index, child):
         '''
         Inserts a child
         '''
-        assert isinstance(child, self._allowed_type)
-
-        child.set_parent(self._parent)
-        self._child_list.insert(index, child)
+        self._child_list.insert(index, self._make(child))
 
     def remove_at(self, index):
         '''
         Removes a child
         '''
-        return self._child_list.pop(index)
+        return self._child_list.pop(index).get()
 
     def replace_at(self, index, child):
         '''
@@ -234,9 +244,8 @@ class ChildList(object):
         '''
         assert isinstance(child, self._allowed_type)
 
-        temp = self._child_list.pop(index)
-        child.set_parent(self._parent)
-        self._child_list.insert(index, child)
+        temp = self.remove_at(index)
+        self.insert_at(index, child)
         return temp
 
     def split_at(self, index):
@@ -248,18 +257,18 @@ class ChildList(object):
 
         other = []
         for i in range(index, len(self._child_list)):
-            other.append(self._child_list[i])
+            other.append(self._child_list[i].get())
             self._child_list[i] = None
 
         self._child_list = self._child_list[0:index]
         return other
 
-    def walk(self, walker):
+    def call(self, doer):
         '''
         Walks all childs
         '''
         for each in self._child_list:
-            walker.walk_node(each)
+            doer.do_child(each)
 
 
 class Node(object):
@@ -322,12 +331,12 @@ class Node(object):
         '''
         self._childs.append(child)
 
-    def walk_childs(self, walker):
+    def for_each_child(self, doer):
         '''
         Walks all node childs
         '''
         for each in self._childs:
-            each.walk(walker)
+            each.call(doer)
 
 
 class StatementNode(Node):

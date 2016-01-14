@@ -13,7 +13,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from smartanthill_phc.common import errors, decl
+from smartanthill_phc.common import errors
 from smartanthill_phc.common.base import ResolutionHelper,\
     expression_type_match, TypeDeclNode
 from smartanthill_phc.common.lookup import lookup_type, RootScope,\
@@ -80,7 +80,7 @@ def overload_filter(compiler, ctx, args, decl_list_list):
         compiler.raise_error()
 
 
-def _can_match(compiler, ctx, args, decls, make_match):
+def can_match_helper(compiler, ctx, args, decls, make_match):
     '''
     If this argument list can not used to initialize given argument list
     Returns TypeDeclNode.NO_MATCH when there is no chance to make it match
@@ -127,6 +127,9 @@ class _ResolutionCheckWalker(NodeWalker):
     Walker class that will check all reachable nodes do not raise when
     get_type() is called and that something is returned
     '''
+
+    def do_child(self, child):
+        self.walk_node(child.get())
 
     def walk_node(self, node):
         assert node
@@ -198,7 +201,7 @@ class _ResolveVisitor(CodeVisitor):
         self.visit(node.child_source)
 
     def visit_TypeDeclNode(self, node):
-        self.visit_childs(node)
+        self.visit_all_childs(node)
         node.get_scope(RootScope).add_type(self._c, node.txt_name, node)
 
     def visit_OperatorDeclNode(self, node):
@@ -207,11 +210,11 @@ class _ResolveVisitor(CodeVisitor):
             #             node.get_scope(StatementListScope).add_variable(
             #                 self._c, node.txt_name, node)
 
-            self.visit_childs(node)
+            self.visit_all_childs(node)
             node.set_type(node.child0_return_type.get_type())
 
     def visit_TrivialCastRuleNode(self, node):
-        self.visit_childs(node)
+        self.visit_all_childs(node)
 
     def visit_StmtListNode(self, node):
         self.visit_stmt_list(node)
@@ -222,12 +225,12 @@ class _ResolveVisitor(CodeVisitor):
             # so no unreachable statements allowed
             if has_flow_stmt:
                 self._c.report_error(each.ctx, "Unreachable statement")
-            if each.is_closed_stmt():
+            if each.get().is_closed_stmt():
                 has_flow_stmt = True
 
     def visit_DeclarationListNode(self, node):
-        for decl in node.declarations:
-            self.visit(decl)
+        for each in node.declarations:
+            self.visit(each.get())
 
     def visit_PreprocessorDirectiveNode(self, node):
         # pylint: disable=unused-argument
@@ -251,7 +254,7 @@ class _ResolveVisitor(CodeVisitor):
             node.get_scope(StatementListScope).add_variable(
                 self._c, node.txt_name, node)
 
-            self.visit_childs(node)
+            self.visit_all_childs(node)
 
             node.set_type(node.child_declaration_type.get_type())
 
@@ -294,16 +297,16 @@ class _ResolveVisitor(CodeVisitor):
 
     def visit_ReturnStmtNode(self, node):
 
-        self.visit_childs(node)
+        self.visit_all_childs(node)
 
         node.get_scope(ReturnStmtScope).add_return_stmt(node)
 
     def visit_ExpressionStmtNode(self, node):
 
-        self.visit_childs(node)
+        self.visit_all_childs(node)
 
     def visit_IfElseStmtNode(self, node):
-        self.visit_childs(node)
+        self.visit_all_childs(node)
 
 #         t = self.get_scope(RootScope).lookup_type('_zc_boolean')
 #
@@ -313,16 +316,16 @@ class _ResolveVisitor(CodeVisitor):
         # no need to raise here
 
     def visit_FunctionCallStmtNode(self, node):
-        self.visit_childs(node)
+        self.visit_all_childs(node)
 
     def visit_WhileStmtNode(self, node):
-        self.visit_childs(node)
+        self.visit_all_childs(node)
 
     def visit_DoWhileStmtNode(self, node):
-        self.visit_childs(node)
+        self.visit_all_childs(node)
 
     def visit_ForStmtNode(self, node):
-        self.visit_childs(node)
+        self.visit_all_childs(node)
 
     def visit_RefTypeNode(self, node):
 
@@ -346,7 +349,7 @@ class _ResolveVisitor(CodeVisitor):
         assert False
 
     def visit_PointerTypeNode(self, node):
-        self.visit_childs(node)
+        self.visit_all_childs(node)
 
         t = node.child_pointed_type.get_type()
         # TODO
@@ -367,7 +370,7 @@ class _ResolveVisitor(CodeVisitor):
 
     def visit_MemberAccessExprNode(self, node):
 
-        self.visit_childs(node)
+        self.visit_all_childs(node)
 
         t = node.child_expression.get_type()
         m = t.lookup_member(self.txt_member)
@@ -414,7 +417,7 @@ class _ResolveVisitor(CodeVisitor):
 
     def visit_AssignmentExprNode(self, node):
 
-        self.visit_childs(node)
+        self.visit_all_childs(node)
 
         t = node.child0_left_expression.get_type()
 
@@ -426,12 +429,12 @@ class _ResolveVisitor(CodeVisitor):
         node.set_type(t)
 
     def visit_ConditionalExprNode(self, node):
-        self.visit_childs(node)
+        self.visit_all_childs(node)
         node.set_type(self._zc_dont_care)
 
     def visit_OperatorExprNode(self, node):
 
-        self.visit_childs(node)
+        self.visit_all_childs(node)
         candidates = node.get_scope(
             RootScope).lookup_operator(node.txt_operator)
 
@@ -460,7 +463,7 @@ class _ResolveVisitor(CodeVisitor):
 
     def visit_MemberOperatorExprNode(self, node):
 
-        self.visit_childs(node)
+        self.visit_all_childs(node)
 
         ref_type = node.child0_expression.get_type()
 
@@ -496,12 +499,12 @@ class _ResolveVisitor(CodeVisitor):
 
     def visit_IndexExprNode(self, node):
 
-        self.visit_childs(node)
+        self.visit_all_childs(node)
         node.set_type(self._zc_dont_care)
 
     def visit_MemberExprNode(self, node):
 
-        self.visit_childs(node)
+        self.visit_all_childs(node)
         left = node.child_expression.get_type()
 
         if node.bool_arrow:
@@ -522,8 +525,8 @@ class _ResolveVisitor(CodeVisitor):
 
     def visit_CastExprNode(self, node):
 
-        self.visit_childs(node)
+        self.visit_all_childs(node)
         node.set_type(node.child0_cast_type.get_type())
 
     def visit_ArgumentListNode(self, node):
-        self.visit_expression_list(node, node.arguments)
+        self.visit_all_childs(node)

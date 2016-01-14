@@ -114,7 +114,7 @@ class _WriterVisitor(NodeVisitor):
 
     def visit_DeclarationListNode(self, node):
         for each in node.declarations:
-            self.visit(each)
+            self.visit(each.get())
 
     def visit_PreprocessorDirectiveNode(self, node):
         self._w.write_line(node.txt_body)
@@ -140,9 +140,9 @@ class _WriterVisitor(NodeVisitor):
             if not first:
                 self._w.write(', ')
             first = False
-            self.visit(each.child_argument_type)
+            self.visit(each.get().child_argument_type)
             self._w.write(' ')
-            self._w.write(each.txt_name)
+            self._w.write(each.get().txt_name)
 
         self._w.write(')')
         self._w.end_of_statement(node.ctx.start)
@@ -153,7 +153,7 @@ class _WriterVisitor(NodeVisitor):
         self._w.write_line('{')
 
         for each in node.statements:
-            self.visit(each)
+            self.visit(each.get())
 
         self._w.write_line('}')
 
@@ -577,7 +577,7 @@ class _WriterVisitor(NodeVisitor):
             if not first:
                 self._w.write(', ')
             first = False
-            self.write_expr(each)
+            self.write_expr(each.get())
 
         self._w.write(end)
 

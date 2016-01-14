@@ -92,7 +92,7 @@ class _RewriteVisitor(CodeVisitor):
 
     def visit_DeclarationListNode(self, node):
         for each in node.declarations:
-            self.visit(each)
+            self.visit(each.get())
 
     def visit_PreprocessorDirectiveNode(self, node):
         # pylint: disable=unused-argument
@@ -117,7 +117,7 @@ class _RewriteVisitor(CodeVisitor):
 
     def visit_StmtListNode(self, node):
         for each in node.statements:
-            self.visit(each)
+            self.visit(each.get())
 
     def visit_NopStmtNode(self, node):
         # Nothing to do here
@@ -225,13 +225,13 @@ class _RewriteVisitor(CodeVisitor):
         self._w.insertAfterToken(node.ctx.stop, txt)
 
     def visit_LoopStmtNode(self, node):
-        self.visit_childs(node)
+        self.visit_all_childs(node)
 
     def visit_ReturnStmtNode(self, node):
-        self.visit_childs(node)
+        self.visit_all_childs(node)
 
     def visit_IfElseStmtNode(self, node):
-        self.visit_childs(node)
+        self.visit_all_childs(node)
 
     def visit_StateMachineStmtNode(self, node):
 
@@ -438,4 +438,4 @@ class _RewriteVisitor(CodeVisitor):
 
     def visit_ArgumentListNode(self, node):
         for each in node.arguments:
-            self.visit(each)
+            self.visit(each.get())

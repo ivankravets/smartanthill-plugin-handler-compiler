@@ -14,7 +14,8 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-from smartanthill_phc.common.base import ArgumentListNode, ExpressionNode, Child
+from smartanthill_phc.common.base import ArgumentListNode, ExpressionNode,\
+    Child
 
 
 class ErrorExprNode(ExpressionNode):

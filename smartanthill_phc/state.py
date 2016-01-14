@@ -459,7 +459,7 @@ class StateMachineVisitor(NodeVisitor):
 
     def visit_DeclarationListNode(self, node):
         for each in node.declarations:
-            self.visit(each)
+            self.visit(each.get())
 
     def visit_PreprocessorDirectiveNode(self, node):
         # pylint: disable=unused-argument
@@ -653,13 +653,13 @@ class _StatementsVisitor(CodeVisitor):
                 self._substates_around_current(node.ctx)
                 return
 
-        self.visit_childs(node)
+        self.visit_all_childs(node)
 
         if self._split_all:
             self._debug_after_current(node.ctx)
 
     def visit_ExpressionStmtNode(self, node):
-        self.visit_childs(node)
+        self.visit_all_childs(node)
 
         if self._split_all:
             self._debug_after_current(node.ctx)
@@ -714,11 +714,11 @@ class _StatementsVisitor(CodeVisitor):
     def visit_LoopStmtNode(self, node):
 
         self._h.begin_loop(self._sc.get_last_state())
-        self.visit_childs(node)
+        self.visit_all_childs(node)
         self._h.end_loop(self._sc.get_last_state())
 
     def visit_ReturnStmtNode(self, node):
-        self.visit_childs(node)
+        self.visit_all_childs(node)
 
         if self._sc.has_states():  # Only needed if we already have states
             s = self._c.init_node(BeforeReturnStmtNode(), node.ctx.start)
@@ -730,25 +730,25 @@ class _StatementsVisitor(CodeVisitor):
             self.insert_before_current(s)
 
     def visit_IfElseStmtNode(self, node):
-        self.visit_childs(node)
+        self.visit_all_childs(node)
 
     def visit_DontCareExprNode(self, node):
         self.visit(node.argument_list.get())
 
     def visit_MemberExprNode(self, node):
-        self.visit_childs(node)
+        self.visit_all_childs(node)
 
     def visit_AssignmentExprNode(self, node):
-        self.visit_childs(node)
+        self.visit_all_childs(node)
 
     def visit_ConditionalExprNode(self, node):
-        self.visit_childs(node)
+        self.visit_all_childs(node)
 
     def visit_OperatorExprNode(self, node):
-        self.visit_childs(node)
+        self.visit_all_childs(node)
 
     def visit_MemberOperatorExprNode(self, node):
-        self.visit_childs(node)
+        self.visit_all_childs(node)
 
 #     def visit_UnaryOpExprNode(self, node):
 #         self.visit(node.child_argument_list)
@@ -763,10 +763,10 @@ class _StatementsVisitor(CodeVisitor):
         pass
 
     def visit_CastExprNode(self, node):
-        self.visit_childs(node)
+        self.visit_all_childs(node)
 
     def visit_TrivialCastExprNode(self, node):
-        self.visit_childs(node)
+        self.visit_all_childs(node)
 
     def visit_VariableExprNode(self, node):
         self._h.add_var_expr(node, self._sc.get_last_state())
@@ -796,4 +796,4 @@ class _StatementsVisitor(CodeVisitor):
         pass
 
     def visit_ArgumentListNode(self, node):
-        self.visit_expression_list(node, node.arguments)
+        self.visit_all_childs(node)
