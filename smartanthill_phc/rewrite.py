@@ -67,10 +67,10 @@ class _RewriteVisitor(CodeVisitor):
             assert False
 
     def _get_func_return(self):
-        if isinstance(self._func.child_return_type.ref_type_declaration,
+        if isinstance(self._func.return_type.get().ref_type_declaration,
                       VoidTypeDeclNode):
             return u"return;"
-        elif isinstance(self._func.child_return_type.ref_type_declaration,
+        elif isinstance(self._func.return_type.get().ref_type_declaration,
                         IntTypeDeclNode):
             return u"return 0;"
         else:
@@ -85,10 +85,10 @@ class _RewriteVisitor(CodeVisitor):
 
     def visit_RootNode(self, node):
         self._nb = node.get_scope(NonBlockingData)
-        self.visit(node.child_source)
+        self.visit(node.source.get())
 
     def visit_PluginSourceNode(self, node):
-        self.visit(node.child_declaration_list)
+        self.visit(node.declaration_list.get())
 
     def visit_DeclarationListNode(self, node):
         for each in node.declarations:
@@ -103,17 +103,17 @@ class _RewriteVisitor(CodeVisitor):
 
         self._func = node
         self._sm = self._nb.get_state_machine_data(node)
-        self.visit(node.child_stmt_list)
+        self.visit(node.statement_list.get())
 
         if self._sm is not None:
             if not self._sm.ref_state_machine.is_main_machine():
                 txt = u"void* sa_state0"
                 txt += u", waiting_for* sa_wf, uint8_t* sa_result"
-                if node.child_argument_decl_list.declarations.get_size() >= 1:
+                if node.argument_decl_list.get().declarations.get_size() >= 1:
                     txt += u", "
 
                 self._w.insertAfterToken(
-                    node.child_argument_decl_list.ctx.symbol, txt)
+                    node.argument_decl_list.get().ctx.symbol, txt)
 
     def visit_StmtListNode(self, node):
         for each in node.statements:
@@ -134,24 +134,24 @@ class _RewriteVisitor(CodeVisitor):
                 tk = get_declarator_identifier(
                     decl_list.initDeclarator(0).declarator())
 
-                if node.child_initializer_expression is not None:
+                if not node.initializer_expression.is_none():
                     self._w.replaceTokens(
                         node.ctx.start, tk.symbol,
                         u"sa_state->%s" % node.txt_name)
                 else:
                     self._w.deleteTokens(node.ctx.start, node.ctx.stop)
 
-            if node.child_initializer_expression is not None:
-                self.visit(node.child_initializer_expression)
+            if not node.initializer_expression.is_none():
+                self.visit(node.initializer_expression.get())
 
     def visit_ExpressionStmtNode(self, node):
-        self.visit(node.child_expression)
+        self.visit(node.expression.get())
 
     def visit_FunctionCallStmtNode(self, node):
 
-        self.visit(node.child_expression)
+        self.visit(node.expression.get())
 
-        if node.child_expression.bool_is_blocking:
+        if node.expression.get().bool_is_blocking:
             assert False
 
     def visit_PapiWaitStmtNode(self, node):
@@ -327,7 +327,7 @@ class _RewriteVisitor(CodeVisitor):
 
     def visit_FunctionCallSubStmtNode(self, node):
 
-        args = node.child_expression.argument_list.get()
+        args = node.expression.get().argument_list.get()
         txt_args = u"(void*)(sa_state + 1), sa_wf, sa_result"
         if args.arguments.get_size() >= 2:
             txt_args += u", "
@@ -338,9 +338,9 @@ class _RewriteVisitor(CodeVisitor):
         txt += u"\nsa_state->sa_next = %s;" % nxt
         txt += u"\nlabel_%s: ;/*nop*/" % nxt
 
-        t = node.child_expression.ref_declaration.child_return_type.txt_name
+        t = node.expression.get().ref_declaration.return_type.get().txt_name
         txt += u"\n%s %s = %s;" % (t, node.txt_name,
-                                   self._get_text(node.child_expression.ctx))
+                                   self._get_text(node.expression.get().ctx))
 
         txt += u"\nif(*(uint8_t*)(sa_state + 1) != 0) "
 
@@ -387,14 +387,14 @@ class _RewriteVisitor(CodeVisitor):
         self.visit(node.argument_list.get())
 
     def visit_MemberOperatorExprNode(self, node):
-        self.visit(node.child0_expression)
+        self.visit(node.expression.get())
         self.visit(node.argument_list.get())
 
-    def visit_MemberExprNode(self, node):
-        self.visit(node.child_expression)
+    def visit_MemberAccessExprNode(self, node):
+        self.visit(node.expression.get())
 
     def visit_CastExprNode(self, node):
-        self.visit(node.child1_expression)
+        self.visit(node.expression.get())
 
     def visit_LiteralExprNode(self, node):
         # nothing to do here

@@ -18,7 +18,9 @@ from smartanthill_phc.common import base, decl, expr
 from smartanthill_phc.common.base import ExpressionNode,\
     Node, StmtListNode,\
     StatementNode, TypeDeclNode,\
-    TypeNode, ResolutionHelper, DeclarationListNode, Child
+    TypeNode, ResolutionHelper, DeclarationListNode, Child, ChildExpr,\
+    ChildExprOpt
+from smartanthill_phc.common.decl import ArgumentDeclListNode
 from smartanthill_phc.common.expr import LiteralExprNode
 
 
@@ -57,48 +59,8 @@ class CastExprNode(ExpressionNode):
         Constructor
         '''
         super(CastExprNode, self).__init__()
-        self.child0_cast_type = None
-        self.child1_expression = None
-
-    def set_cast_type(self, child):
-        '''
-        expression setter
-        '''
-        assert isinstance(child, TypeNode)
-        child.set_parent(self)
-        self.child0_cast_type = child
-
-    def set_expression(self, child):
-        '''
-        expression setter
-        '''
-        assert isinstance(child, ExpressionNode)
-        child.set_parent(self)
-        self.child1_expression = child
-
-
-class MemberExprNode(ExpressionNode):
-
-    '''
-    Node class representing a dot member access
-    '''
-
-    def __init__(self):
-        '''
-        Constructor
-        '''
-        super(MemberExprNode, self).__init__()
-        self.txt_name = None
-        self.child_expression = None
-        self.ref_declaration = None
-
-    def set_expression(self, child):
-        '''
-        expression setter
-        '''
-        assert isinstance(child, ExpressionNode)
-        child.set_parent(self)
-        self.child_expression = child
+        self.cast_type = Child(self, TypeNode)
+        self.expression = ChildExpr(self)
 
 
 class IntegerLiteralExprNode(LiteralExprNode):
@@ -155,15 +117,7 @@ class FunctionCallStmtNode(StatementNode):
         Constructor
         '''
         super(FunctionCallStmtNode, self).__init__()
-        self.child_expression = None
-
-    def set_expression(self, child):
-        '''
-        expression setter
-        '''
-        assert isinstance(child, ExpressionNode)
-        child.set_parent(self)
-        self.child_expression = child
+        self.expression = ChildExpr(self)
 
 
 class LoopStmtNode(StatementNode):
@@ -190,24 +144,8 @@ class WhileStmtNode(LoopStmtNode):
         Constructor
         '''
         super(WhileStmtNode, self).__init__()
-        self.child0_expression = None
-        self.child1_stmt_list = None
-
-    def set_expression(self, child):
-        '''
-        expression setter
-        '''
-        assert isinstance(child, ExpressionNode)
-        child.set_parent(self)
-        self.child0_expression = child
-
-    def set_statement_list(self, child):
-        '''
-        statement_list setter
-        '''
-        assert isinstance(child, StmtListNode)
-        child.set_parent(self)
-        self.child1_stmt_list = child
+        self.expression = ChildExpr(self)
+        self.statement_list = Child(self, StmtListNode)
 
 
 class DoWhileStmtNode(WhileStmtNode):
@@ -234,42 +172,10 @@ class ForStmtNode(LoopStmtNode):
         Constructor
         '''
         super(ForStmtNode, self).__init__()
-        self.child0_init_expression = None
-        self.child1_condition_expression = None
-        self.child2_iteration_expression = None
-        self.child3_stmt_list = None
-
-    def set_init_expression(self, child):
-        '''
-        expression setter
-        '''
-        assert isinstance(child, ExpressionNode)
-        child.set_parent(self)
-        self.child0_init_expression = child
-
-    def set_condition_expression(self, child):
-        '''
-        expression setter
-        '''
-        assert isinstance(child, ExpressionNode)
-        child.set_parent(self)
-        self.child1_condition_expression = child
-
-    def set_iteration_expression(self, child):
-        '''
-        expression setter
-        '''
-        assert isinstance(child, ExpressionNode)
-        child.set_parent(self)
-        self.child2_iteration_expression = child
-
-    def set_statement_list(self, child):
-        '''
-        statement_list setter
-        '''
-        assert isinstance(child, StmtListNode)
-        child.set_parent(self)
-        self.child3_stmt_list = child
+        self.init_expression = ChildExprOpt(self)
+        self.condition_expression = ChildExprOpt(self)
+        self.iteration_expression = ChildExprOpt(self)
+        self.statement_list = Child(self, StmtListNode)
 
 
 class BasicTypeDeclNode(TypeDeclNode):
@@ -309,24 +215,8 @@ class IntTypeDeclNode(TypeDeclNode):
         Constructor
         '''
         super(IntTypeDeclNode, self).__init__(type_name)
-        self.child0_operator_decl_list = None
-        self.child1_cast_rules_list = None
-
-    def set_operator_decl_list(self, child):
-        '''
-        Setter
-        '''
-        assert isinstance(child, DeclarationListNode)
-        child.set_parent(self)
-        self.child0_operator_decl_list = child
-
-    def set_cast_rule_list(self, child):
-        '''
-        Setter
-        '''
-        assert isinstance(child, DeclarationListNode)
-        child.set_parent(self)
-        self.child1_cast_rules_list = child
+        self.operator_decl_list = Child(self, DeclarationListNode)
+        self.cast_rules_list = Child(self, DeclarationListNode)
 
     def can_cast_from(self, source_type):
         '''
@@ -334,7 +224,7 @@ class IntTypeDeclNode(TypeDeclNode):
         If self can be constructed from source_type returns True
         Otherwise returns False
         '''
-        for each in self.child1_cast_rules_list.declarations:
+        for each in self.cast_rules_list.get().declarations:
             if each.get().can_cast_from(source_type):
                 return True
         return False
@@ -345,14 +235,14 @@ class IntTypeDeclNode(TypeDeclNode):
         Only implemented by types that return true to can_cast_from
         '''
         # pylint: disable=unused-argument
-        for each in self.child1_cast_rules_list.declarations:
+        for each in self.cast_rules_list.get().declarations:
             if each.get().can_cast_from(source_type):
                 return each.get().insert_cast(compiler, self, expression)
         assert False
 
     def lookup_operator(self, name):
         result = []
-        for each in self.child0_operator_decl_list.declarations:
+        for each in self.operator_decl_list.get().declarations:
             if each.get().txt_name == name:
                 result.append(each.get())
         return result
@@ -361,7 +251,7 @@ class IntTypeDeclNode(TypeDeclNode):
 class TrivialCastRuleNode(Node):
 
     '''
-    Rule that  integral built-in types are implemented using this class
+    Rule that integral built-in types are implemented using this class
     '''
 
     def __init__(self):
@@ -371,15 +261,8 @@ class TrivialCastRuleNode(Node):
         super(TrivialCastRuleNode, self).__init__()
         self.int_min_value = 0
         self.int_max_value = 0
-        self.child_type = None
-
-    def set_type(self, child):
-        '''
-        expression setter
-        '''
-        assert isinstance(child, TypeNode)
-        child.set_parent(self)
-        self.child_type = child
+        self.cast_type = Child(self, TypeNode)
+        self.expression = ChildExpr(self)
 
     def can_cast_from(self, source_type):
         '''
@@ -387,16 +270,17 @@ class TrivialCastRuleNode(Node):
         If self can be constructed from source_type returns True
         Otherwise returns False
         '''
-        return source_type == self.child_type.ref_type_declaration
+        return source_type == self.cast_type.get().ref_type_declaration
 
+    @staticmethod
     def insert_cast(self, compiler, target_type, expression):
         '''
         Inserts a cast to the target type
         '''
         # pylint: disable=no-self-use
         node = compiler.init_node(expr.TrivialCastExprNode(), expression.ctx)
-        node.set_expression(expression)
-        node.set_type(target_type)
+        node.expression.set(expression)
+        node.cast_type.set(target_type)
 
         return node
 
@@ -469,16 +353,8 @@ class PointerTypeNode(TypeNode):
         Constructor
         '''
         super(PointerTypeNode, self).__init__()
-        self.child_pointed_type = None
+        self.pointed_type = Child(self, TypeNode)
         self.bool_const = False
-
-    def set_pointed_type(self, child):
-        '''
-        expression setter
-        '''
-        assert isinstance(child, TypeNode)
-        child.set_parent(self)
-        self.child_pointed_type = child
 
     def add_qualifier(self, compiler, ctx, qualifier):
         '''
@@ -522,15 +398,7 @@ class TypedefStmtNode(StatementNode, ResolutionHelper):
         '''
         super(TypedefStmtNode, self).__init__()
         self.txt_name = None
-        self.child_type = None
-
-    def set_type(self, child):
-        '''
-        expression setter
-        '''
-        assert isinstance(child, TypeNode)
-        child.set_parent(self)
-        self.child_type = child
+        self.typedef_type = Child(self, TypeNode)
 
 
 class PreprocessorDirectiveNode(Node):
@@ -559,33 +427,17 @@ class OperatorDeclNode(decl.CallableDeclNode, ResolutionHelper):
         '''
         super(OperatorDeclNode, self).__init__()
         self.txt_name = None
-        self.child0_return_type = None
-        self.child1_argument_decl_list = None
-
-    def set_return_type(self, child):
-        '''
-        Setter
-        '''
-        assert isinstance(child, TypeNode)
-        child.set_parent(self)
-        self.child0_return_type = child
-
-    def set_argument_decl_list(self, child):
-        '''
-        Setter
-        '''
-        assert isinstance(child, decl.ArgumentDeclListNode)
-        child.set_parent(self)
-        self.child1_argument_decl_list = child
+        self.return_type = Child(self, TypeNode)
+        self.argument_decl_list = Child(self, ArgumentDeclListNode)
 
     def can_match_arguments(self, compiler, ctx, args):
 
         return resolve.can_match_helper(
             compiler, ctx, args,
-            self.child1_argument_decl_list.declarations, False)
+            self.argument_decl_list.get().declarations, False)
 
     def make_arguments_match(self, compiler, ctx, args):
 
         return resolve.can_match_helper(
             compiler, ctx, args,
-            self.child1_argument_decl_list.declarations, True)
+            self.argument_decl_list.get().declarations, True)

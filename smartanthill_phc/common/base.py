@@ -429,6 +429,30 @@ class ExpressionNode(Node):
         return None
 
 
+class ChildExpr(Child):
+    '''
+    Specialized Child used for expressions
+    '''
+
+    def __init__(self, parent):
+        '''
+        Constructor
+        '''
+        super(ChildExpr, self).__init__(parent, ExpressionNode, False, False)
+
+
+class ChildExprOpt(Child):
+    '''
+    Specialized Child used for expressions
+    '''
+
+    def __init__(self, parent):
+        '''
+        Constructor
+        '''
+        super(ChildExprOpt, self).__init__(parent, ExpressionNode, True, False)
+
+
 class TypeNode(Node):
 
     '''

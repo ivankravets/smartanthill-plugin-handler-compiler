@@ -185,12 +185,12 @@ class _ResolveVisitor(CodeVisitor):
         return node.get_type()
 
     def visit_PluginSourceNode(self, node):
-        self.visit(node.child_declaration_list)
+        self.visit(node.declaration_list.get())
 
     def visit_RootNode(self, node):
 
         # first built-ins
-        self.visit(node.child_builtins)
+        self.visit(node.builtins.get())
 
         sc = node.get_scope(RootScope)
         self._zc_dont_care = sc.get_type('_zc_dont_care')
@@ -198,7 +198,7 @@ class _ResolveVisitor(CodeVisitor):
         assert self._zc_dont_care is not None
         assert self._void is not None
 
-        self.visit(node.child_source)
+        self.visit(node.source.get())
 
     def visit_TypeDeclNode(self, node):
         self.visit_all_childs(node)
@@ -211,7 +211,7 @@ class _ResolveVisitor(CodeVisitor):
             #                 self._c, node.txt_name, node)
 
             self.visit_all_childs(node)
-            node.set_type(node.child0_return_type.get_type())
+            node.set_type(node.return_type.get().get_type())
 
     def visit_TrivialCastRuleNode(self, node):
         self.visit_all_childs(node)
@@ -244,8 +244,8 @@ class _ResolveVisitor(CodeVisitor):
                 node.get_scope(FunctionScope).add_argument(
                     self._c, node.txt_name, node)
 
-            self.visit(node.child_argument_type)
-            node.set_type(node.child_argument_type.get_type())
+            self.visit(node.argument_type.get())
+            node.set_type(node.argument_type.get().get_type())
 
     def visit_VariableDeclarationStmtNode(self, node):
 
@@ -256,7 +256,7 @@ class _ResolveVisitor(CodeVisitor):
 
             self.visit_all_childs(node)
 
-            node.set_type(node.child_declaration_type.get_type())
+            node.set_type(node.declaration_type.get().get_type())
 
     def visit_FunctionDeclNode(self, node):
 
@@ -264,11 +264,11 @@ class _ResolveVisitor(CodeVisitor):
 
             node.get_scope(RootScope).add_function(
                 self._c, node.txt_name, node)
-            self.visit(node.child_return_type)
-            self.visit(node.child_argument_decl_list)
-            self.visit(node.child_stmt_list)
+            self.visit(node.return_type.get())
+            self.visit(node.argument_decl_list.get())
+            self.visit(node.statement_list.get())
 
-            node.set_type(node.child_return_type.get_type())
+            node.set_type(node.return_type.get().get_type())
 
     def visit_TypedefStmtNode(self, node):
 
@@ -281,9 +281,9 @@ class _ResolveVisitor(CodeVisitor):
                 node.get_scope(RootScope).add_typedef(
                     self._c, node.txt_name, node)
 
-            self.visit(node.child_type)
+            self.visit(node.typedef_type.get())
 
-            node.set_type(node.child_type.get_type())
+            node.set_type(node.typedef_type.get().get_type())
 
     def visit_NopStmtNode(self, node):
         # pylint: disable=unused-argument
@@ -351,7 +351,7 @@ class _ResolveVisitor(CodeVisitor):
     def visit_PointerTypeNode(self, node):
         self.visit_all_childs(node)
 
-        t = node.child_pointed_type.get_type()
+        t = node.pointed_type.get().get_type()
         # TODO
         node.set_type(t)
 
@@ -367,23 +367,6 @@ class _ResolveVisitor(CodeVisitor):
 #             self.ctx, "Unresolved function call '%s'" % self.txt_name)
 
         node.set_type(self._zc_dont_care)
-
-    def visit_MemberAccessExprNode(self, node):
-
-        self.visit_all_childs(node)
-
-        t = node.child_expression.get_type()
-        m = t.lookup_member(self.txt_member)
-        if m is None:
-            self._c.report_error(node.ctx, "Member '%s' not found" %
-                                 node.txt_member)
-            self._c.raise_error()
-
-        node.type_decl = t
-        node.member_decl = m
-
-        t = self.on_demand_resolve(node.member_decl)
-        node.set_type(t)
 
     def visit_IntegerLiteralExprNode(self, node):
         # pylint: disable=no-self-use
@@ -419,7 +402,7 @@ class _ResolveVisitor(CodeVisitor):
 
         self.visit_all_childs(node)
 
-        t = node.child0_left_expression.get_type()
+        t = node.left_expression.get().get_type()
 
         if not expression_type_match(self._c, t, node,
                                      'child1_right_expression'):
@@ -465,7 +448,7 @@ class _ResolveVisitor(CodeVisitor):
 
         self.visit_all_childs(node)
 
-        ref_type = node.child0_expression.get_type()
+        ref_type = node.expression.get().get_type()
 
         candidates = ref_type.lookup_operator(node.txt_operator)
 
@@ -502,10 +485,10 @@ class _ResolveVisitor(CodeVisitor):
         self.visit_all_childs(node)
         node.set_type(self._zc_dont_care)
 
-    def visit_MemberExprNode(self, node):
+    def visit_MemberAccessExprNode(self, node):
 
         self.visit_all_childs(node)
-        left = node.child_expression.get_type()
+        left = node.expression.get().get_type()
 
         if node.bool_arrow:
             pass
@@ -526,7 +509,7 @@ class _ResolveVisitor(CodeVisitor):
     def visit_CastExprNode(self, node):
 
         self.visit_all_childs(node)
-        node.set_type(node.child0_cast_type.get_type())
+        node.set_type(node.cast_type.get().get_type())
 
     def visit_ArgumentListNode(self, node):
         self.visit_all_childs(node)

@@ -13,8 +13,8 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+from smartanthill_phc.common.base import Node, DeclarationListNode, Child
 from smartanthill_phc.common.lookup import RootScope
-from smartanthill_phc.common.base import Node, DeclarationListNode
 
 
 class PluginSourceNode(Node):
@@ -28,15 +28,7 @@ class PluginSourceNode(Node):
         Constructor
         '''
         super(PluginSourceNode, self).__init__()
-        self.child_declaration_list = None
-
-    def set_declaration_list(self, child):
-        '''
-        statement list setter
-        '''
-        assert isinstance(child, DeclarationListNode)
-        child.set_parent(self)
-        self.child_declaration_list = child
+        self.declaration_list = Child(self, DeclarationListNode)
 
 
 class StateMachineData(object):
@@ -141,23 +133,7 @@ class RootNode(Node):
         Constructor
         '''
         super(RootNode, self).__init__()
-        self.child_builtins = None
-        self.child_source = None
+        self.builtins = Child(self, DeclarationListNode)
+        self.source = Child(self, PluginSourceNode)
         self.add_scope(RootScope, RootScope(self))
         self.add_scope(NonBlockingData, NonBlockingData())
-
-    def set_builtins(self, child):
-        '''
-        built-ins setter
-        '''
-        assert isinstance(child, DeclarationListNode)
-        child.set_parent(self)
-        self.child_builtins = child
-
-    def set_source(self, child):
-        '''
-        program setter
-        '''
-        assert isinstance(child, PluginSourceNode)
-        child.set_parent(self)
-        self.child_source = child

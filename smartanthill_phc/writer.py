@@ -78,10 +78,10 @@ class _WriterVisitor(NodeVisitor):
             assert False
 
     def _write_func_return(self):
-        if isinstance(self._func.child_return_type.ref_type_declaration,
+        if isinstance(self._func.return_type.get().ref_type_declaration,
                       VoidTypeDeclNode):
             self._w.write_line("return;")
-        elif isinstance(self._func.child_return_type.ref_type_declaration,
+        elif isinstance(self._func.return_type.get().ref_type_declaration,
                         IntTypeDeclNode):
             self._w.write_line("return 0;")
         else:
@@ -107,10 +107,10 @@ class _WriterVisitor(NodeVisitor):
 
     def visit_RootNode(self, node):
         self._nb = node.get_scope(NonBlockingData)
-        self.visit(node.child_source)
+        self.visit(node.source.get())
 
     def visit_PluginSourceNode(self, node):
-        self.visit(node.child_declaration_list)
+        self.visit(node.declaration_list.get())
 
     def visit_DeclarationListNode(self, node):
         for each in node.declarations:
@@ -123,7 +123,7 @@ class _WriterVisitor(NodeVisitor):
 
         self._func = node
         self._sm = self._nb.get_state_machine_data(node)
-        self.visit(node.child_return_type)
+        self.visit(node.return_type.get())
         self._w.write(' ')
         self._w.write(node.txt_name)
         self._w.write('(')
@@ -135,19 +135,19 @@ class _WriterVisitor(NodeVisitor):
                 "void* sa_state0, waiting_for* sa_wf, uint8_t* sa_result")
             first = False
 
-        for each in node.child_argument_decl_list.declarations:
+        for each in node.argument_decl_list.get().declarations:
 
             if not first:
                 self._w.write(', ')
             first = False
-            self.visit(each.get().child_argument_type)
+            self.visit(each.get().argument_type.get())
             self._w.write(' ')
             self._w.write(each.get().txt_name)
 
         self._w.write(')')
         self._w.end_of_statement(node.ctx.start)
 
-        self.visit(node.child_stmt_list)
+        self.visit(node.statement_list.get())
 
     def visit_StmtListNode(self, node):
         self._w.write_line('{')
@@ -167,39 +167,39 @@ class _WriterVisitor(NodeVisitor):
 
         if self._sm is not None and\
                 self._sm.is_moved_var_decl(node):
-            if node.child_initializer_expression is not None:
+            if not node.initializer_expression.is_none():
 
                 self._w.write('sa_state->')
                 self._w.write(node.txt_name)
 
                 self._w.write(' = ')
-                self.write_expr(node.child_initializer_expression)
+                self.write_expr(node.initializer_expression.get())
 
                 self._w.write(';')
                 self._w.end_of_statement(node.ctx.stop)
 
         else:
-            self.visit(node.child_declaration_type)
+            self.visit(node.declaration_type.get())
             self._w.write(' ')
             self._w.write(node.txt_name)
-            if node.child_initializer_expression is not None:
+            if not node.initializer_expression.is_none():
                 self._w.write(' = ')
-                self.write_expr(node.child_initializer_expression)
+                self.write_expr(node.initializer_expression.get())
 
             self._w.write(';')
             self._w.end_of_statement(node.ctx.stop)
 
     def visit_ExpressionStmtNode(self, node):
-        self.write_expr(node.child_expression)
+        self.write_expr(node.expression.get())
         self._w.write(';')
         self._w.end_of_statement(node.ctx.stop)
 
     def visit_FunctionCallStmtNode(self, node):
-        self.write_expr(node.child_expression)
+        self.write_expr(node.expression.get())
         self._w.write(';')
         self._w.end_of_statement(node.ctx.stop)
 
-        if node.child_expression.bool_is_blocking:
+        if node.expression.get().bool_is_blocking:
             assert False
 
     def visit_PapiWaitStmtNode(self, node):
@@ -270,44 +270,44 @@ class _WriterVisitor(NodeVisitor):
     def visit_WhileStmtNode(self, node):
         self._w.write('while')
         self._w.write('(')
-        self.write_expr(node.child0_expression)
+        self.write_expr(node.expression.get())
         self._w.write(')')
         self._w.end_of_statement(node.ctx.start)
-        self.visit(node.child1_stmt_list)
+        self.visit(node.statement_list.get())
 
     def visit_DoWhileStmtNode(self, node):
         self._w.write('do')
         self._w.end_of_statement(None)
-        self.visit(node.child1_stmt_list)
+        self.visit(node.statement_list.get())
         self._w.write('while')
         self._w.write('(')
-        self.write_expr(node.child0_expression)
+        self.write_expr(node.expression.get())
         self._w.write(');')
         self._w.end_of_statement(node.ctx.stop)
 
     def visit_ForStmtNode(self, node):
         self._w.write('for')
         self._w.write('(')
-        if node.child0_init_expression is not None:
-            self.write_expr(node.child0_init_expression)
+        if not node.init_expression.is_none():
+            self.write_expr(node.init_expression.get())
         self._w.write(';')
-        if node.child1_condition_expression is not None:
+        if not node.condition_expression.is_none():
             self._w.write(' ')
-            self.write_expr(node.child1_condition_expression)
+            self.write_expr(node.condition_expression.get())
         self._w.write('; ')
-        if node.child2_iteration_expression is not None:
+        if not node.iteration_expression.is_none():
             self._w.write(' ')
-            self.write_expr(node.child2_iteration_expression)
+            self.write_expr(node.iteration_expression.get())
         self._w.write(')')
         self._w.end_of_statement(node.ctx.start)
-        self.visit(node.child3_stmt_list)
+        self.visit(node.statement_list.get())
 
     def visit_ReturnStmtNode(self, node):
 
         self._w.write('return')
-        if node.child_expression is not None:
+        if not node.expression.is_none():
             self._w.write(' ')
-            self.write_expr(node.child_expression)
+            self.write_expr(node.expression.get())
 
         self._w.write(';')
         self._w.end_of_statement(node.ctx.stop)
@@ -316,14 +316,14 @@ class _WriterVisitor(NodeVisitor):
 
         self._w.write('if')
         self._w.write('(')
-        self.write_expr(node.child0_expression)
+        self.write_expr(node.expression.get())
         self._w.write(')')
         self._w.end_of_statement(node.ctx.start)
-        self.visit(node.child1_if_stmt_list)
-        if node.child2_else_stmt_list is not None:
+        self.visit(node.if_stmt_list.get())
+        if not node.else_stmt_list.is_none():
             self._w.write('else')
             self._w.end_of_statement(None)
-            self.visit(node.child2_else_stmt_list)
+            self.visit(node.else_stmt_list.get())
 
     def visit_StateMachineStmtNode(self, node):
 
@@ -427,11 +427,11 @@ class _WriterVisitor(NodeVisitor):
         self._w.write_line("sa_state->sa_next = %s;" % nxt)
         self._w.write_line("label_%s: ;/*nop*/" % nxt)
 
-        self.visit(node.child_expression.ref_declaration.child_return_type)
+        self.visit(node.expression.get().ref_declaration.return_type.get())
         self._w.write(' ')
         self._w.write(node.txt_name)
         self._w.write(' = ')
-        self.visit(node.child_expression)
+        self.visit(node.expression.get())
         self._w.write(';')
         self._w.end_of_statement(node.ctx.stop)
 
@@ -480,17 +480,17 @@ class _WriterVisitor(NodeVisitor):
 
     def visit_AssignmentExprNode(self, node):
 
-        self.write_expr(node.child0_left_expression)
+        self.write_expr(node.left_expression.get())
         self._w.write('=')
-        self.write_expr(node.child1_right_expression)
+        self.write_expr(node.right_expression.get())
 
     def visit_ConditionalExprNode(self, node):
 
-        self.write_expr(node.child0_condition_expression)
+        self.write_expr(node.condition_expression.get())
         self._w.write('?')
-        self.write_expr(node.child1_true_expression)
+        self.write_expr(node.true_expression.get())
         self._w.write(':')
-        self.write_expr(node.child2_false_expression)
+        self.write_expr(node.false_expression.get())
 
     def visit_BinaryOpExprNode(self, node):
         assert node.argument_list.get().arguments.get_size() == 2
@@ -501,23 +501,23 @@ class _WriterVisitor(NodeVisitor):
     def visit_UnaryOpExprNode(self, node):
         assert node.argument_list.get().arguments.get_size() == 0
         self._w.write(node.txt_operator)
-        self.write_expr(node.child0_expression)
+        self.write_expr(node.expression.get())
 
     def visit_PostUnaryOpExprNode(self, node):
         assert node.argument_list.get().arguments.get_size() == 0
-        self.write_expr(node.child0_expression)
+        self.write_expr(node.expression.get())
         self._w.write(node.txt_operator[4:])
 
     def visit_IndexExprNode(self, node):
-        self._w.write(node.child0_expression)
+        self._w.write(node.expression.get())
         self._writeArgumentListNode(node.argument_list.get(), '[', ']')
 
     def visit_LiteralExprNode(self, node):
         self._w.write(node.txt_literal)
 
-    def visit_MemberExprNode(self, node):
+    def visit_MemberAccessExprNode(self, node):
 
-        self.write_expr(node.child_expression)
+        self.write_expr(node.expression.get())
 
         if node.bool_arrow:
             self._w.write('->')
@@ -528,15 +528,15 @@ class _WriterVisitor(NodeVisitor):
 
     def visit_CastExprNode(self, node):
         self._w.write('(')
-        self.visit(node.child0_cast_type)
+        self.visit(node.cast_type.get())
         self._w.write(')')
-        self.visit(node.child1_expression)
+        self.visit(node.expression.get())
 
     def visit_TrivialCastExprNode(self, node):
         #         self._w.write('(')
         #         self.visit(node.child0_cast_type)
         #         self._w.write(')')
-        self.visit(node.child_expression)
+        self.visit(node.expression.get())
 
     def visit_VariableExprNode(self, node):
         if node.ref_declaration is not None:
@@ -590,7 +590,7 @@ class _WriterVisitor(NodeVisitor):
 
     def visit_PointerTypeNode(self, node):
 
-        self.visit(node.child_pointed_type)
+        self.visit(node.pointed_type.get())
         self._w.write('*')
         if node.bool_const:
             self._w.write(" const")
@@ -628,7 +628,7 @@ class _HeaderWriterVisitor(_WriterVisitor):
 
             for v in f.refs_moved_var_decls:
 
-                self.visit(v.child_declaration_type)
+                self.visit(v.declaration_type.get())
                 self._w.write(' ')
                 self._w.write(v.txt_name)
 

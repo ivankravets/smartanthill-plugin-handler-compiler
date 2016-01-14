@@ -60,7 +60,7 @@ def _make_integer(compiler, ctx, decls):
 
     tn = compiler.init_node(IntTypeDeclNode('uint8_t'), ctx)
     ol = compiler.init_node(DeclarationListNode(), ctx)
-    tn.set_operator_decl_list(ol)
+    tn.operator_decl_list.set(ol)
 
     decls.declarations.add(tn)
     _make_integer_operators(compiler, ctx, tn, decls, ol)
@@ -70,10 +70,10 @@ def _make_integer(compiler, ctx, decls):
     c0 = compiler.init_node(c_node.TrivialCastRuleNode(), ctx)
     t0 = compiler.init_node(c_node.SimpleTypeNode(), ctx)
     t0.txt_name = 'sa_int_literal'
-    c0.set_type(t0)
+    c0.cast_type.set(t0)
 
     casts.declarations.add(c0)
-    tn.set_cast_rule_list(casts)
+    tn.cast_rules_list.set(casts)
 
 
 def _make_integer_operators(compiler, ctx, tn, decls, membs):
@@ -127,7 +127,7 @@ def _make_bool(compiler, ctx, decls):
 
     tn = compiler.init_node(IntTypeDeclNode('bool'), ctx)
     ol = compiler.init_node(DeclarationListNode(), ctx)
-    tn.set_operator_decl_list(ol)
+    tn.operator_decl_list.set(ol)
 
     decls.declarations.add(tn)
     _make_bool_operators(compiler, ctx, tn, decls)
@@ -137,10 +137,10 @@ def _make_bool(compiler, ctx, decls):
     c0 = compiler.init_node(c_node.TrivialCastRuleNode(), ctx)
     t0 = compiler.init_node(c_node.SimpleTypeNode(), ctx)
     t0.txt_name = 'sa_bool_literal'
-    c0.set_type(t0)
+    c0.cast_type.set(t0)
 
     casts.declarations.add(c0)
-    tn.set_cast_rule_list(casts)
+    tn.cast_rules_list.set(casts)
 
 
 def _make_bool_operators(compiler, ctx, tn, decls):
@@ -161,7 +161,7 @@ def _make_op(compiler, ctx, op_name, return_type, arg_types):
     rt = compiler.init_node(c_node.RefTypeNode(), ctx)
     rt.set_type(return_type)
 
-    d.set_return_type(rt)
+    d.return_type.set(rt)
 
     args = compiler.init_node(decl.ArgumentDeclListNode(), ctx)
     for each in arg_types:
@@ -169,9 +169,9 @@ def _make_op(compiler, ctx, op_name, return_type, arg_types):
         at = compiler.init_node(c_node.RefTypeNode(), ctx)
         at.set_type(each)
 
-        a.set_argument_type(at)
+        a.argument_type.set(at)
         args.declarations.add(a)
 
-    d.set_argument_decl_list(args)
+    d.argument_decl_list.set(args)
 
     return d

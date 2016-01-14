@@ -58,10 +58,10 @@ def process_file(file_name, prefix, split_all, dump):
     c = Compiler()
     root = c.init_node(RootNode(), Ctx.ROOT)
     builtin = create_builtins(c, Ctx.BUILTIN)
-    root.set_builtins(builtin)
+    root.builtins.set(builtin)
     source = c_parse_tree_to_syntax_tree(
         c, ptree, root.get_scope(NonBlockingData))
-    root.set_source(source)
+    root.source.set(source)
 
     if dump:
         print
