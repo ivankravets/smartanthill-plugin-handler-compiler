@@ -26,29 +26,29 @@ def create_builtins(compiler, ctx):
     '''
 
     decls = compiler.init_node(DeclarationListNode(), ctx)
-    decls.add_declaration(
+    decls.declarations.add(
         compiler.init_node(VoidTypeDeclNode(), ctx))
 
-    decls.add_declaration(
+    decls.declarations.add(
         compiler.init_node(BasicTypeDeclNode('_zc_dont_care'), ctx))
 
-    decls.add_declaration(
+    decls.declarations.add(
         compiler.init_node(BasicTypeDeclNode('sa_int_literal'), ctx))
-    decls.add_declaration(
+    decls.declarations.add(
         compiler.init_node(BasicTypeDeclNode('sa_bool_literal'), ctx))
 
     _make_integer(compiler, ctx, decls)
     _make_bool(compiler, ctx, decls)
 
-    decls.add_declaration(compiler.init_node(
+    decls.declarations.add(compiler.init_node(
         PapiFunctionDeclNode('papi_sleep'), ctx))
-    decls.add_declaration(compiler.init_node(
+    decls.declarations.add(compiler.init_node(
         PapiFunctionDeclNode('papi_wait_for_spi_send'), ctx))
-    decls.add_declaration(compiler.init_node(
+    decls.declarations.add(compiler.init_node(
         PapiFunctionDeclNode('papi_wait_for_i2c_send'), ctx))
-    decls.add_declaration(compiler.init_node(
+    decls.declarations.add(compiler.init_node(
         PapiFunctionDeclNode('papi_wait_for_spi_receive'), ctx))
-    decls.add_declaration(compiler.init_node(
+    decls.declarations.add(compiler.init_node(
         PapiFunctionDeclNode('papi_wait_for_i2c_receive'), ctx))
 
     compiler.check_stage('built_in')
@@ -62,7 +62,7 @@ def _make_integer(compiler, ctx, decls):
     ol = compiler.init_node(DeclarationListNode(), ctx)
     tn.set_operator_decl_list(ol)
 
-    decls.add_declaration(tn)
+    decls.declarations.add(tn)
     _make_integer_operators(compiler, ctx, tn, decls, ol)
 
     casts = compiler.init_node(DeclarationListNode(), ctx)
@@ -72,55 +72,55 @@ def _make_integer(compiler, ctx, decls):
     t0.txt_name = 'sa_int_literal'
     c0.set_type(t0)
 
-    casts.add_declaration(c0)
+    casts.declarations.add(c0)
     tn.set_cast_rule_list(casts)
 
 
 def _make_integer_operators(compiler, ctx, tn, decls, membs):
 
-    decls.add_declaration(_make_op(compiler, ctx, '+', tn, [tn, tn]))
-    decls.add_declaration(_make_op(compiler, ctx, '-', tn, [tn, tn]))
-    decls.add_declaration(_make_op(compiler, ctx, '*', tn, [tn, tn]))
-    decls.add_declaration(_make_op(compiler, ctx, '/', tn, [tn, tn]))
-    decls.add_declaration(_make_op(compiler, ctx, '%', tn, [tn, tn]))
+    decls.declarations.add(_make_op(compiler, ctx, '+', tn, [tn, tn]))
+    decls.declarations.add(_make_op(compiler, ctx, '-', tn, [tn, tn]))
+    decls.declarations.add(_make_op(compiler, ctx, '*', tn, [tn, tn]))
+    decls.declarations.add(_make_op(compiler, ctx, '/', tn, [tn, tn]))
+    decls.declarations.add(_make_op(compiler, ctx, '%', tn, [tn, tn]))
 
-    decls.add_declaration(_make_op(compiler, ctx, '<', tn, [tn, tn]))
-    decls.add_declaration(_make_op(compiler, ctx, '>', tn, [tn, tn]))
-    decls.add_declaration(_make_op(compiler, ctx, '<=', tn, [tn, tn]))
-    decls.add_declaration(_make_op(compiler, ctx, '>=', tn, [tn, tn]))
-    decls.add_declaration(_make_op(compiler, ctx, '==', tn, [tn, tn]))
-    decls.add_declaration(_make_op(compiler, ctx, '!=', tn, [tn, tn]))
+    decls.declarations.add(_make_op(compiler, ctx, '<', tn, [tn, tn]))
+    decls.declarations.add(_make_op(compiler, ctx, '>', tn, [tn, tn]))
+    decls.declarations.add(_make_op(compiler, ctx, '<=', tn, [tn, tn]))
+    decls.declarations.add(_make_op(compiler, ctx, '>=', tn, [tn, tn]))
+    decls.declarations.add(_make_op(compiler, ctx, '==', tn, [tn, tn]))
+    decls.declarations.add(_make_op(compiler, ctx, '!=', tn, [tn, tn]))
 
-    decls.add_declaration(_make_op(compiler, ctx, '&', tn, [tn, tn]))
-    decls.add_declaration(_make_op(compiler, ctx, '^', tn, [tn, tn]))
-    decls.add_declaration(_make_op(compiler, ctx, '|', tn, [tn, tn]))
+    decls.declarations.add(_make_op(compiler, ctx, '&', tn, [tn, tn]))
+    decls.declarations.add(_make_op(compiler, ctx, '^', tn, [tn, tn]))
+    decls.declarations.add(_make_op(compiler, ctx, '|', tn, [tn, tn]))
 
 #     g.append(_make_op(compiler, ctx, '>>', tn, [tn, tn]))
 #     g.append(_make_op(compiler, ctx, '<<', tn, [tn, tn]))
 
-    membs.add_declaration(_make_op(compiler, ctx, '+', tn, []))
-    membs.add_declaration(_make_op(compiler, ctx, '-', tn, []))
-    membs.add_declaration(_make_op(compiler, ctx, '~', tn, []))
+    membs.declarations.add(_make_op(compiler, ctx, '+', tn, []))
+    membs.declarations.add(_make_op(compiler, ctx, '-', tn, []))
+    membs.declarations.add(_make_op(compiler, ctx, '~', tn, []))
 
-    membs.add_declaration(_make_op(compiler, ctx, '++', tn, []))
-    membs.add_declaration(_make_op(compiler, ctx, '--', tn, []))
-    membs.add_declaration(_make_op(compiler, ctx, 'post++', tn, []))
-    membs.add_declaration(_make_op(compiler, ctx, 'post--', tn, []))
+    membs.declarations.add(_make_op(compiler, ctx, '++', tn, []))
+    membs.declarations.add(_make_op(compiler, ctx, '--', tn, []))
+    membs.declarations.add(_make_op(compiler, ctx, 'post++', tn, []))
+    membs.declarations.add(_make_op(compiler, ctx, 'post--', tn, []))
 
-    decls.add_declaration(_make_op(compiler, ctx, '+=', tn, [tn, tn]))
-    decls.add_declaration(_make_op(compiler, ctx, '-=', tn, [tn, tn]))
-    decls.add_declaration(_make_op(compiler, ctx, '*=', tn, [tn, tn]))
-    decls.add_declaration(_make_op(compiler, ctx, '/=', tn, [tn, tn]))
-    decls.add_declaration(_make_op(compiler, ctx, '%=', tn, [tn, tn]))
+    decls.declarations.add(_make_op(compiler, ctx, '+=', tn, [tn, tn]))
+    decls.declarations.add(_make_op(compiler, ctx, '-=', tn, [tn, tn]))
+    decls.declarations.add(_make_op(compiler, ctx, '*=', tn, [tn, tn]))
+    decls.declarations.add(_make_op(compiler, ctx, '/=', tn, [tn, tn]))
+    decls.declarations.add(_make_op(compiler, ctx, '%=', tn, [tn, tn]))
 
-    decls.add_declaration(_make_op(compiler, ctx, '&=', tn, [tn, tn]))
-    decls.add_declaration(_make_op(compiler, ctx, '^=', tn, [tn, tn]))
-    decls.add_declaration(_make_op(compiler, ctx, '|=', tn, [tn, tn]))
+    decls.declarations.add(_make_op(compiler, ctx, '&=', tn, [tn, tn]))
+    decls.declarations.add(_make_op(compiler, ctx, '^=', tn, [tn, tn]))
+    decls.declarations.add(_make_op(compiler, ctx, '|=', tn, [tn, tn]))
 
 #     m.append(_make_op(compiler, ctx, '<<=', tn, [tn]))
 #     m.append(_make_op(compiler, ctx, '>>=', tn, [tn]))
 
-    membs.add_declaration(_make_op(compiler, ctx, '[]', tn, [tn]))
+    membs.declarations.add(_make_op(compiler, ctx, '[]', tn, [tn]))
 
 
 def _make_bool(compiler, ctx, decls):
@@ -129,7 +129,7 @@ def _make_bool(compiler, ctx, decls):
     ol = compiler.init_node(DeclarationListNode(), ctx)
     tn.set_operator_decl_list(ol)
 
-    decls.add_declaration(tn)
+    decls.declarations.add(tn)
     _make_bool_operators(compiler, ctx, tn, decls)
 
     casts = compiler.init_node(DeclarationListNode(), ctx)
@@ -139,18 +139,18 @@ def _make_bool(compiler, ctx, decls):
     t0.txt_name = 'sa_bool_literal'
     c0.set_type(t0)
 
-    casts.add_declaration(c0)
+    casts.declarations.add(c0)
     tn.set_cast_rule_list(casts)
 
 
 def _make_bool_operators(compiler, ctx, tn, decls):
 
-    decls.add_declaration(_make_op(compiler, ctx, '==', tn, [tn, tn]))
-    decls.add_declaration(_make_op(compiler, ctx, '!=', tn, [tn, tn]))
+    decls.declarations.add(_make_op(compiler, ctx, '==', tn, [tn, tn]))
+    decls.declarations.add(_make_op(compiler, ctx, '!=', tn, [tn, tn]))
 
-    decls.add_declaration(_make_op(compiler, ctx, '&&', tn, [tn, tn]))
-    decls.add_declaration(_make_op(compiler, ctx, '||', tn, [tn, tn]))
-    decls.add_declaration(_make_op(compiler, ctx, '!', tn, [tn]))
+    decls.declarations.add(_make_op(compiler, ctx, '&&', tn, [tn, tn]))
+    decls.declarations.add(_make_op(compiler, ctx, '||', tn, [tn, tn]))
+    decls.declarations.add(_make_op(compiler, ctx, '!', tn, [tn]))
 
 
 def _make_op(compiler, ctx, op_name, return_type, arg_types):
@@ -170,7 +170,7 @@ def _make_op(compiler, ctx, op_name, return_type, arg_types):
         at.set_type(each)
 
         a.set_argument_type(at)
-        args.add_declaration(a)
+        args.declarations.add(a)
 
     d.set_argument_decl_list(args)
 

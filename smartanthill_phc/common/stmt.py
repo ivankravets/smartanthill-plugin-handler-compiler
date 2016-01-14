@@ -33,7 +33,7 @@ def make_statement_list(compiler, statement):
         return statement
 
     stmt_list = compiler.init_node(StmtListNode(), statement.ctx)
-    stmt_list.add_statement(statement)
+    stmt_list.statements.add(statement)
 
     return stmt_list
 

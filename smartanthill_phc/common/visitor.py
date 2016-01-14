@@ -13,7 +13,8 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from smartanthill_phc.common.base import Node, ExpressionNode, StmtListNode
+from smartanthill_phc.common.base import Node, ExpressionNode, StmtListNode,\
+    ChildList, Child
 
 
 def visit_node(visitor, node):
@@ -66,6 +67,8 @@ def walk_node_childs(walker, node):
             if ch:
                 walker.walk_node(ch)
 
+    node.walk_childs(walker)
+
 
 class NodeWalker(object):
 
@@ -86,12 +89,21 @@ class NodeVisitor(object):
         Constructor
         '''
         super(NodeVisitor, self).__init__()
+        self._current_child = None
 
     def visit(self, node):
         '''
         Generic visit function wrapper
         '''
         visit_node(self, node)
+
+    def visit_child(self, child):
+        '''
+        Generic visit function wrapper
+        '''
+        self._current_child = child
+        visit_node(self, child.get())
+        self._current_child = None
 
     def default_visit(self, node):
         '''
@@ -133,8 +145,8 @@ class CodeVisitor(NodeVisitor):
         self._stmt_list.append(stmt_list)
         self._index.append(begin)
 
-        while self._index[-1] < len(self._stmt_list[-1].childs_statements):
-            s = self._stmt_list[-1].childs_statements[self._index[-1]]
+        while self._index[-1] < self._stmt_list[-1].statements.get_size():
+            s = self._stmt_list[-1].statements.at(self._index[-1])
             self.visit(s)
 
             self._index[-1] += 1
@@ -166,7 +178,7 @@ class CodeVisitor(NodeVisitor):
         '''
         Visit child expression list, to allow expression replacement
         '''
-        for i in range(len(expr_list)):
+        for i in range(expr_list.get_size()):
             self._visit_expression_list_item(parent, expr_list, i)
 
     def _visit_expression_list_item(self, parent, expr_list, i):
@@ -174,16 +186,23 @@ class CodeVisitor(NodeVisitor):
         Visit child expression list by index, to allow expression
         replacement
         '''
-        self.visit(expr_list[i])
+        self.visit(expr_list.at(i))
 
         if self._replacement is not None:
-            assert self._replacement is not expr_list[i]
-            self._replacement.set_parent(parent)
-            expr_list[i] = self._replacement
+            assert self._replacement is not expr_list.at(i)
+            expr_list.replace_at(i, self._replacement)
             self._replacement = None
 
             # visit again (replacement)
             self._visit_expression_list_item(parent, expr_list, i)
+
+    def visit_expression_child(self, child):
+        '''
+        Visit a child expression, to allow expression replacement
+        '''
+        assert self._replacement is None
+        self._current_child = child
+        self.visit_child(child)
 
     def visit_childs(self, node):
         '''
@@ -206,6 +225,19 @@ class CodeVisitor(NodeVisitor):
                     if ch is not None:
                         self.visit(ch)
 
+        for each in node._childs:
+            if isinstance(each, Child):
+                if not each.is_none():
+                    if each._allowed_type == ExpressionNode:
+                        self.visit_expression_child(each)
+                    elif each._allowed_type == StmtListNode:
+                        self.visit_stmt_list(each.get())
+                    else:
+                        self.visit_child(each)
+            else:
+                print node.__name__
+                assert False
+
     def insert_before_current(self, statement):
         '''
         Insert statement before current one
@@ -213,7 +245,7 @@ class CodeVisitor(NodeVisitor):
         Inserted statement will never be visited, because it will be inserted
         at a place visitor already did
         '''
-        self._stmt_list[-1].insert_statement_at(self._index[-1], statement)
+        self._stmt_list[-1].statements.insert_at(self._index[-1], statement)
 
         self._index[-1] += 1
 
@@ -223,7 +255,8 @@ class CodeVisitor(NodeVisitor):
         Index will be incremented to account for the extra statement
         and to avoid visitation of inserted statement
         '''
-        self._stmt_list[-1].insert_statement_at(self._index[-1] + 1, statement)
+        self._stmt_list[-1].statements.insert_at(self._index[-1] + 1,
+                                                 statement)
 
         self._index[-1] += 1
 
@@ -231,16 +264,14 @@ class CodeVisitor(NodeVisitor):
         '''
         Replace current statement
         '''
-        self._stmt_list[-1].insert_statement_at(self._index[-1] + 1, statement)
-        old = self._stmt_list[-1].remove_statement_at(self._index[-1])
-
-        return old
+        return self._stmt_list[-1].statements.replace_at(self._index[-1],
+                                                         statement)
 
     def get_current_statement(self):
         '''
         Returns current statement
         '''
-        return self._stmt_list[-1].childs_statements[self._index[-1]]
+        return self._stmt_list[-1].statements.at(self._index[-1])
 
     def replace_expression(self, replacement):
         '''
@@ -248,7 +279,10 @@ class CodeVisitor(NodeVisitor):
         '''
         assert self._replacement is None
         assert isinstance(replacement, ExpressionNode)
-        self._replacement = replacement
+        if self._current_child is not None:
+            return self._current_child.reset(replacement)
+        else:
+            self._replacement = replacement
 
 
 def check_all_nodes_reachables(compiler, root):

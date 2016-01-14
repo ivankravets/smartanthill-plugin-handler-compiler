@@ -18,7 +18,7 @@ from smartanthill_phc.common import base, decl, expr
 from smartanthill_phc.common.base import ExpressionNode,\
     Node, StmtListNode,\
     StatementNode, TypeDeclNode,\
-    TypeNode, ResolutionHelper, DeclarationListNode
+    TypeNode, ResolutionHelper, DeclarationListNode, Child
 from smartanthill_phc.common.expr import LiteralExprNode
 
 
@@ -33,15 +33,7 @@ class DontCareExprNode(ExpressionNode):
         Constructor
         '''
         super(DontCareExprNode, self).__init__()
-        self.child_argument_list = None
-
-    def set_argument_list(self, child):
-        '''
-        argument_list setter
-        '''
-        assert isinstance(child, base.ArgumentListNode)
-        child.set_parent(self)
-        self.child_argument_list = child
+        self.argument_list = Child(self, base.ArgumentListNode)
 
     @staticmethod
     def create(compiler, ctx):
@@ -49,7 +41,7 @@ class DontCareExprNode(ExpressionNode):
         Creates a new instance, and a new argument list
         '''
         node = compiler.init_node(DontCareExprNode(), ctx)
-        node.set_argument_list(
+        node.argument_list.set(
             compiler.init_node(base.ArgumentListNode(), ctx))
         return node
 
@@ -342,7 +334,7 @@ class IntTypeDeclNode(TypeDeclNode):
         If self can be constructed from source_type returns True
         Otherwise returns False
         '''
-        for each in self.child1_cast_rules_list.childs_declarations:
+        for each in self.child1_cast_rules_list.declarations:
             if each.can_cast_from(source_type):
                 return True
         return False
@@ -353,14 +345,14 @@ class IntTypeDeclNode(TypeDeclNode):
         Only implemented by types that return true to can_cast_from
         '''
         # pylint: disable=unused-argument
-        for each in self.child1_cast_rules_list.childs_declarations:
+        for each in self.child1_cast_rules_list.declarations:
             if each.can_cast_from(source_type):
                 return each.insert_cast(compiler, self, expression)
         assert False
 
     def lookup_operator(self, name):
         result = []
-        for each in self.child0_operator_decl_list.childs_declarations:
+        for each in self.child0_operator_decl_list.declarations:
             if each.txt_name == name:
                 result.append(each)
         return result
@@ -590,10 +582,10 @@ class OperatorDeclNode(decl.CallableDeclNode, ResolutionHelper):
 
         return resolve._can_match(
             compiler, ctx, args,
-            self.child1_argument_decl_list.childs_declarations, False)
+            self.child1_argument_decl_list.declarations, False)
 
     def make_arguments_match(self, compiler, ctx, args):
 
         return resolve._can_match(
             compiler, ctx, args,
-            self.child1_argument_decl_list.childs_declarations, True)
+            self.child1_argument_decl_list.declarations, True)

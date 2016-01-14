@@ -98,6 +98,170 @@ class ResolutionHelper(object):
         self._resolved_flag = self._RESOLVED_OK
 
 
+class Child(object):
+    '''
+    Intermediate instance to hold a child reference
+    '''
+
+    def __init__(self, parent, allowed_type, optional=False):
+        '''
+        Constructor
+        '''
+        super(Child, self).__init__()
+        self._child_node = None
+        self._parent = parent
+        self._allowed_type = allowed_type
+        self._optional = optional
+
+        parent.add_child(self)
+
+    def set(self, child):
+        '''
+        Sets the child
+        There must not be any previous child
+        '''
+        assert isinstance(child, self._allowed_type)
+        assert self._child_node is None
+        child.set_parent(self._parent)
+        self._child_node = child
+
+    def is_none(self):
+        '''
+        Returns where there is a child here
+        '''
+        return self._child_node is None
+
+    def get(self):
+        '''
+        Returns the current child
+        '''
+        assert self._optional or self._child_node is not None
+        return self._child_node
+
+    def reset(self, child):
+        '''
+        Replaces existing child
+        '''
+        temp = self._child_node
+        self._child_node = None
+        self.set(child)
+        return temp
+
+    def clear(self):
+        '''
+        Replaces existing child
+        '''
+        temp = self._child_node
+        self._child_node = None
+        return temp
+
+    def walk(self, walker):
+        '''
+        Walks this child
+        '''
+        if self._child_node is not None:
+            walker.walk_node(self._child_node)
+
+
+class ChildList(object):
+    '''
+    Intermediate instance to hold a child list
+
+    '''
+
+    def __init__(self, parent, allowed_type):
+        '''
+        Constructor
+        '''
+        super(ChildList, self).__init__()
+        self._child_list = []
+        self._parent = parent
+        self._allowed_type = allowed_type
+
+        parent.add_child(self)
+
+    def __iter__(self):
+        '''
+        Easy iteration
+        '''
+        return self._child_list.__iter__()
+
+    def get_size(self):
+        '''
+        Returns the child count
+        '''
+        return len(self._child_list)
+
+    def add(self, child):
+        '''
+        Adds a child
+        '''
+        assert isinstance(child, self._allowed_type)
+        child.set_parent(self._parent)
+        self._child_list.append(child)
+
+    def add_all(self, childs):
+        '''
+        Adds all childs in iterable
+        '''
+        for each in childs:
+            self.add(each)
+
+    def at(self, index):
+        '''
+        Returns a child
+        '''
+        return self._child_list[index]
+
+    def insert_at(self, index, child):
+        '''
+        Inserts a child
+        '''
+        assert isinstance(child, self._allowed_type)
+
+        child.set_parent(self._parent)
+        self._child_list.insert(index, child)
+
+    def remove_at(self, index):
+        '''
+        Removes a child
+        '''
+        return self._child_list.pop(index)
+
+    def replace_at(self, index, child):
+        '''
+        Replaces a child
+        '''
+        assert isinstance(child, self._allowed_type)
+
+        temp = self._child_list.pop(index)
+        child.set_parent(self._parent)
+        self._child_list.insert(index, child)
+        return temp
+
+    def split_at(self, index):
+        '''
+        Splits this list at index, all items from index on, are returned
+        '''
+        assert index <= len(self._child_list)
+        assert index >= 0
+
+        other = []
+        for i in range(index, len(self._child_list)):
+            other.append(self._child_list[i])
+            self._child_list[i] = None
+
+        self._child_list = self._child_list[0:index]
+        return other
+
+    def walk(self, walker):
+        '''
+        Walks all childs
+        '''
+        for each in self._child_list:
+            walker.walk_node(each)
+
+
 class Node(object):
 
     '''
@@ -112,6 +276,7 @@ class Node(object):
         self._parent = None
         self._resolved = False
         self._scopes = {}
+        self._childs = []
 
     def get_scope(self, kind):
         '''
@@ -151,6 +316,19 @@ class Node(object):
         assert self._parent is not None
         return self._parent
 
+    def add_child(self, child):
+        '''
+        Adds a child to this node
+        '''
+        self._childs.append(child)
+
+    def walk_childs(self, walker):
+        '''
+        Walks all node childs
+        '''
+        for each in self._childs:
+            each.walk(walker)
+
 
 class StatementNode(Node):
 
@@ -181,39 +359,8 @@ class StmtListNode(StatementNode):
         Constructor
         '''
         super(StmtListNode, self).__init__()
-        self.childs_statements = []
+        self.statements = ChildList(self, StatementNode)
         self.add_scope(StatementListScope, StatementListScope(self))
-
-    def add_statement(self, child):
-        '''
-        statement adder
-        '''
-        if not child:
-            assert False
-        assert isinstance(child, StatementNode)
-        child.set_parent(self)
-        self.childs_statements.append(child)
-
-    def insert_statement_at(self, index, child):
-        '''
-        statement adder
-        '''
-        assert child is not None
-        assert isinstance(child, StatementNode)
-        assert index >= 0
-        assert index <= len(self.childs_statements)
-
-        child.set_parent(self)
-        self.childs_statements.insert(index, child)
-
-    def remove_statement_at(self, index):
-        '''
-        statement adder
-        '''
-        assert index >= 0
-        assert index <= len(self.childs_statements)
-
-        return self.childs_statements.pop(index)
 
     def split_at(self, index, other):
         '''
@@ -221,21 +368,15 @@ class StmtListNode(StatementNode):
         all items with index equal or greater than are moved to the other
         '''
         assert isinstance(other, StmtListNode)
-        assert index <= len(self.childs_statements)
-        assert index >= 0
-
-        for i in range(index, len(self.childs_statements)):
-            other.add_statement(self.childs_statements[i])
-            self.childs_statements[i] = None
-
-        self.childs_statements = self.childs_statements[0:index]
+        o = self.statements.split_at(index)
+        o.statements.add_all(o)
 
     def is_closed_stmt(self):
         '''
         Returns true when last statement is closed
         '''
-        if len(self.childs_statements) != 0:
-            return self.childs_statements[-1].is_closed_stmt()
+        if self.statements.get_size() != 0:
+            return self.statements.at(-1).is_closed_stmt()
         else:
             return False
 
@@ -269,14 +410,10 @@ class ExpressionNode(Node):
         '''
         Returns the type of this expression
         '''
-        assert self._resolved_type
+        if self._resolved_type is None:
+            print self.__name__
+            assert False
         return self._resolved_type
-
-    def assert_resolved(self):
-        '''
-        Asserts this instance has a resolved type
-        '''
-        assert self._resolved_type
 
     def get_static_value(self):
         # pylint: disable=no-self-use
@@ -438,28 +575,7 @@ class DeclarationListNode(Node):
         Constructor
         '''
         super(DeclarationListNode, self).__init__()
-        self.childs_declarations = []
-
-    def add_declaration(self, child):
-        '''
-        statement adder
-        '''
-        assert child
-        assert isinstance(child, Node)
-        child.set_parent(self)
-        self.childs_declarations.append(child)
-
-    def insert_declaration_at(self, index, child):
-        '''
-        statement adder
-        '''
-        assert child is not None
-        assert isinstance(child, Node)
-        assert index >= 0
-        assert index <= len(self.childs_declarations)
-
-        child.set_parent(self)
-        self.childs_declarations.insert(index, child)
+        self.declarations = ChildList(self, Node)
 
 
 class ArgumentListNode(Node):
@@ -473,24 +589,4 @@ class ArgumentListNode(Node):
         Constructor
         '''
         super(ArgumentListNode, self).__init__()
-        self.childs_arguments = []
-
-    def add_argument(self, child):
-        '''
-        argument adder
-        '''
-        assert isinstance(child, ExpressionNode)
-        child.set_parent(self)
-        self.childs_arguments.append(child)
-
-    def insert_argument_at(self, index, child):
-        '''
-        statement adder
-        '''
-        assert child is not None
-        assert isinstance(child, ExpressionNode)
-        assert index >= 0
-        assert index <= len(self.childs_arguments)
-
-        child.set_parent(self)
-        self.childs_arguments.insert(index, child)
+        self.arguments = ChildList(self, ExpressionNode)

@@ -88,21 +88,21 @@ def _can_match(compiler, ctx, args, decls, make_match):
     and TypeDeclNode.CAST_MATCH when it can match but casting needed
     '''
 
-    if len(args) != len(decls):
+    if args.get_size() != decls.get_size():
         if make_match:
             compiler.report_error(
                 ctx, "Wrong number of arguments, need %s but given %s" % (
-                    len(args),
-                    len(decls)))
+                    args.get_size(),
+                    decls.get_size()))
             compiler.raise_error()
 
         return TypeDeclNode.NO_MATCH
 
     result = TypeDeclNode.EXACT_MATCH
-    for i in range(len(args)):
+    for i in range(args.get_size()):
 
-        source = args[i].get_type()
-        target = decls[i].get_type()
+        source = args.at(i).get_type()
+        target = decls.at(i).get_type()
 
         if source == target:
             pass
@@ -217,7 +217,7 @@ class _ResolveVisitor(CodeVisitor):
         self.visit_stmt_list(node)
 
         has_flow_stmt = False
-        for each in node.childs_statements:
+        for each in node.statements:
             # state _StatementsSplitterVisitor needs nice flow statements
             # so no unreachable statements allowed
             if has_flow_stmt:
@@ -226,7 +226,7 @@ class _ResolveVisitor(CodeVisitor):
                 has_flow_stmt = True
 
     def visit_DeclarationListNode(self, node):
-        for decl in node.childs_declarations:
+        for decl in node.declarations:
             self.visit(decl)
 
     def visit_PreprocessorDirectiveNode(self, node):
@@ -356,7 +356,7 @@ class _ResolveVisitor(CodeVisitor):
         node.get_scope(RootScope).add_function(self._c, node.txt_name, node)
 
     def visit_FunctionCallExprNode(self, node):
-        self.visit(node.child_argument_list)
+        self.visit(node.argument_list.get())
 
         node.ref_declaration = node.get_scope(
             RootScope).lookup_function(node.txt_name)
@@ -445,7 +445,7 @@ class _ResolveVisitor(CodeVisitor):
                 return
 
         d = overload_filter(
-            self._c, node.ctx, node.child_argument_list.childs_arguments,
+            self._c, node.ctx, node.argument_list.get().arguments,
             candidates)
 
         t = self.on_demand_resolve(d)
@@ -453,7 +453,7 @@ class _ResolveVisitor(CodeVisitor):
         node.set_type(t)
 
         d.make_arguments_match(
-            self._c, node.ctx, node.child_argument_list.childs_arguments)
+            self._c, node.ctx, node.argument_list.get().arguments)
 #         r = d.static_evaluate(self._c, node.child_argument_list)
 #         if r is not None:
 #             self.replace_expression(r)
@@ -476,7 +476,7 @@ class _ResolveVisitor(CodeVisitor):
                 return
 
         d = overload_filter(
-            self._c, node.ctx, node.child1_argument_list.childs_arguments,
+            self._c, node.ctx, node.argument_list.get().arguments,
             candidates)
 
         t = self.on_demand_resolve(d)
@@ -484,14 +484,14 @@ class _ResolveVisitor(CodeVisitor):
         node.set_type(t)
 
         d.make_arguments_match(
-            self._c, node.ctx, node.child1_argument_list.childs_arguments)
+            self._c, node.ctx, node.argument_list.get().arguments)
 #         r = d.static_evaluate(self._c, node.child1_argument_list)
 #         if r is not None:
 #             self.replace_expression(r)
 
     def visit_DontCareExprNode(self, node):
 
-        self.visit(node.child_argument_list)
+        self.visit(node.argument_list.get())
         node.set_type(self._zc_dont_care)
 
     def visit_IndexExprNode(self, node):
@@ -526,4 +526,4 @@ class _ResolveVisitor(CodeVisitor):
         node.set_type(node.child0_cast_type.get_type())
 
     def visit_ArgumentListNode(self, node):
-        self.visit_expression_list(node, node.childs_arguments)
+        self.visit_expression_list(node, node.arguments)

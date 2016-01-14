@@ -14,7 +14,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-from smartanthill_phc.common.base import ArgumentListNode, ExpressionNode
+from smartanthill_phc.common.base import ArgumentListNode, ExpressionNode, Child
 
 
 class ErrorExprNode(ExpressionNode):
@@ -44,16 +44,8 @@ class FunctionCallExprNode(ExpressionNode):
         '''
         super(FunctionCallExprNode, self).__init__()
         self.txt_name = None
-        self.child_argument_list = None
+        self.argument_list = Child(self, ArgumentListNode)
         self.ref_declaration = None
-
-    def set_argument_list(self, child):
-        '''
-        Setter
-        '''
-        assert isinstance(child, ArgumentListNode)
-        child.set_parent(self)
-        self.child_argument_list = child
 
 
 class MemberAccessExprNode(ExpressionNode):
@@ -284,16 +276,8 @@ class OperatorExprNode(ExpressionNode):
         '''
         super(OperatorExprNode, self).__init__()
         self.txt_operator = None
-        self.child_argument_list = None
+        self.argument_list = Child(self, ArgumentListNode)
         self.ref_declaration = None
-
-    def set_argument_list(self, child):
-        '''
-        Setter
-        '''
-        assert isinstance(child, ArgumentListNode)
-        child.set_parent(self)
-        self.child_argument_list = child
 
 
 class MemberOperatorExprNode(ExpressionNode):
@@ -312,7 +296,7 @@ class MemberOperatorExprNode(ExpressionNode):
         super(MemberOperatorExprNode, self).__init__()
         self.txt_operator = None
         self.child0_expression = None
-        self.child1_argument_list = None
+        self.argument_list = Child(self, ArgumentListNode)
         self.ref_declaration = None
 
     def set_expression(self, child):
@@ -322,14 +306,6 @@ class MemberOperatorExprNode(ExpressionNode):
         assert isinstance(child, ExpressionNode)
         child.set_parent(self)
         self.child0_expression = child
-
-    def set_argument_list(self, child):
-        '''
-        Setter
-        '''
-        assert isinstance(child, ArgumentListNode)
-        child.set_parent(self)
-        self.child1_argument_list = child
 
 
 class BinaryOpExprNode(OperatorExprNode):

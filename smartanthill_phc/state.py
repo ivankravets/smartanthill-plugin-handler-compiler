@@ -16,7 +16,7 @@
 from smartanthill_phc.c_node import CastExprNode, IntTypeDeclNode,\
     VoidTypeDeclNode
 from smartanthill_phc.common.base import StatementNode, ExpressionNode,\
-    ArgumentListNode
+    ArgumentListNode, Child
 from smartanthill_phc.common.compiler import BuiltinCtx
 from smartanthill_phc.common.expr import VariableExprNode,\
     FunctionCallExprNode
@@ -243,16 +243,8 @@ class PapiWaitStmtNode(StatementNode):
         self.int_next_state = None
         self.txt_name = None
         self.txt_wait_for = None
-        self.child_argument_list = None
+        self.argument_list = Child(self, ArgumentListNode)
         self.ctx_function_name = None
-
-    def set_argument_list(self, child):
-        '''
-        argument_list setter
-        '''
-        assert isinstance(child, ArgumentListNode)
-        child.set_parent(self)
-        self.child_argument_list = child
 
 
 class PapiSleepStmtNode(StatementNode):
@@ -267,15 +259,7 @@ class PapiSleepStmtNode(StatementNode):
         '''
         super(PapiSleepStmtNode, self).__init__()
         self.int_next_state = None
-        self.child_argument_list = None
-
-    def set_argument_list(self, child):
-        '''
-        argument_list setter
-        '''
-        assert isinstance(child, ArgumentListNode)
-        child.set_parent(self)
-        self.child_argument_list = child
+        self.argument_list = Child(self, ArgumentListNode)
 
 
 class LoopsHelper(object):
@@ -440,8 +424,8 @@ class _StateCountHelper(object):
 
 def _skip_statements(stmt_list):
 
-    for i in range(len(stmt_list.childs_statements)):
-        s = stmt_list.childs_statements[i]
+    for i in range(stmt_list.statements.get_size()):
+        s = stmt_list.statements.at(i)
         if isinstance(s, MainFirstStmtNode):
             continue
 
@@ -453,7 +437,7 @@ def _skip_statements(stmt_list):
                           VariableExprNode):
             return i
 
-    return len(stmt_list.childs_statements)
+    return stmt_list.statements.get_size()
 
 
 class StateMachineVisitor(NodeVisitor):
@@ -474,7 +458,7 @@ class StateMachineVisitor(NodeVisitor):
         self.visit(node.child_declaration_list)
 
     def visit_DeclarationListNode(self, node):
-        for each in node.childs_declarations:
+        for each in node.declarations:
             self.visit(each)
 
     def visit_PreprocessorDirectiveNode(self, node):
@@ -492,13 +476,13 @@ class StateMachineVisitor(NodeVisitor):
 
             s = self._c.init_node(InitFirstStmtNode(), ctx)
 
-            args = node.child_argument_decl_list.childs_declarations
-            if len(args) >= 2:
-                s.txt_arg1 = args[1].txt_name
+            args = node.child_argument_decl_list.declarations
+            if args.get_size() >= 2:
+                s.txt_arg1 = args.at(1).txt_name
             else:
                 self._c.report_error(node.ctx, "Too few arguments")
 
-            node.child_stmt_list.insert_statement_at(0, s)
+            node.child_stmt_list.statements.insert_at(0, s)
         elif node.txt_name == self._nb.handler_init_name:
             pass
         else:
@@ -515,7 +499,7 @@ class StateMachineVisitor(NodeVisitor):
         if i == 0:
             ctx = stmt_list.ctx.start
         else:
-            ctx = stmt_list.childs_statements[i - 1].ctx.stop
+            ctx = stmt_list.statements.at(i - 1).ctx.stop
 
         v = _StatementsVisitor(self._c, self._nb, self._split_all)
         v.visit_stmt_list(stmt_list, i)
@@ -523,10 +507,10 @@ class StateMachineVisitor(NodeVisitor):
         if v.has_states():
             sm = self._c.init_node(StateMachineStmtNode(), ctx)
             sm.int_last_state = v.get_last_state()
-            stmt_list.insert_statement_at(i, sm)
+            stmt_list.statements.insert_at(i, sm)
 
             s = self._c.init_node(SubFirstStmtNode(), ctx)
-            stmt_list.insert_statement_at(0, s)
+            stmt_list.statements.insert_at(0, s)
 
             moved_vars = v.get_moved_vars()
             self._nb.add_function_with_states(node, sm, moved_vars)
@@ -540,7 +524,7 @@ class StateMachineVisitor(NodeVisitor):
             if not stmt_list.is_closed_stmt():
                 s = self._c.init_node(
                     BeforeReturnStmtNode(), stmt_list.ctx.stop)
-                stmt_list.add_statement(s)
+                stmt_list.statements.add(s)
 
     def _create_state_machine(self, node):
         '''
@@ -556,7 +540,7 @@ class StateMachineVisitor(NodeVisitor):
         if i == 0:
             ctx = stmt_list.ctx.start
         else:
-            ctx = stmt_list.childs_statements[i - 1].ctx.stop
+            ctx = stmt_list.statements.at(i - 1).ctx.stop
 
         v = _StatementsVisitor(self._c, self._nb, self._split_all)
         v.visit_stmt_list(stmt_list, i)
@@ -565,18 +549,18 @@ class StateMachineVisitor(NodeVisitor):
             sm = self._c.init_node(StateMachineStmtNode(), ctx)
             sm.int_last_state = v.get_last_state()
             sm.flag_main_machine = True
-            stmt_list.insert_statement_at(i, sm)
+            stmt_list.statements.insert_at(i, sm)
 
             s = self._c.init_node(MainFirstStmtNode(), ctx)
 
-            args = node.child_argument_decl_list.childs_declarations
-            if len(args) >= 6:
-                s.txt_arg2 = args[2].txt_name
-                s.txt_arg5 = args[5].txt_name
+            args = node.child_argument_decl_list.declarations
+            if args.get_size() >= 6:
+                s.txt_arg2 = args.at(2).txt_name
+                s.txt_arg5 = args.at(5).txt_name
             else:
                 self._c.report_error(node.ctx, "Too few arguments")
 
-            stmt_list.insert_statement_at(0, s)
+            stmt_list.statements.insert_at(0, s)
 
             moved_vars = v.get_moved_vars()
             self._nb.add_function_with_states(node, sm, moved_vars)
@@ -660,11 +644,11 @@ class _StatementsVisitor(CodeVisitor):
             if init_expr.ref_declaration is not None and\
                     self._nb.has_states(init_expr.ref_declaration):
 
-                visit_node(self, init_expr.child_argument_list)
+                visit_node(self, init_expr.argument_list.get())
 
                 a = self._c.init_node(
                     StatefullCallArgumentExprNode(), init_expr.ctx)
-                init_expr.child_argument_list.insert_argument_at(0, a)
+                init_expr.argument_list.get().arguments.insert_at(0, a)
 
                 self._substates_around_current(node.ctx)
                 return
@@ -682,12 +666,12 @@ class _StatementsVisitor(CodeVisitor):
 
     def visit_FunctionCallStmtNode(self, node):
 
-        self.visit(node.child_expression.child_argument_list)
+        self.visit(node.child_expression.argument_list.get())
 
         if self._nb.has_states(node.child_expression.ref_declaration):
             a = self._c.init_node(
                 StatefullCallArgumentExprNode(), node.child_expression.ctx)
-            node.child_expression.child_argument_list.insert_argument_at(0, a)
+            node.child_expression.argument_list.get().arguments.insert_at(0, a)
             self._substates_around_current(node.ctx)
 
         elif node.child_expression.bool_is_blocking:
@@ -717,10 +701,9 @@ class _StatementsVisitor(CodeVisitor):
                 s.ctx_function_name = node.child_expression.ctx.\
                     unaryExpression().Identifier()
 
-            s.set_argument_list(node.child_expression.child_argument_list)
+            s.argument_list.set(node.child_expression.argument_list.clear())
             s.int_next_state = self._sc.increment_state()
 
-            node.child_expression.child_argument_list = None
             old = self.replace_current_statement(s)
             self._c.remove_nodes(old)
 
@@ -750,7 +733,7 @@ class _StatementsVisitor(CodeVisitor):
         self.visit_childs(node)
 
     def visit_DontCareExprNode(self, node):
-        self.visit(node.child_argument_list)
+        self.visit(node.argument_list.get())
 
     def visit_MemberExprNode(self, node):
         self.visit_childs(node)
@@ -789,12 +772,12 @@ class _StatementsVisitor(CodeVisitor):
         self._h.add_var_expr(node, self._sc.get_last_state())
 
     def visit_FunctionCallExprNode(self, node):
-        self.visit(node.child_argument_list)
+        self.visit(node.argument_list.get())
 
         if self._nb.has_states(node.ref_declaration):
             ctx = self.get_current_statement().ctx
             a = self._c.init_node(StatefullCallArgumentExprNode(), node.ctx)
-            node.child_argument_list.insert_argument_at(0, a)
+            node.argument_list.get().arguments.insert_at(0, a)
 
             s = self._c.init_node(FunctionCallSubStmtNode(), ctx)
             s.int_next_state = self._sc.increment_state()
@@ -813,4 +796,4 @@ class _StatementsVisitor(CodeVisitor):
         pass
 
     def visit_ArgumentListNode(self, node):
-        self.visit_expression_list(node, node.childs_arguments)
+        self.visit_expression_list(node, node.arguments)

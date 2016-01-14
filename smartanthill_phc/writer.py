@@ -113,7 +113,7 @@ class _WriterVisitor(NodeVisitor):
         self.visit(node.child_declaration_list)
 
     def visit_DeclarationListNode(self, node):
-        for each in node.childs_declarations:
+        for each in node.declarations:
             self.visit(each)
 
     def visit_PreprocessorDirectiveNode(self, node):
@@ -135,7 +135,7 @@ class _WriterVisitor(NodeVisitor):
                 "void* sa_state0, waiting_for* sa_wf, uint8_t* sa_result")
             first = False
 
-        for each in node.child_argument_decl_list.childs_declarations:
+        for each in node.child_argument_decl_list.declarations:
 
             if not first:
                 self._w.write(', ')
@@ -152,7 +152,7 @@ class _WriterVisitor(NodeVisitor):
     def visit_StmtListNode(self, node):
         self._w.write_line('{')
 
-        for each in node.childs_statements:
+        for each in node.statements:
             self.visit(each)
 
         self._w.write_line('}')
@@ -204,14 +204,14 @@ class _WriterVisitor(NodeVisitor):
 
     def visit_PapiWaitStmtNode(self, node):
         self._w.write(node.txt_name)
-        self._writeArgumentListNode(node.child_argument_list)
+        self._writeArgumentListNode(node.argument_list.get())
         self._w.write(';')
         self._w.end_of_statement(node.ctx.stop)
 
         self._w.write("papi_wait_handler_add_wait_for_")
         self._w.write(node.txt_wait_for)
         self._w.write("(sa_wf, ")
-        self.write_expr(node.child_argument_list.childs_arguments[0])
+        self.write_expr(node.argument_list.get().arguments.at(0))
         self._w.write(')')
         self._w.write(';')
         self._w.end_of_statement(None)
@@ -224,7 +224,7 @@ class _WriterVisitor(NodeVisitor):
         self._w.write("if(papi_wait_handler_is_waiting_for_")
         self._w.write(node.txt_wait_for)
         self._w.write("(sa_wf, ")
-        self.write_expr(node.child_argument_list.childs_arguments[0])
+        self.write_expr(node.argument_list.get().arguments.at(0))
         self._w.write('))')
         self._w.end_of_statement(None)
         self._w.write_line('{')
@@ -244,7 +244,7 @@ class _WriterVisitor(NodeVisitor):
         #         self._w.end_of_statement()
 
         self._w.write("papi_wait_handler_add_wait_for_timeout(sa_wf, ")
-        self.write_expr(node.child_argument_list.childs_arguments[0])
+        self.write_expr(node.argument_list.get().arguments.at(0))
         self._w.write(')')
         self._w.write(';')
         self._w.end_of_statement(node.ctx.stop)
@@ -351,7 +351,7 @@ class _WriterVisitor(NodeVisitor):
         self._w.write_line("label_%s:" % nxt)
 
         n = node.ref_waiting_for.txt_name
-        args = node.ref_waiting_for.child_argument_list.childs_arguments
+        args = node.ref_waiting_for.argument_list.get().arguments
         assert len(args) >= 1
 #         arg0 = self._get_text(args[0].ctx)
         arg0 = '/* TODO */'
@@ -493,24 +493,24 @@ class _WriterVisitor(NodeVisitor):
         self.write_expr(node.child2_false_expression)
 
     def visit_BinaryOpExprNode(self, node):
-        assert len(node.child_argument_list.childs_arguments) == 2
-        self.write_expr(node.child_argument_list.childs_arguments[0])
+        assert node.argument_list.get().arguments.get_size() == 2
+        self.write_expr(node.argument_list.get().arguments.at(0))
         self._w.write(node.txt_operator)
-        self.write_expr(node.child_argument_list.childs_arguments[1])
+        self.write_expr(node.argument_list.get().arguments.at(1))
 
     def visit_UnaryOpExprNode(self, node):
-        assert len(node.child1_argument_list.childs_arguments) == 0
+        assert node.argument_list.get().arguments.get_size() == 0
         self._w.write(node.txt_operator)
         self.write_expr(node.child0_expression)
 
     def visit_PostUnaryOpExprNode(self, node):
-        assert len(node.child1_argument_list.childs_arguments) == 0
+        assert node.argument_list.get().arguments.get_size() == 0
         self.write_expr(node.child0_expression)
         self._w.write(node.txt_operator[4:])
 
     def visit_IndexExprNode(self, node):
         self._w.write(node.child0_expression)
-        self._writeArgumentListNode(node.child1_argument_list, '[', ']')
+        self._writeArgumentListNode(node.argument_list.get(), '[', ']')
 
     def visit_LiteralExprNode(self, node):
         self._w.write(node.txt_literal)
@@ -555,7 +555,7 @@ class _WriterVisitor(NodeVisitor):
         else:
             self._w.write(node.txt_name)
 
-        self._writeArgumentListNode(node.child_argument_list)
+        self._writeArgumentListNode(node.argument_list.get())
 
     def visit_FunctionCallSubExprNode(self, node):
 
@@ -573,7 +573,7 @@ class _WriterVisitor(NodeVisitor):
         self._w.write(begin)
 
         first = True
-        for each in node.childs_arguments:
+        for each in node.arguments:
             if not first:
                 self._w.write(', ')
             first = False
