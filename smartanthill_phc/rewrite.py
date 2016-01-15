@@ -249,42 +249,6 @@ class _RewriteVisitor(CodeVisitor):
 
         self._w.insertAfterToken(node.ctx, txt)
 
-    def visit_WaitStateStmtNode(self, node):
-
-        nxt = str(node.int_next_state)
-        txt = u"\nsa_state->sa_next = %s;" % nxt
-
-        txt += self._format_result_return("PLUGIN_WAITING")
-
-        txt += u"\n\nlabel_%s:" % nxt
-
-        n = node.ref_waiting_for.txt_name
-        args = node.ref_waiting_for.argument_list.get().arguments
-        assert len(args) >= 1
-        arg0 = self._get_text(args.at(0).get().ctx)
-
-        if n == "papi_sleep":
-            f = u"timeout(0, sa_wf)"
-        elif n == "papi_wait_for_spi_send":
-            f = u"spi_send(sa_wf, %s)" % arg0
-        elif n == "papi_wait_for_i2c_send":
-            f = u"i2c_send(sa_wf, %s)" % arg0
-        elif n == "papi_wait_for_spi_receive":
-            f = u"spi_receive(sa_wf, %s)" % arg0
-        elif n == "papi_wait_for_i2c_receive":
-            f = u"i2c_receive(sa_wf, %s)" % arg0
-        else:
-            assert False
-
-        txt += u"\nif(papi_wait_handler_is_waiting_for_%s) {" % f
-        txt += self._format_result_return("PLUGIN_WAITING")
-        txt += u"\n}\n"
-
-        if node.ctx.stop.line is not None:
-            txt += u"//#line %s\n" % node.ctx.stop.line
-
-        self._w.insertAfterToken(node.ctx.stop, txt)
-
     def visit_DebugStateStmtNode(self, node):
 
         nxt = str(node.int_next_state)
@@ -377,9 +341,6 @@ class _RewriteVisitor(CodeVisitor):
             self._sm.txt_struct_name, self._sm.txt_struct_name)
 
         self._w.insertAfterToken(node.ctx, txt)
-
-    def visit_DontCareExprNode(self, node):
-        self.visit_childs(node)
 
     def visit_OperatorExprNode(self, node):
         self.visit_childs(node)

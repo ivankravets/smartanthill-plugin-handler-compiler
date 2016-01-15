@@ -497,11 +497,6 @@ class _ResolveVisitor(CodeVisitor):
 #         if r is not None:
 #             self.replace_expression(r)
 
-    def visit_DontCareExprNode(self, node):
-
-        self.visit(node.argument_list.get())
-        node.set_type(self._zc_dont_care)
-
     def visit_IndexExprNode(self, node):
 
         self.visit_childs(node)

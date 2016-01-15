@@ -104,22 +104,6 @@ class SubFirstStmtNode(StatementNode):
         super(SubFirstStmtNode, self).__init__()
 
 
-class WaitStateStmtNode(StatementNode):
-
-    '''
-    Statement node class representing state to be processed next time we enter
-    this function
-    '''
-
-    def __init__(self):
-        '''
-        Constructor
-        '''
-        super(WaitStateStmtNode, self).__init__()
-        self.int_next_state = None
-        self.ref_waiting_for = None
-
-
 class DebugStateStmtNode(StatementNode):
 
     '''
@@ -589,15 +573,6 @@ class _StatementsVisitor(CodeVisitor):
     def get_last_state(self):
         return self._sc.get_last_state()
 
-    def _wait_after_current(self, wait_condition, ctx):
-        '''
-        Adds 'PLUGIN_WAITING' state change after current statement
-        '''
-        nxt = self._c.init_node(WaitStateStmtNode(), ctx)
-        nxt.ref_waiting_for = wait_condition
-        nxt.int_next_state = self._sc.increment_state()
-        self.insert_after_current(nxt)
-
     def _debug_after_current(self, ctx):
         '''
         Adds 'PLUGIN_DEBUG' state change after current statement
@@ -698,7 +673,6 @@ class _StatementsVisitor(CodeVisitor):
             old = self.replace_current_statement(s)
             self._c.remove_nodes(old)
 
-#             self._wait_after_current(node.child_expression, node.ctx)
         elif self._split_all:
             self._debug_after_current(node.ctx)
 
@@ -722,9 +696,6 @@ class _StatementsVisitor(CodeVisitor):
 
     def visit_IfElseStmtNode(self, node):
         self.visit_childs(node)
-
-    def visit_DontCareExprNode(self, node):
-        self.visit(node.argument_list.get())
 
     def visit_MemberAccessExprNode(self, node):
         self.visit_childs(node)

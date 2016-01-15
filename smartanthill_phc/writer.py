@@ -340,41 +340,6 @@ class _WriterVisitor(NodeVisitor):
 #             if node.ctx.line is not None:
 #                 txt += u"\n//#line %s\n" % node.ctx.line
 
-    def visit_WaitStateStmtNode(self, node):
-
-        nxt = str(node.int_next_state)
-        self._w.write_line("sa_state->sa_next = %s;" % nxt)
-
-        self._write_result_return("PLUGIN_WAITING")
-
-        self._w.write_line("label_%s:" % nxt)
-
-        n = node.ref_waiting_for.txt_name
-        args = node.ref_waiting_for.argument_list.get().arguments
-        assert len(args) >= 1
-#         arg0 = self._get_text(args[0].ctx)
-        arg0 = '/* TODO */'
-
-        if n == "papi_sleep":
-            f = "timeout(0, sa_wf)"
-        elif n == "papi_wait_for_spi_send":
-            f = "spi_send(sa_wf, %s)" % arg0
-        elif n == "papi_wait_for_i2c_send":
-            f = "i2c_send(sa_wf, %s)" % arg0
-        elif n == "papi_wait_for_spi_receive":
-            f = "spi_receive(sa_wf, %s)" % arg0
-        elif n == "papi_wait_for_i2c_receive":
-            f = "i2c_receive(sa_wf, %s)" % arg0
-        else:
-            assert False
-
-        self._w.write_line("if(papi_wait_handler_is_waiting_for_%s) {" % f)
-        self._write_result_return("PLUGIN_WAITING")
-        self._w.write_line("}")
-
-#         if node.ctx.stop.line is not None:
-#             txt += u"//#line %s\n" % node.ctx.stop.line
-
     def visit_DebugStateStmtNode(self, node):
 
         nxt = str(node.int_next_state)
@@ -470,12 +435,6 @@ class _WriterVisitor(NodeVisitor):
             self._sm.txt_struct_name, self._sm.txt_struct_name))
 
 #        self._w.insertAfterToken(node.ctx, txt)
-
-    def visit_DontCareExprNode(self, node):
-        # pylint: disable=unused-argument
-        # TODO
-        # self.visit(node.child_argument_list)
-        self._w.write('/* TODO */')
 
     def visit_AssignmentExprNode(self, node):
 

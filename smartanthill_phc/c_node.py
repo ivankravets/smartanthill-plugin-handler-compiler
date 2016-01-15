@@ -14,7 +14,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 from smartanthill_phc import resolve
-from smartanthill_phc.common import base, decl, expr
+from smartanthill_phc.common import decl, expr
 from smartanthill_phc.common.base import ExpressionNode,\
     Node, StmtListNode,\
     StatementNode, TypeDeclNode,\
@@ -22,30 +22,6 @@ from smartanthill_phc.common.base import ExpressionNode,\
     ChildExprOpt
 from smartanthill_phc.common.decl import ArgumentDeclListNode
 from smartanthill_phc.common.expr import LiteralExprNode
-
-
-class DontCareExprNode(ExpressionNode):
-
-    '''
-    Node class representing a operator expression
-    '''
-
-    def __init__(self):
-        '''
-        Constructor
-        '''
-        super(DontCareExprNode, self).__init__()
-        self.argument_list = Child(self, base.ArgumentListNode)
-
-    @staticmethod
-    def create(compiler, ctx):
-        '''
-        Creates a new instance, and a new argument list
-        '''
-        node = compiler.init_node(DontCareExprNode(), ctx)
-        node.argument_list.set(
-            compiler.init_node(base.ArgumentListNode(), ctx))
-        return node
 
 
 class CastExprNode(ExpressionNode):
