@@ -68,9 +68,15 @@ def _make_integer(compiler, ctx, decls):
     casts = compiler.init_node(DeclarationListNode(), ctx)
 
     c0 = compiler.init_node(c_node.TrivialCastRuleNode(), ctx)
+
     t0 = compiler.init_node(c_node.SimpleTypeNode(), ctx)
     t0.txt_name = 'sa_int_literal'
-    c0.cast_type.set(t0)
+
+    t1 = compiler.init_node(c_node.RefTypeNode(), ctx)
+    t1.set_type(tn)
+
+    c0.source_type.set(t0)
+    c0.target_type.set(t1)
 
     casts.declarations.add(c0)
     tn.cast_rules_list.set(casts)
@@ -135,9 +141,15 @@ def _make_bool(compiler, ctx, decls):
     casts = compiler.init_node(DeclarationListNode(), ctx)
 
     c0 = compiler.init_node(c_node.TrivialCastRuleNode(), ctx)
+
     t0 = compiler.init_node(c_node.SimpleTypeNode(), ctx)
     t0.txt_name = 'sa_bool_literal'
-    c0.cast_type.set(t0)
+
+    t1 = compiler.init_node(c_node.RefTypeNode(), ctx)
+    t1.set_type(tn)
+
+    c0.source_type.set(t0)
+    c0.target_type.set(t1)
 
     casts.declarations.add(c0)
     tn.cast_rules_list.set(casts)

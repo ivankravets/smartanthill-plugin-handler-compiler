@@ -162,12 +162,12 @@ class Child(object):
         self._child_node = None
         return temp
 
-    def call(self, doer):
+    def call(self, functor):
         '''
         Walks this child
         '''
         if self._child_node is not None:
-            doer.do_child(self)
+            functor(self)
 
 
 class ChildList(object):
@@ -224,7 +224,7 @@ class ChildList(object):
         '''
         Returns a child
         '''
-        return self._child_list[index].get()
+        return self._child_list[index]
 
     def insert_at(self, index, child):
         '''
@@ -263,12 +263,12 @@ class ChildList(object):
         self._child_list = self._child_list[0:index]
         return other
 
-    def call(self, doer):
+    def call(self, functor):
         '''
         Walks all childs
         '''
         for each in self._child_list:
-            doer.do_child(each)
+            functor(each)
 
 
 class Node(object):
@@ -331,12 +331,12 @@ class Node(object):
         '''
         self._childs.append(child)
 
-    def for_each_child(self, doer):
+    def for_each_child(self, functor):
         '''
         Walks all node childs
         '''
         for each in self._childs:
-            each.call(doer)
+            each.call(functor)
 
 
 class StatementNode(Node):
@@ -385,7 +385,7 @@ class StmtListNode(StatementNode):
         Returns true when last statement is closed
         '''
         if self.statements.get_size() != 0:
-            return self.statements.at(-1).is_closed_stmt()
+            return self.statements.at(-1).get().is_closed_stmt()
         else:
             return False
 
@@ -546,7 +546,7 @@ class TypeDeclNode(Node):
         # pylint: disable=unused-argument
         return False
 
-    def insert_cast(self, compiler, source_type, expression):
+    def insert_cast_from(self, compiler, source_type, expression):
         '''
         Inserts a cast from the source type
         Only implemented by types that return true to can_cast_from
@@ -573,27 +573,6 @@ class TypeDeclNode(Node):
         # pylint: disable=no-self-use
         # pylint: disable=unused-argument
         return None
-
-
-def expression_type_match(compiler, lhs_type, parent, child_name):
-    '''
-    Helper function for expression type matching
-    If no match possible just returns false
-    If exact match returns true
-    If can match but needs cast, inserts cast and returns true
-    '''
-    e = getattr(parent, child_name)
-    expr_type = e.get_type()
-
-    if expr_type == lhs_type:
-        return True
-    elif lhs_type.can_cast_from(expr_type):
-        cast = lhs_type.insert_cast(compiler, expr_type, e)
-        cast.set_parent(parent)
-        setattr(parent, child_name, cast)
-        return True
-    else:
-        return False
 
 
 class DeclarationListNode(Node):

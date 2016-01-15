@@ -229,7 +229,7 @@ class IntTypeDeclNode(TypeDeclNode):
                 return True
         return False
 
-    def insert_cast(self, compiler, source_type, expression):
+    def insert_cast_from(self, compiler, source_type, box):
         '''
         Inserts a cast from the source type
         Only implemented by types that return true to can_cast_from
@@ -237,7 +237,7 @@ class IntTypeDeclNode(TypeDeclNode):
         # pylint: disable=unused-argument
         for each in self.cast_rules_list.get().declarations:
             if each.get().can_cast_from(source_type):
-                return each.get().insert_cast(compiler, self, expression)
+                return each.get().insert_cast_from(compiler, source_type, box)
         assert False
 
     def lookup_operator(self, name):
@@ -261,8 +261,8 @@ class TrivialCastRuleNode(Node):
         super(TrivialCastRuleNode, self).__init__()
         self.int_min_value = 0
         self.int_max_value = 0
-        self.cast_type = Child(self, TypeNode)
-        self.expression = ChildExpr(self)
+        self.source_type = Child(self, TypeNode)
+        self.target_type = Child(self, TypeNode)
 
     def can_cast_from(self, source_type):
         '''
@@ -270,19 +270,17 @@ class TrivialCastRuleNode(Node):
         If self can be constructed from source_type returns True
         Otherwise returns False
         '''
-        return source_type == self.cast_type.get().ref_type_declaration
+        return source_type == self.source_type.get().get_type()
 
-    @staticmethod
-    def insert_cast(self, compiler, target_type, expression):
+    def insert_cast_from(self, compiler, source_type, box):
         '''
         Inserts a cast to the target type
         '''
-        # pylint: disable=no-self-use
-        node = compiler.init_node(expr.TrivialCastExprNode(), expression.ctx)
-        node.expression.set(expression)
-        node.cast_type.set(target_type)
+        assert self.can_cast_from(source_type)
+        rep = expr.TrivialCastExprNode.create(
+            compiler, box.get(), self.target_type.get().get_type())
 
-        return node
+        box.reset(rep)
 
 
 class RefTypeNode(TypeNode):

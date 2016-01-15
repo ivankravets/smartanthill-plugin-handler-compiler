@@ -17,7 +17,7 @@ from antlr4.ParserRuleContext import ParserRuleContext
 from antlr4.tree.Tree import TerminalNodeImpl
 
 from smartanthill_phc.common.errors import CompilerError
-from smartanthill_phc.common.visitor import NodeWalker, walk_node_childs
+from smartanthill_phc.common.visitor import NodeWalker
 import xml.etree.ElementTree as ET
 
 
@@ -145,12 +145,10 @@ class _NodeIdsWalker(NodeWalker):
         '''
         Constructor
         '''
+        super(_NodeIdsWalker, self).__init__()
         self.node_ids = []
-
-    def do_child(self, child):
-        self.walk_node(child.get())
 
     def walk_node(self, node):
         assert node
         self.node_ids.append(node.node_id)
-        walk_node_childs(self, node)
+        self.walk_childs(node)

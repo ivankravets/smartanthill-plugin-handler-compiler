@@ -130,7 +130,7 @@ class TrivialCastExprNode(ExpressionNode):
         Creates a new instance
         '''
         node = compiler.init_node(TrivialCastExprNode(), expression.ctx)
-        node.set_expression(expression)
+        node.expression.set(expression)
         node.set_type(target_type)
 
         return node
