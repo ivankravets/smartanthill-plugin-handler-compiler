@@ -1,0 +1,23 @@
+--- Build ---
+gcc -fno-exceptions -g -Os -Wall -ffunction-sections -fdata-sections -std=c99 -I.. -DSA_PLUGIN_ID=expression -include expression.h -o expression.exe ../runner.c expression.c
+expression.c: In function 'expression_plugin_handler':
+expression.c:47:31: warning: unused variable 'pc' [-Wunused-variable]
+     expression_plugin_config* pc = (expression_plugin_config*)plugin_config;
+                               ^
+Ok
+
+---  Run  ---
+Ok
+
+
+*** Non Blocking ***
+--- Build ---
+gcc -fno-exceptions -g -Os -Wall -ffunction-sections -fdata-sections -std=c99 -I.. -DSA_PLUGIN_ID=expression -include expression.h -o expression_non_blocking.exe ../runner.c expression_non_blocking.c
+expression.c: In function 'expression_plugin_handler':
+expression.c:47:27: warning: unused variable 'pc' [-Wunused-variable]
+     expression_plugin_config* pc = (expression_plugin_config*)plugin_config;
+                           ^
+Ok
+
+---  Run  ---
+Ok

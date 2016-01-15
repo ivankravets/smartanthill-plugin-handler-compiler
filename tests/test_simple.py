@@ -68,6 +68,11 @@ def test_debug():
     non_blocking_test('debug', True)
 
 
+def test_expression():
+
+    non_blocking_test('expression', False)
+
+
 def test_loop():
 
     non_blocking_test('loop', False)
