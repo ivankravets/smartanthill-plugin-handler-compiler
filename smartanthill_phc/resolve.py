@@ -14,7 +14,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 from smartanthill_phc.common import errors
-from smartanthill_phc.common.base import ResolutionHelper,\
+from smartanthill_phc.common.base import OnDemandResolution,\
     TypeDeclNode
 from smartanthill_phc.common.lookup import lookup_type, RootScope,\
     StatementListScope, ReturnStmtScope, FunctionScope
@@ -49,8 +49,7 @@ def overload_filter(compiler, ctx, args, decl_list_list):
     exact_match = []
     cast_match = []
     for current in decl_list_list:
-        r = current.can_match_arguments(
-            compiler, ctx, args)
+        r = current.can_match_arguments(compiler, ctx, args)
 
         if r == TypeDeclNode.NO_MATCH:
             pass
@@ -78,51 +77,6 @@ def overload_filter(compiler, ctx, args, decl_list_list):
         compiler.report_error(
             ctx, "More than a candidate can match the arguments")
         compiler.raise_error()
-
-
-def can_match_helper(compiler, ctx, args, decls, make_match):
-    '''
-    If this argument list can not used to initialize given argument list
-    Returns TypeDeclNode.NO_MATCH when there is no chance to make it match
-    TypeDeclNode.EXACT_MATCH when match does not need any cast
-    and TypeDeclNode.CAST_MATCH when it can match but casting needed
-    '''
-
-    if args.get_size() != decls.get_size():
-        if make_match:
-            compiler.report_error(
-                ctx, "Wrong number of arguments, need %s but given %s" % (
-                    args.get_size(),
-                    decls.get_size()))
-            compiler.raise_error()
-
-        return TypeDeclNode.NO_MATCH
-
-    result = TypeDeclNode.EXACT_MATCH
-    for i in range(args.get_size()):
-
-        source = args.at(i).get().get_type()
-        target = decls.at(i).get().get_type()
-
-        if source == target:
-            pass
-        elif source.can_cast_to(target):
-            result = TypeDeclNode.CAST_MATCH
-            if make_match:
-                source.insert_cast_to(compiler, target, args.at(i))
-        elif target.can_cast_from(source):
-            result = TypeDeclNode.CAST_MATCH
-            if make_match:
-                target.insert_cast_from(compiler, source, args.at(i))
-        else:
-            if make_match:
-                compiler.report_error(
-                    ctx, "Bad argument type at position %s" % i)
-                compiler.raise_error()
-
-            return TypeDeclNode.NO_MATCH
-
-    return result
 
 
 def expression_type_match(compiler, lhs_type, box):
@@ -205,7 +159,7 @@ class _ResolveVisitor(CodeVisitor):
         Calls to resolve on demand, on some declaration after look up
         This resolution in not result of natural tree order
         '''
-        assert isinstance(node, (ResolutionHelper, TypeDeclNode))
+        assert isinstance(node, (OnDemandResolution, TypeDeclNode))
         visit_node(self, node)
         return node.get_type()
 
@@ -281,6 +235,9 @@ class _ResolveVisitor(CodeVisitor):
             self.visit_childs(node)
 
             node.set_type(node.declaration_type.get().get_type())
+
+    def visit_FunctionDefinitionNode(self, node):
+        self.visit_childs(node)
 
     def visit_FunctionDeclNode(self, node):
 

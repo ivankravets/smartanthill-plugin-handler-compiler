@@ -441,27 +441,30 @@ class StateMachineVisitor(NodeVisitor):
         # pylint: disable=no-self-use
         pass
 
-    def visit_FunctionDeclNode(self, node):
-        if node.txt_name == self._nb.handler_name:
+    def visit_FunctionDefinitionNode(self, node):
+        if node.declaration.get().txt_name == self._nb.handler_name:
 
             self._create_state_machine(node)
-        elif node.txt_name == self._nb.exec_init_name:
+        elif node.declaration.get().txt_name == self._nb.exec_init_name:
 
             ctx = node.statement_list.get().ctx.start
 
             s = self._c.init_node(InitFirstStmtNode(), ctx)
 
-            args = node.argument_decl_list.get().declarations
+            args = node.declaration.get().argument_decl_list.get().declarations
             if args.get_size() >= 2:
                 s.txt_arg1 = args.at(1).get().txt_name
             else:
                 self._c.report_error(node.ctx, "Too few arguments")
 
             node.statement_list.get().statements.insert_at(0, s)
-        elif node.txt_name == self._nb.handler_init_name:
+        elif node.declaration.get().txt_name == self._nb.handler_init_name:
             pass
         else:
             self._create_sub_state_machine(node)
+
+    def visit_FunctionDeclNode(self, node):
+        pass
 
     def _create_sub_state_machine(self, node):
         '''
@@ -488,10 +491,13 @@ class StateMachineVisitor(NodeVisitor):
             stmt_list.statements.insert_at(0, s)
 
             moved_vars = v.get_moved_vars()
-            self._nb.add_function_with_states(node, sm, moved_vars)
+            self._nb.add_function_with_states(
+                node.declaration.get(), sm, moved_vars)
 
-            if not isinstance(node.return_type.get().ref_type_declaration,
-                              (VoidTypeDeclNode, IntTypeDeclNode)):
+            if not isinstance(
+                    node.declaration.get().return_type.get(
+                    ).ref_type_declaration,
+                    (VoidTypeDeclNode, IntTypeDeclNode)):
                 self._c.report_error(
                     node.ctx,
                     "Function return type not supported for sub states")
@@ -528,7 +534,7 @@ class StateMachineVisitor(NodeVisitor):
 
             s = self._c.init_node(MainFirstStmtNode(), ctx)
 
-            args = node.argument_decl_list.get().declarations
+            args = node.declaration.get().argument_decl_list.get().declarations
             if args.get_size() >= 6:
                 s.txt_arg2 = args.at(2).get().txt_name
                 s.txt_arg5 = args.at(5).get().txt_name
@@ -538,7 +544,8 @@ class StateMachineVisitor(NodeVisitor):
             stmt_list.statements.insert_at(0, s)
 
             moved_vars = v.get_moved_vars()
-            self._nb.add_function_with_states(node, sm, moved_vars)
+            self._nb.add_function_with_states(
+                node.declaration.get(), sm, moved_vars)
 
 
 class _StatementsVisitor(CodeVisitor):

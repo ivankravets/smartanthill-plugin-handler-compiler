@@ -929,27 +929,28 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
             self._c.report_error(ctx, "Invalid function declaration")
             return
 
-        f = self._c.init_node(decl.FunctionDeclNode(), ctx)
+        definition = self._c.init_node(decl.FunctionDefinitionNode(), ctx)
+        declaration = self._c.init_node(decl.FunctionDeclNode(), ctx)
 
-        f.txt_name = get_identifier_text(
+        declaration.txt_name = get_identifier_text(
             self._c, dd.directDeclarator().Identifier(), _prefix)
 
         t = self._process_specifiers(ctx.declarationSpecifier())
         if ctx.declarator().pointer() is not None:
             t = self._pointerHelper(ctx.declarator().pointer(), t)
 
-        f.return_type.set(t)
+        declaration.return_type.set(t)
 
         al = self._c.init_node(decl.ArgumentDeclListNode(), dd.getChild(1))
-        f.argument_decl_list.set(al)
-
         # add argument declarations
         self._process_arg_list(dd.parameterTypeList(), al)
+        declaration.argument_decl_list.set(al)
 
+        definition.declaration.set(declaration)
         sl = self.visit(ctx.compoundStatement())
-        f.statement_list.set(sl)
+        definition.statement_list.set(sl)
 
-        self._s.declaration_list.get().declarations.add(f)
+        self._s.declaration_list.get().declarations.add(definition)
 
         return None
 

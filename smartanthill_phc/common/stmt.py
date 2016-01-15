@@ -14,7 +14,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-from smartanthill_phc.common.base import ResolutionHelper, StatementNode,\
+from smartanthill_phc.common.base import OnDemandResolution, StatementNode,\
     StmtListNode, TypeNode, ChildExprOpt, ChildExpr, Child
 
 
@@ -96,7 +96,7 @@ class ReturnStmtNode(StatementNode):
             return void_type
 
 
-class VariableDeclarationStmtNode(StatementNode, ResolutionHelper):
+class VariableDeclarationStmtNode(StatementNode, OnDemandResolution):
 
     '''
     Node class representing variable declaration statement

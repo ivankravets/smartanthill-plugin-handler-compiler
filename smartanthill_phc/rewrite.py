@@ -98,11 +98,13 @@ class _RewriteVisitor(CodeVisitor):
         # pylint: disable=no-self-use
         pass
 
+    def visit_FunctionDefinitionNode(self, node):
+        self.visit_childs(node)
+
     def visit_FunctionDeclNode(self, node):
 
         self._func = node
         self._sm = self._nb.get_state_machine_data(node)
-        self.visit(node.statement_list)
 
         if self._sm is not None:
             if not self._sm.ref_state_machine.is_main_machine():

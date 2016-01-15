@@ -118,6 +118,9 @@ class _WriterVisitor(NodeVisitor):
     def visit_PreprocessorDirectiveNode(self, node):
         self._w.write_line(node.txt_body)
 
+    def visit_FunctionDefinitionNode(self, node):
+        self.visit_childs(node)
+
     def visit_FunctionDeclNode(self, node):
 
         self._func = node
@@ -145,8 +148,6 @@ class _WriterVisitor(NodeVisitor):
 
         self._w.write(')')
         self._w.end_of_statement(node.ctx.start)
-
-        self.visit(node.statement_list)
 
     def visit_StmtListNode(self, node):
         self._w.write_line('{')

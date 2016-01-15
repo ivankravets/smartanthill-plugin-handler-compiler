@@ -19,7 +19,7 @@ from smartanthill_phc.common.child import Child, ChildList
 from smartanthill_phc.common.lookup import RootScope, StatementListScope
 
 
-class ResolutionHelper(object):
+class OnDemandResolution(object):
 
     '''
     Helper base class provides resolution cycle safety
@@ -36,7 +36,7 @@ class ResolutionHelper(object):
         '''
         Constructor
         '''
-        super(ResolutionHelper, self).__init__()
+        super(OnDemandResolution, self).__init__()
         self._resolved_flag = self._NOT_RESOLVED
         self._resolved_type = None
 
@@ -344,25 +344,6 @@ class TypeDeclNode(Node):
         assert not self._resolved
         self.get_scope(RootScope).add_type(compiler, self.txt_name, self)
         self._resolved = True
-
-    def can_cast_to(self, target_type):
-        '''
-        Base method for type casting
-        If self can be casted to target_type returns True
-        Otherwise returns False
-        '''
-        # pylint: disable=no-self-use
-        # pylint: disable=unused-argument
-        return False
-
-    def insert_cast_to(self, compiler, target_type, expression):
-        '''
-        Inserts a cast to the target type
-        Only implemented by types that return true to can_cast_to
-        '''
-        # pylint: disable=unused-argument
-        print "Node: %s" % type(self).__name__
-        assert False
 
     def can_cast_from(self, source_type):
         '''

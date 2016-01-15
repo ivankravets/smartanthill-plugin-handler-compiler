@@ -13,14 +13,10 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from smartanthill_phc import resolve
 from smartanthill_phc.common import decl, expr
-from smartanthill_phc.common.base import ExpressionNode,\
-    Node, StmtListNode,\
-    StatementNode, TypeDeclNode,\
-    TypeNode, ResolutionHelper, DeclarationListNode, Child, ChildExpr,\
-    ChildExprOpt
-from smartanthill_phc.common.decl import ArgumentDeclListNode
+from smartanthill_phc.common.base import ExpressionNode, Node, StmtListNode,\
+    StatementNode, TypeDeclNode, TypeNode, OnDemandResolution,\
+    DeclarationListNode, Child, ChildExpr, ChildExprOpt
 from smartanthill_phc.common.expr import LiteralExprNode
 
 
@@ -360,7 +356,7 @@ class PapiFunctionDeclNode(Node):
         self.txt_name = name
 
 
-class TypedefStmtNode(StatementNode, ResolutionHelper):
+class TypedefStmtNode(StatementNode, OnDemandResolution):
 
     '''
     Node class representing variable declaration statement
@@ -389,7 +385,7 @@ class PreprocessorDirectiveNode(Node):
         self.txt_body = None
 
 
-class OperatorDeclNode(decl.CallableDeclNode, ResolutionHelper):
+class OperatorDeclNode(decl.FunctionDeclNode):
 
     '''
     Node class representing a function declaration
@@ -400,18 +396,3 @@ class OperatorDeclNode(decl.CallableDeclNode, ResolutionHelper):
         Constructor
         '''
         super(OperatorDeclNode, self).__init__()
-        self.txt_name = None
-        self.return_type = Child(self, TypeNode)
-        self.argument_decl_list = Child(self, ArgumentDeclListNode)
-
-    def can_match_arguments(self, compiler, ctx, args):
-
-        return resolve.can_match_helper(
-            compiler, ctx, args,
-            self.argument_decl_list.get().declarations, False)
-
-    def make_arguments_match(self, compiler, ctx, args):
-
-        return resolve.can_match_helper(
-            compiler, ctx, args,
-            self.argument_decl_list.get().declarations, True)
