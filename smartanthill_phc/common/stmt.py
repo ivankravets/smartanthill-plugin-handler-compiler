@@ -162,10 +162,3 @@ class IfElseStmtNode(StatementNode):
                 self.else_stmt_list.get().is_closed_stmt()
         else:
             return False
-
-#         t = self.get_scope(RootScope).lookup_type('_zc_boolean')
-#
-#         if not expression_type_match(compiler, t, self, 'child_expression'):
-#             compiler.report_error(
-#                 self.ctx, "Condition can not be evaluated to boolean")
-        # no need to raise here

@@ -16,7 +16,7 @@
 
 from smartanthill_phc.common import errors
 from smartanthill_phc.common.child import Child, ChildList
-from smartanthill_phc.common.lookup import RootScope, StatementListScope
+from smartanthill_phc.common.lookup import StatementListScope, TypeScope
 
 
 class OnDemandResolution(object):
@@ -319,7 +319,7 @@ class TypeNode(Node):
         compiler.report_error(ctx, "Unsupported qualifier '%s'" % qualifier)
 
 
-class TypeDeclNode(Node):
+class TypeDeclNode(Node, OnDemandResolution):
 
     '''
     Base class for types declarations
@@ -335,15 +335,7 @@ class TypeDeclNode(Node):
         '''
         super(TypeDeclNode, self).__init__()
         self.txt_name = name
-        self._resolved = False
-
-    def resolve(self, compiler):
-        '''
-        Resolve
-        '''
-        assert not self._resolved
-        self.get_scope(RootScope).add_type(compiler, self.txt_name, self)
-        self._resolved = True
+        self.add_scope(TypeScope, TypeScope(self))
 
     def can_cast_from(self, source_type):
         '''
@@ -366,22 +358,6 @@ class TypeDeclNode(Node):
 
     def to_string(self):
         return self.txt_name
-
-    def lookup_member(self, name):
-        '''
-        Base method for type member look up
-        '''
-        # pylint: disable=no-self-use
-        # pylint: disable=unused-argument
-        return None
-
-    def lookup_operator(self, name):
-        '''
-        Base method for type operator look up
-        '''
-        # pylint: disable=no-self-use
-        # pylint: disable=unused-argument
-        return None
 
 
 class DeclarationListNode(Node):

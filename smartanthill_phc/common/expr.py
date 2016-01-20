@@ -244,6 +244,19 @@ class BinaryOpExprNode(OperatorExprNode):
         super(BinaryOpExprNode, self).__init__()
 
 
+class MemberBinaryOpExprNode(MemberOperatorExprNode):
+
+    '''
+    Node class representing a binary operator expression
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(MemberBinaryOpExprNode, self).__init__()
+
+
 class UnaryOpExprNode(MemberOperatorExprNode):
 
     '''
@@ -283,3 +296,31 @@ class IndexOpExprNode(MemberOperatorExprNode):
         Constructor
         '''
         super(IndexOpExprNode, self).__init__()
+
+
+class PointerExprNode(ExpressionNode):
+
+    '''
+    Node class representing a pointer operator expression
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(PointerExprNode, self).__init__()
+        self.expression = ChildExpr(self)
+
+
+class AddressOfExprNode(ExpressionNode):
+
+    '''
+    Node class representing an address of operator expression
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(AddressOfExprNode, self).__init__()
+        self.expression = ChildExpr(self)

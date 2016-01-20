@@ -15,8 +15,7 @@
 
 from smartanthill_phc.common.base import Node, OnDemandResolution, TypeNode,\
     StmtListNode, DeclarationListNode, TypeDeclNode, Child
-from smartanthill_phc.common.lookup import ReturnStmtScope, StatementListScope,\
-    FunctionScope
+from smartanthill_phc.common.lookup import FunctionScope, StatementListScope
 
 
 class CallableDeclNode(Node):
@@ -133,7 +132,6 @@ class FunctionDefinitionNode(Node):
         super(FunctionDefinitionNode, self).__init__()
         self.declaration = Child(self, FunctionDeclNode)
         self.statement_list = Child(self, StmtListNode)
-        self.add_scope(ReturnStmtScope, ReturnStmtScope(self))
         self.add_scope(StatementListScope, None)  # stop scope recursion
         self.add_scope(FunctionScope, FunctionScope(self))
 

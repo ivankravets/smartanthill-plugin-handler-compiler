@@ -716,6 +716,12 @@ class _StatementsVisitor(CodeVisitor):
     def visit_OperatorExprNode(self, node):
         self.visit_childs(node)
 
+    def visit_PointerExprNode(self, node):
+        self.visit_childs(node)
+
+    def visit_AddressOfExprNode(self, node):
+        self.visit_childs(node)
+
     def visit_MemberOperatorExprNode(self, node):
         self.visit_childs(node)
 

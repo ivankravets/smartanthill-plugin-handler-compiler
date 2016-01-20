@@ -43,6 +43,7 @@ class Ctx(object):
     TARGET = BuiltinCtx('<target>')
     ROOT = BuiltinCtx('<root>')
     NONE = BuiltinCtx('<none>')
+    INTERNAL = BuiltinCtx('<internal>')
 
 
 def format_location(ctx):

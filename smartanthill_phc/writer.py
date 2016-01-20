@@ -457,6 +457,12 @@ class _WriterVisitor(NodeVisitor):
         self._w.write(node.txt_operator)
         self.write_expr(node.argument_list.get().arguments.at(1))
 
+    def visit_MemberBinaryOpExprNode(self, node):
+        assert node.argument_list.get().arguments.get_size() == 1
+        self.write_expr(node.expression)
+        self._w.write(node.txt_operator)
+        self.write_expr(node.argument_list.get().arguments.at(0))
+
     def visit_UnaryOpExprNode(self, node):
         assert node.argument_list.get().arguments.get_size() == 0
         self._w.write(node.txt_operator)
@@ -468,8 +474,19 @@ class _WriterVisitor(NodeVisitor):
         self._w.write(node.txt_operator[4:])
 
     def visit_IndexExprNode(self, node):
-        self._w.write(node.expression)
-        self._writeArgumentListNode(node.argument_list.get(), '[', ']')
+        assert node.argument_list.get().arguments.get_size() == 2
+        self.write_expr(node.expression)
+        self._w.write('[')
+        self.write_expr(node.argument_list.get().arguments.at(0))
+        self._w.write(']')
+
+    def visit_PointerExprNode(self, node):
+        self._w.write('*')
+        self.write_expr(node.expression)
+
+    def visit_AddressOfExprNode(self, node):
+        self._w.write('&')
+        self.write_expr(node.expression)
 
     def visit_LiteralExprNode(self, node):
         self._w.write(node.txt_literal)
@@ -527,9 +544,9 @@ class _WriterVisitor(NodeVisitor):
         # pylint: disable=unused-argument
         self._w.write("(void*)(sa_state + 1), sa_wf, sa_result")
 
-    def _writeArgumentListNode(self, node, begin='(', end=')'):
+    def _writeArgumentListNode(self, node):
 
-        self._w.write(begin)
+        self._w.write('(')
 
         first = True
         for each in node.arguments:
@@ -538,7 +555,7 @@ class _WriterVisitor(NodeVisitor):
             first = False
             self.write_expr(each)
 
-        self._w.write(end)
+        self._w.write(')')
 
     def visit_SimpleTypeNode(self, node):
 

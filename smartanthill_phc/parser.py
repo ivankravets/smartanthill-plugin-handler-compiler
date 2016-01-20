@@ -251,10 +251,20 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
     # Visit a parse tree produced by CParser#UnaryOperatorExpression.
     def visitUnaryOperatorExpression(self, ctx):
 
-        node = self._c.init_node(expr.UnaryOpExprNode(), ctx)
-        node.txt_operator = get_text(ctx.getChild(0))
-        node.expression.set(self.visit(ctx.castExpression()))
-        node.argument_list.set(self._make_args(ctx, []))
+        op = get_text(ctx.getChild(0))
+        if op == '*':
+            node = self._c.init_node(expr.PointerExprNode(), ctx)
+            node.expression.set(self.visit(ctx.castExpression()))
+        elif op == '&':
+            node = self._c.init_node(expr.AddressOfExprNode(), ctx)
+            node.expression.set(self.visit(ctx.castExpression()))
+        elif op in ['+', '-', '~', '!']:
+            node = self._c.init_node(expr.UnaryOpExprNode(), ctx)
+            node.txt_operator = get_text(ctx.getChild(0))
+            node.expression.set(self.visit(ctx.castExpression()))
+            node.argument_list.set(self._make_args(ctx, []))
+        else:
+            assert False
 
         return node
 
@@ -371,19 +381,19 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
                 node.left_expression.set(self.visit(ctx.unaryExpression()))
                 node.right_expression.set(
                     self.visit(ctx.assignmentExpression()))
-                return node
-            else:
-                if op not in ('*=', '/=', '%=', '+=', '-=', '<<=', '>>=',
-                              '&=', '^=', '|='):
-                    self._c.report_error(
-                        ctx, "Operator '%s' not supported" % op)
+            elif op in ('*=', '/=', '%=', '+=', '-=', '<<=', '>>=',
+                        '&=', '^=', '|='):
 
-                node = self._c.init_node(expr.BinaryOpExprNode(), ctx)
+                node = self._c.init_node(expr.MemberBinaryOpExprNode(), ctx)
                 node.txt_operator = op
-                args = self._make_args(
-                    ctx, [ctx.unaryExpression(), ctx.assignmentExpression()])
+                node.expression.set(self.visit(ctx.unaryExpression()))
+                args = self._make_args(ctx, [ctx.assignmentExpression()])
                 node.argument_list.set(args)
                 return node
+            else:
+                assert False
+
+            return node
 
     # Visit a parse tree produced by CParser#expr.
     def visitExpression(self, ctx):

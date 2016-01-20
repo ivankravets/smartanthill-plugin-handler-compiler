@@ -353,6 +353,12 @@ class _RewriteVisitor(CodeVisitor):
     def visit_MemberAccessExprNode(self, node):
         self.visit_childs(node)
 
+    def visit_PointerExprNode(self, node):
+        self.visit_childs(node)
+
+    def visit_AddressOfExprNode(self, node):
+        self.visit_childs(node)
+
     def visit_CastExprNode(self, node):
         self.visit(node.expression)
 

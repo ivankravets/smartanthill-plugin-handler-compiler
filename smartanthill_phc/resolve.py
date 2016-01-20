@@ -13,11 +13,13 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from smartanthill_phc.common import errors
+from smartanthill_phc import pointer
+from smartanthill_phc.common import errors, lookup
 from smartanthill_phc.common.base import OnDemandResolution,\
     TypeDeclNode
-from smartanthill_phc.common.lookup import lookup_type, RootScope,\
-    StatementListScope, ReturnStmtScope, FunctionScope
+from smartanthill_phc.common.compiler import format_location
+from smartanthill_phc.common.lookup import RootScope,\
+    StatementListScope, FunctionScope, TypeScope
 from smartanthill_phc.common.visitor import CodeVisitor, visit_node,\
     NodeWalker
 
@@ -41,6 +43,39 @@ def resolve_tree(compiler, root):
     walker.walk_node(root)
 
 
+def report_overload_error(compiler, ctx, first_line, args, decls):
+
+    txt = []
+    txt.append(format_location(ctx) + first_line)
+    txt.append("Arguments:")
+
+    current = '('
+    for i in range(args.get_size()):
+        if i != 0:
+            current += ','
+
+        current += args.at(i).get().get_type().to_string()
+    current += ')'
+    txt.append(current)
+
+    txt.append("Candidates:")
+    for each in decls:
+        current = '('
+        e = each.argument_decl_list.get().declarations
+        for i in range(e.get_size()):
+            if i != 0:
+                current += ','
+
+            current += e.at(i).get().get_type().to_string()
+        current += ')'
+        txt.append(current)
+
+    for each in txt:
+        print each
+
+    compiler.raise_error()
+
+
 def overload_filter(compiler, ctx, args, decl_list_list):
     '''
     From a list declarations, returns one that can match the arguments,
@@ -62,21 +97,24 @@ def overload_filter(compiler, ctx, args, decl_list_list):
 
     if len(exact_match) == 0:
         if len(cast_match) == 0:
-            compiler.report_error(
-                ctx, "None of candidates can match the arguments")
-            compiler.raise_error()
+            return decl_list_list[0]
+            report_overload_error(
+                compiler, ctx, "None of candidates can match the arguments",
+                args, decl_list_list)
         elif len(cast_match) == 1:
             return cast_match[0]
         else:
-            compiler.report_error(
-                ctx, "More than a candidate can match the arguments")
-            compiler.raise_error()
+            return decl_list_list[0]
+            report_overload_error(
+                compiler, ctx, "More than a candidate can match the arguments",
+                args, decl_list_list)
     elif len(exact_match) == 1:
         return exact_match[0]
     else:
-        compiler.report_error(
-            ctx, "More than a candidate can match the arguments")
-        compiler.raise_error()
+        return decl_list_list[0]
+        report_overload_error(
+            compiler, ctx, "More than a candidate match the arguments",
+            args, decl_list_list)
 
 
 def expression_type_match(compiler, lhs_type, box):
@@ -121,8 +159,29 @@ class _ResolutionCheckWalker(NodeWalker):
                     assert False
         except AttributeError:
             pass
+        except errors.ResolutionCycleError:
+            print "ResolutionCycleError"
+            print "Node   : %s" % type(node).__name__
+#            assert False
+        except errors.UnresolvedError:
+            print "UnresolvedError"
+            print "Node   : %s" % type(node).__name__
+#            assert False
+        except errors.PreviousResolutionError:
+            print "PreviousResolutionError"
+            print "Node   : %s" % type(node).__name__
+#            assert False
 
         self.walk_childs(node)
+
+
+def _get_internal_type(txt_name, node):
+    '''
+    Type look up at RootScope that is known to success
+    '''
+    t = node.get_scope(RootScope).types.lookup(txt_name)
+    assert t is not None
+    return t
 
 
 class _ResolveVisitor(CodeVisitor):
@@ -171,23 +230,33 @@ class _ResolveVisitor(CodeVisitor):
         # first built-ins
         self.visit(node.builtins)
 
-        sc = node.get_scope(RootScope)
-        self._zc_dont_care = sc.get_type('_zc_dont_care')
-        self._void = sc.get_type('void')
-        assert self._zc_dont_care is not None
-        assert self._void is not None
+        self._zc_dont_care = _get_internal_type('_zc_dont_care', node)
+        self._void = _get_internal_type('void', node)
 
         self.visit(node.source)
 
     def visit_TypeDeclNode(self, node):
-        self.visit_childs(node)
-        node.get_scope(RootScope).add_type(self._c, node.txt_name, node)
+
+        if node.begin_resolution():
+            sc = node.get_parent_scope(TypeScope)
+            if sc is None:
+                sc = node.get_scope(RootScope)
+                assert sc is not None
+
+            sc.types.add(self._c, node.txt_name, node)
+
+            self.visit_childs(node)
+            node.set_type(node)
 
     def visit_OperatorDeclNode(self, node):
         if node.begin_resolution():
 
-            #             node.get_scope(StatementListScope).add_variable(
-            #                 self._c, node.txt_name, node)
+            sc = node.get_scope(TypeScope)
+            if sc is None:
+                sc = node.get_scope(RootScope)
+                assert sc is not None
+
+            sc.operators.add(self._c, node.txt_name, node)
 
             self.visit_childs(node)
             node.set_type(node.return_type.get().get_type())
@@ -219,7 +288,7 @@ class _ResolveVisitor(CodeVisitor):
         # pylint: disable=no-self-use
         if node.begin_resolution():
             if node.txt_name is not None:
-                node.get_scope(FunctionScope).add_argument(
+                node.get_scope(FunctionScope).arguments.add(
                     self._c, node.txt_name, node)
 
             self.visit_childs(node)
@@ -229,7 +298,7 @@ class _ResolveVisitor(CodeVisitor):
 
         if node.begin_resolution():
 
-            node.get_scope(StatementListScope).add_variable(
+            node.get_scope(StatementListScope).variables.add(
                 self._c, node.txt_name, node)
 
             self.visit_childs(node)
@@ -243,7 +312,7 @@ class _ResolveVisitor(CodeVisitor):
 
         if node.begin_resolution():
 
-            node.get_scope(RootScope).add_function(
+            node.get_scope(RootScope).functions.add(
                 self._c, node.txt_name, node)
             self.visit_childs(node)
 
@@ -255,9 +324,9 @@ class _ResolveVisitor(CodeVisitor):
 
             stmt_scope = node.get_scope(StatementListScope)
             if stmt_scope is not None:
-                stmt_scope.add_typedef(self._c, node.txt_name, node)
+                stmt_scope.typedefs.add(self._c, node.txt_name, node)
             else:
-                node.get_scope(RootScope).add_typedef(
+                node.get_scope(RootScope).typedefs.add(
                     self._c, node.txt_name, node)
 
             self.visit_childs(node)
@@ -275,13 +344,9 @@ class _ResolveVisitor(CodeVisitor):
         assert False
 
     def visit_ReturnStmtNode(self, node):
-
         self.visit_childs(node)
 
-        node.get_scope(ReturnStmtScope).add_return_stmt(node)
-
     def visit_ExpressionStmtNode(self, node):
-
         self.visit_childs(node)
 
     def visit_IfElseStmtNode(self, node):
@@ -316,8 +381,9 @@ class _ResolveVisitor(CodeVisitor):
 
         root_scope = node.get_scope(RootScope)
         stmt_scope = node.get_scope(StatementListScope)
-        t = lookup_type(node.txt_name, root_scope, stmt_scope)
+        t = lookup.lookup_type(node.txt_name, root_scope, stmt_scope)
         if t is None:
+            print "Unresolved type '%s'" % node.txt_name
             t = self._zc_dont_care
 
         node.set_type(t)
@@ -331,49 +397,64 @@ class _ResolveVisitor(CodeVisitor):
         self.visit_childs(node)
 
         t = node.pointed_type.get().get_type()
-        # TODO
-        node.set_type(t)
-
-    def visit_PapiFunctionDeclNode(self, node):
-        node.get_scope(RootScope).add_function(self._c, node.txt_name, node)
+        ptr = pointer.make_pointer_of(self._c, t)
+        d = self.on_demand_resolve(ptr)
+        node.set_type(d)
 
     def visit_FunctionCallExprNode(self, node):
 
         self.visit_childs(node)
 
-        node.ref_declaration = node.get_scope(
-            RootScope).lookup_function(node.txt_name)
-#         compiler.report_error(
-#             self.ctx, "Unresolved function call '%s'" % self.txt_name)
+        candidates = node.get_scope(
+            RootScope).functions.lookup(node.txt_name)
 
-        node.set_type(self._zc_dont_care)
+        if candidates is None or len(candidates) == 0:
+
+            node.set_type(self._zc_dont_care)
+            return
+
+            self._c.report_error(
+                node.ctx, "Unresolved call '%s'" % node.txt_name)
+            self._c.raise_error()
+
+        d = overload_filter(
+            self._c, node.ctx, node.argument_list.get().arguments,
+            candidates)
+
+        t = self.on_demand_resolve(d)
+        node.ref_declaration = d
+        node.set_type(t)
+
+#         d.make_arguments_match(
+#             self._c, node.ctx, node.argument_list.get().arguments)
 
     def visit_IntegerLiteralExprNode(self, node):
         # pylint: disable=no-self-use
-        t = node.get_scope(RootScope).get_type('sa_int_literal')
+        t = _get_internal_type('sa_int_literal', node)
         node.set_type(t)
 
     def visit_BooleanLiteralExprNode(self, node):
         # pylint: disable=no-self-use
-        t = node.get_scope(RootScope).get_type('sa_bool_literal')
+        t = _get_internal_type('sa_bool_literal', node)
         node.set_type(t)
 
     def visit_VariableExprNode(self, node):
 
         sc = node.get_scope(StatementListScope)
-        assert sc is not None
-        d = sc.lookup_variable(node.txt_name)
+
+        d = lookup.lookup_variable(node.txt_name, sc)
         if d is not None:
             node.ref_declaration = d
             t = self.on_demand_resolve(node.ref_declaration)
         else:
+            # Try find as function argument
             sc = node.get_scope(FunctionScope)
-            assert sc is not None
-            d = sc.lookup_argument(node.txt_name)
+            d = sc.arguments.lookup(node.txt_name)
             if d is not None:
                 node.ref_declaration = d
                 t = self.on_demand_resolve(node.ref_declaration)
             else:
+                print "Unresolved variable '%s'" % node.txt_name
                 t = self._zc_dont_care
 
         node.set_type(t)
@@ -398,16 +479,12 @@ class _ResolveVisitor(CodeVisitor):
 
         self.visit_childs(node)
         candidates = node.get_scope(
-            RootScope).lookup_operator(node.txt_operator)
+            RootScope).operators.lookup(node.txt_operator)
 
         if candidates is None or len(candidates) == 0:
-            if False:
-                self._c.report_error(
-                    node.ctx, "Unresolved operator '%s'" % node.txt_operator)
-                self._c.raise_error()
-            else:
-                node.set_type(self._zc_dont_care)
-                return
+            self._c.report_error(
+                node.ctx, "Unresolved operator '%s'" % node.txt_operator)
+            self._c.raise_error()
 
         d = overload_filter(
             self._c, node.ctx, node.argument_list.get().arguments,
@@ -417,8 +494,8 @@ class _ResolveVisitor(CodeVisitor):
         node.ref_declaration = d
         node.set_type(t)
 
-        d.make_arguments_match(
-            self._c, node.ctx, node.argument_list.get().arguments)
+#         d.make_arguments_match(
+#             self._c, node.ctx, node.argument_list.get().arguments)
 #         r = d.static_evaluate(self._c, node.child_argument_list)
 #         if r is not None:
 #             self.replace_expression(r)
@@ -429,16 +506,13 @@ class _ResolveVisitor(CodeVisitor):
 
         ref_type = node.expression.get().get_type()
 
-        candidates = ref_type.lookup_operator(node.txt_operator)
+        candidates = ref_type.get_scope(
+            TypeScope).operators.lookup(node.txt_operator)
 
         if candidates is None or len(candidates) == 0:
-            if False:
-                self._c.report_error(
-                    node.ctx, "Unresolved operator '%s'" % node.txt_operator)
-                self._c.raise_error()
-            else:
-                node.set_type(self._zc_dont_care)
-                return
+            self._c.report_error(
+                node.ctx, "Unresolved operator '%s'" % node.txt_operator)
+            self._c.raise_error()
 
         d = overload_filter(
             self._c, node.ctx, node.argument_list.get().arguments,
@@ -448,11 +522,23 @@ class _ResolveVisitor(CodeVisitor):
         node.ref_declaration = d
         node.set_type(t)
 
-        d.make_arguments_match(
-            self._c, node.ctx, node.argument_list.get().arguments)
-#         r = d.static_evaluate(self._c, node.child1_argument_list)
-#         if r is not None:
-#             self.replace_expression(r)
+#         d.make_arguments_match(
+#             self._c, node.ctx, node.argument_list.get().arguments)
+
+    def visit_PointerExprNode(self, node):
+        self.visit_childs(node)
+
+        ref_type = node.expression.get().get_type()
+        p = pointer.get_pointed_by(self._c, node.ctx, ref_type)
+        node.set_type(p)
+
+    def visit_AddressOfExprNode(self, node):
+        self.visit_childs(node)
+
+        ref_type = node.expression.get().get_type()
+        # TODO check valid
+        p = pointer.make_pointer_of(self._c, ref_type)
+        node.set_type(p)
 
     def visit_IndexExprNode(self, node):
 
@@ -465,18 +551,23 @@ class _ResolveVisitor(CodeVisitor):
         left = node.expression.get().get_type()
 
         if node.bool_arrow:
-            pass
+            left = pointer.get_pointed_by(self._c, node.ctx, left)
+
         if left == self._zc_dont_care:
             node.set_type(self._zc_dont_care)
             return
 
-        node.ref_declaration = left.lookup_member(node.txt_name)
+        node.ref_declaration = left.get_scope(
+            TypeScope).attributes.lookup(node.txt_name)
         if node.ref_declaration is not None:
             t = self.on_demand_resolve(node.ref_declaration)
         else:
-            self._c.report_error(node.ctx, "Member '%s' not found on '%s'" % (
-                node.txt_name, t.to_string()))
+            print "Member '%s' not found on '%s'" % (
+                node.txt_name, left.to_string())
             t = self._zc_dont_care
+#          self._c.report_error(node.ctx, "Member '%s' not found on '%s'" % (
+#                 node.txt_name, left.txt_name))
+#             self._c.raise_error()
 
         node.set_type(t)
 

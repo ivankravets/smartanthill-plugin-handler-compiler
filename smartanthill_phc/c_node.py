@@ -13,10 +13,12 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+
 from smartanthill_phc.common import decl, expr
 from smartanthill_phc.common.base import ExpressionNode, Node, StmtListNode,\
     StatementNode, TypeDeclNode, TypeNode, OnDemandResolution,\
     DeclarationListNode, Child, ChildExpr, ChildExprOpt
+from smartanthill_phc.common.child import ChildList
 from smartanthill_phc.common.expr import LiteralExprNode
 
 
@@ -150,7 +152,21 @@ class ForStmtNode(LoopStmtNode):
         self.statement_list = Child(self, StmtListNode)
 
 
-class BasicTypeDeclNode(TypeDeclNode):
+class CTypeDeclNode(TypeDeclNode):
+
+    '''
+    Base class for types with added C subtypes as pointers and arrays
+    '''
+
+    def __init__(self, name):
+        '''
+        Constructor
+        '''
+        super(CTypeDeclNode, self).__init__(name)
+        self.pointer = Child(self, TypeDeclNode, True)
+
+
+class BasicTypeDeclNode(CTypeDeclNode):
 
     '''
     Basic, built-in types are implemented using this class
@@ -163,7 +179,7 @@ class BasicTypeDeclNode(TypeDeclNode):
         super(BasicTypeDeclNode, self).__init__(type_name)
 
 
-class VoidTypeDeclNode(TypeDeclNode):
+class VoidTypeDeclNode(CTypeDeclNode):
 
     '''
     void pseudotype is implemented using this class
@@ -176,7 +192,7 @@ class VoidTypeDeclNode(TypeDeclNode):
         super(VoidTypeDeclNode, self).__init__('void')
 
 
-class IntTypeDeclNode(TypeDeclNode):
+class IntTypeDeclNode(CTypeDeclNode):
 
     '''
     Basic integral built-in types are implemented using this class
@@ -212,12 +228,34 @@ class IntTypeDeclNode(TypeDeclNode):
                 return each.get().insert_cast_from(compiler, source_type, box)
         assert False
 
-    def lookup_operator(self, name):
-        result = []
-        for each in self.operator_decl_list.get().declarations:
-            if each.get().txt_name == name:
-                result.append(each.get())
-        return result
+
+class StructTypeDeclNode(CTypeDeclNode):
+
+    '''
+    Basic integral built-in types are implemented using this class
+    '''
+
+    def __init__(self, type_name):
+        '''
+        Constructor
+        '''
+        super(StructTypeDeclNode, self).__init__(type_name)
+        self.members = ChildList(self, Node)
+
+
+class AttributeDeclarationNode(Node, OnDemandResolution):
+
+    '''
+    Node class representing variable declaration statement
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(AttributeDeclarationNode, self).__init__()
+        self.txt_name = None
+        self.declaration_type = Child(self, TypeNode)
 
 
 class TrivialCastRuleNode(Node):
@@ -342,18 +380,17 @@ class PointerTypeNode(TypeNode):
                 compiler, ctx, qualifier)
 
 
-class PapiFunctionDeclNode(Node):
+class PapiFunctionDeclNode(decl.FunctionDeclNode):
 
     '''
     Node class representing a plugin api function
     '''
 
-    def __init__(self, name):
+    def __init__(self):
         '''
         Constructor
         '''
         super(PapiFunctionDeclNode, self).__init__()
-        self.txt_name = name
 
 
 class TypedefStmtNode(StatementNode, OnDemandResolution):
