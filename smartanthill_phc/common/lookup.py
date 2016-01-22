@@ -14,169 +14,167 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-class StatementListScope(object):
+def lookup_type(name, root_scope, stmt_scope):
+    '''
+    Type lookup algorithm
+    Will lookup for typedef in every StatementListScope,
+    if not found will lookup for type or typedef at RootScope
+    '''
 
+    while stmt_scope is not None:
+        t = stmt_scope.typedefs.lookup(name)
+        if t is not None:
+            return t.get_type()
+
+        stmt_scope = stmt_scope.get_parent_scope()
+
+    # If we reach here stmt_scope is None, and name was not found
+
+    assert root_scope is not None
+    t = root_scope.typedefs.lookup(name)
+    if t is not None:
+        return t.get_type()
+
+    return root_scope.types.lookup(name)
+
+
+def lookup_variable(name, scope):
     '''
-    The scope created by statement lists, where variables are look up
+    Variable lookup algorithm
+    It will look up name in this scope,
+    and if not found it will look up in the containing scope recursively
+    until either it is found, or no more scopes are available
     '''
+    assert scope is not None
+
+    while scope is not None:
+        v = scope.variables.lookup(name)
+        if v is not None:
+            return v
+
+        scope = scope.get_parent_scope()
+
+    return None
+
+
+class BaseScope(object):
 
     def __init__(self, owner):
         '''
         Constructor
         '''
+        super(BaseScope, self).__init__()
         self._owner = owner
-        self._variables = {}
-        self._typedefs = {}
+        self._data = {}
 
     def get_parent_scope(self):
-        '''
-        Returns parent scope of this same type
-        '''
-        return self._owner.get_parent_scope(StatementListScope)
-
-    def add_variable(self, compiler, name, node):
-        '''
-        Adds a variable to this scope
-        '''
-        if name in self._variables:
-            compiler.report_error(
-                node.ctx, "Redeclaration of '%s'" % name)
-            compiler.report_error(
-                self._variables[name].ctx, "Previous was here")
-
-        self._variables[name] = node
-
-    def lookup_variable(self, name):
-        '''
-        Variable lookup algorithm
-        It will look up name in this scope,
-        and if not found it will look up in the containing scope recursively
-        until either it is found, or no more scopes are available
-        '''
-        if name in self._variables:
-            return self._variables[name]
-        else:
-            p = self.get_parent_scope()
-            if p is not None:
-                return p.lookup_variable(name)
-            else:
-                return None
-
-    def add_typedef(self, compiler, name, node):
-        '''
-        Adds a typedef to this scope
-        '''
-        if name in self._typedefs:
-            compiler.report_error(
-                node.ctx, "Redeclaration of '%s'" % name)
-            compiler.report_error(
-                self._typedefs[name].ctx, "Previous was here")
-
-        self._typedefs[name] = node
-
-    def get_typedef(self, name):
-        '''
-        Typedef lookup
-        '''
-        return self._typedefs[name] if name in self._typedefs else None
-
-
-class FunctionScope(object):
-
-    '''
-    The scope created by statement lists, where variables are look up
-    '''
-
-    def __init__(self, owner):
-        '''
-        Constructor
-        '''
-        self._owner = owner
-        self._arguments = {}
-
-    def get_parent_scope(self):
-        '''
-        Returns parent scope of this same type
-        '''
         return self._owner.get_parent_scope(type(self))
 
-    def add_argument(self, compiler, name, node):
-        '''
-        Adds a variable to this scope
-        '''
-        if name in self._arguments:
+    def reserved_name(self, helper, compiler, name, node):
+        if name in self._data and self._data[name] != helper:
             compiler.report_error(
                 node.ctx, "Redeclaration of '%s'" % name)
             compiler.report_error(
-                self._variables[name].ctx, "Previous was here")
+                self._data[name].ctx, "Previous was here")
 
-        self._arguments[name] = node
+            return True
 
-    def lookup_argument(self, name):
-        '''
-        Variable lookup algorithm
-        It will look up name in this scope,
-        and if not found it will look up in the containing scope recursively
-        until either it is found, or no more scopes are available
-        '''
-        if name in self._arguments:
-            return self._arguments[name]
         else:
-            p = self.get_parent_scope()
-            if p is not None:
-                return p.lookup_argument(name)
+            self._data[name] = helper
+            return False
+
+
+class LookupHelper(object):
+
+    def __init__(self, reserver, overloadable=False):
+        '''
+        Constructor
+        '''
+        self._reserver = reserver
+        self._overloadable = overloadable
+        self._data = {}
+
+    def add(self, compiler, name, node):
+        '''
+        Adds an operator
+        '''
+        if self._reserver.reserved_name(self, compiler, name, node):
+            return
+
+        if self._overloadable:
+            if name not in self._data:
+                self._data[name] = []
+
+            self._data[name].append(node)
+        else:
+            if name in self._data:
+                compiler.report_error(
+                    node.ctx, "Redeclaration of '%s'" % name)
+                compiler.report_error(
+                    self._typedefs[name].ctx, "Previous was here")
+                return
             else:
-                return None
+                self._data[name] = node
+
+    def lookup(self, name):
+        '''
+        Looks up an operator
+        '''
+        return self._data[name] if name in self._data else None
 
 
-class ReturnStmtScope(object):
+class StatementListScope(BaseScope):
 
     '''
-    The scope a 'return' will exit
-    Used for tracking return statements, and type compatibility check when
-    more than one return is found
+    The scope created by statement lists, where variables are look up
     '''
 
     def __init__(self, owner):
         '''
         Constructor
         '''
+        super(StatementListScope, self).__init__(owner)
+
+        self.variables = LookupHelper(self)
+        self.typedefs = LookupHelper(self)
+
+
+class FunctionScope(BaseScope):
+
+    '''
+    The scope created by statement lists, where variables are look up
+    '''
+
+    def __init__(self, owner):
+        '''
+        Constructor
+        '''
+        super(FunctionScope, self).__init__(owner)
+        self.arguments = LookupHelper(self)
+
+
+class TypeScope(BaseScope):
+
+    '''
+    The scope used by root and types to hold functions / methods, attributes /
+    global variables, and operators
+    basic types
+    '''
+
+    def __init__(self, owner):
+        '''
+        Constructor
+        '''
+        super(TypeScope, self).__init__(owner)
         self._owner = owner
-        self._previous_return_type = None
-        self._previous_ctx = None
-        self._return_stmts = []
-
-    def add_return_stmt(self, stmt):
-        '''
-        Adds a return statement to this scope
-        '''
-        self._return_stmts.append(stmt)
-
-    def check_auto_return_type(self, compiler):
-        '''
-        check type compatibility of return statements
-        '''
-
-        _first_return = None
-        for each in self._return_stmts:
-            if _first_return is None:
-                _first_return = each
-            else:
-                if _first_return != each.get_type():
-                    compiler.report_error(
-                        each.ctx, "Return type does not match")
-                    compiler.report_error(
-                        _first_return.ctx, "Previous was here")
-
-    def get_return_type(self):
-        '''
-        Return type getter
-        '''
-        assert self._previous_return_type
-        return self._previous_return_type
+        self.types = LookupHelper(self)
+        self.typedefs = LookupHelper(self)
+        self.functions = LookupHelper(self, True)
+        self.operators = LookupHelper(self, True)
+        self.attributes = LookupHelper(self)
 
 
-class RootScope(object):
+class RootScope(TypeScope):
 
     '''
     The scope used by root to hold root elements, as plugins, functions,
@@ -187,139 +185,5 @@ class RootScope(object):
         '''
         Constructor
         '''
-        self._owner = owner
-        self._bodyparts = {}
-        self._types = {}
-        self._typedefs = {}
-        self._functions = {}
-        self._operators = {}
-        self._parameters = {}
-
-    def add_bodypart(self, compiler, name, node):
-        '''
-        Adds a plug-in
-        '''
-
-        if name in self._bodyparts:
-            compiler.report_error(
-                node.ctx, "Duplicate use of plug-in name '%s'" % name)
-
-        self._bodyparts[name] = node
-
-    def lookup_bodypart(self, name):
-        '''
-        Looks up a plug-in
-        '''
-        return self._bodyparts[name] if name in self._bodyparts else None
-
-    def add_type(self, compiler, name, node):
-        '''
-        Adds a type
-        '''
-
-        if name in self._types:
-            compiler.report_error(
-                node.ctx, "Duplicate use of type name '%s'" % name)
-
-        self._types[name] = node
-
-    def get_type(self, name):
-        '''
-        Looks up a type
-        '''
-        return self._types[name] if name in self._types else None
-
-    def add_typedef(self, compiler, name, node):
-        '''
-        Adds a typedef to this scope
-        '''
-        if name in self._typedefs:
-            compiler.report_error(
-                node.ctx, "Redeclaration of '%s'" % name)
-            compiler.report_error(
-                self._typedefs[name].ctx, "Previous was here")
-
-        self._typedefs[name] = node
-
-    def get_typedef(self, name):
-        '''
-        Typedef lookup will look up name here
-        '''
-        return self._typedefs[name] if name in self._typedefs else None
-
-    def add_operator(self, compiler, name, node):
-        '''
-        Adds an operator
-        '''
-        del compiler
-
-        if name not in self._operators:
-            self._operators[name] = []
-
-        self._operators[name].append(node)
-
-    def lookup_operator(self, name):
-        '''
-        Looks up an operator
-        '''
-        return self._operators[name] if name in self._operators else None
-
-    def add_function(self, compiler, name, node):
-        '''
-        Adds a function
-        '''
-
-        if name in self._functions:
-            compiler.report_error(
-                node.ctx, "Duplicate use of name '%s'" % name)
-
-        self._functions[name] = node
-
-    def lookup_function(self, name):
-        '''
-        Looks up a function
-        '''
-        return self._functions[name] if name in self._functions else None
-
-    def add_parameter(self, compiler, name, node):
-        '''
-        Adds a parameter to this scope
-        '''
-        if name in self._parameters:
-            compiler.report_error(
-                node.ctx, "Redeclaration of '%s'" % name)
-            compiler.report_error(
-                self._parameters[name].ctx, "Previous was here")
-
-        self._parameters[name] = node
-
-    def lookup_parameter(self, name):
-        '''
-        Looks up a parameter in this scope
-        Returns None if not found
-        '''
-        return self._parameters[name] if name in self._parameters else None
-
-
-def lookup_type(name, root_scope, stmt_scope):
-    '''
-    Type lookup algorithm
-    Will lookup for typedef in every StatementListScope,
-    if not found will lookup for type or typedef at RootScope
-    '''
-
-    while stmt_scope is not None:
-        t = stmt_scope.get_typedef(name)
-        if t is not None:
-            return t.get_type()
-
-        stmt_scope = stmt_scope.get_parent_scope()
-
-    # If we reach here stmt_scope is None, and name was not found
-
-    assert root_scope is not None
-    t = root_scope.get_typedef(name)
-    if t is not None:
-        return t.get_type()
-
-    return root_scope.get_type(name)
+        super(RootScope, self).__init__(owner)
+        self.constants = LookupHelper(self)

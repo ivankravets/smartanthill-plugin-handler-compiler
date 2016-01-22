@@ -67,10 +67,10 @@ class _RewriteVisitor(CodeVisitor):
             assert False
 
     def _get_func_return(self):
-        if isinstance(self._func.child_return_type.ref_type_declaration,
+        if isinstance(self._func.return_type.get().ref_type_declaration,
                       VoidTypeDeclNode):
             return u"return;"
-        elif isinstance(self._func.child_return_type.ref_type_declaration,
+        elif isinstance(self._func.return_type.get().ref_type_declaration,
                         IntTypeDeclNode):
             return u"return 0;"
         else:
@@ -85,39 +85,44 @@ class _RewriteVisitor(CodeVisitor):
 
     def visit_RootNode(self, node):
         self._nb = node.get_scope(NonBlockingData)
-        self.visit(node.child_source)
+        self.visit(node.source)
 
     def visit_PluginSourceNode(self, node):
-        self.visit(node.child_declaration_list)
+        self.visit_childs(node)
 
     def visit_DeclarationListNode(self, node):
-        for each in node.childs_declarations:
-            self.visit(each)
+        self.visit_childs(node)
 
     def visit_PreprocessorDirectiveNode(self, node):
         # pylint: disable=unused-argument
         # pylint: disable=no-self-use
         pass
 
+    def visit_ConstantDefineNode(self, node):
+        # pylint: disable=unused-argument
+        # pylint: disable=no-self-use
+        pass
+
+    def visit_FunctionDefinitionNode(self, node):
+        self.visit_childs(node)
+
     def visit_FunctionDeclNode(self, node):
 
         self._func = node
         self._sm = self._nb.get_state_machine_data(node)
-        self.visit(node.child_stmt_list)
 
         if self._sm is not None:
             if not self._sm.ref_state_machine.is_main_machine():
                 txt = u"void* sa_state0"
                 txt += u", waiting_for* sa_wf, uint8_t* sa_result"
-                if len(node.child_argument_decl_list.childs_declarations) >= 1:
+                if node.argument_decl_list.get().declarations.get_size() >= 1:
                     txt += u", "
 
                 self._w.insertAfterToken(
-                    node.child_argument_decl_list.ctx.symbol, txt)
+                    node.argument_decl_list.get().ctx.symbol, txt)
 
     def visit_StmtListNode(self, node):
-        for each in node.childs_statements:
-            self.visit(each)
+        self.visit_childs(node)
 
     def visit_NopStmtNode(self, node):
         # Nothing to do here
@@ -134,33 +139,33 @@ class _RewriteVisitor(CodeVisitor):
                 tk = get_declarator_identifier(
                     decl_list.initDeclarator(0).declarator())
 
-                if node.child_initializer_expression is not None:
+                if not node.initializer_expression.is_none():
                     self._w.replaceTokens(
                         node.ctx.start, tk.symbol,
                         u"sa_state->%s" % node.txt_name)
                 else:
                     self._w.deleteTokens(node.ctx.start, node.ctx.stop)
 
-            if node.child_initializer_expression is not None:
-                self.visit(node.child_initializer_expression)
+            if not node.initializer_expression.is_none():
+                self.visit(node.initializer_expression)
 
     def visit_ExpressionStmtNode(self, node):
-        self.visit(node.child_expression)
+        self.visit_childs(node)
 
     def visit_FunctionCallStmtNode(self, node):
 
-        self.visit(node.child_expression)
+        self.visit_childs(node)
 
-        if node.child_expression.bool_is_blocking:
+        if node.expression.get().bool_is_blocking:
             assert False
 
     def visit_PapiWaitStmtNode(self, node):
 
-        self.visit(node.child_argument_list)
+        self.visit_childs(node)
 
-        args = node.child_argument_list.childs_arguments
-        assert len(args) >= 1
-        arg0 = self._get_text(args[0].ctx)
+        args = node.argument_list.get().arguments
+        assert args.get_size() >= 1
+        arg0 = self._get_text(args.at(0).get().ctx)
 
         self._w.replaceToken(
             node.ctx_function_name.symbol, node.txt_name)
@@ -176,9 +181,9 @@ class _RewriteVisitor(CodeVisitor):
 
         txt += u"\n\nlabel_%s:" % nxt
 
-        args = node.child_argument_list.childs_arguments
-        assert len(args) >= 1
-        arg0 = self._get_text(args[0].ctx)
+        args = node.argument_list.get().arguments
+        assert args.get_size() >= 1
+        arg0 = self._get_text(args.at(0).get().ctx)
 
         txt += u"\nif(papi_wait_handler_is_waiting_for_%s(sa_wf, %s)) {" % (
             node.txt_wait_for, arg0)
@@ -192,11 +197,11 @@ class _RewriteVisitor(CodeVisitor):
 
     def visit_PapiSleepStmtNode(self, node):
 
-        self.visit(node.child_argument_list)
+        self.visit_childs(node)
 
-        args = node.child_argument_list.childs_arguments
-        assert len(args) >= 1
-        arg0 = self._get_text(args[0].ctx)
+        args = node.argument_list.get().arguments
+        assert args.get_size() >= 1
+        arg0 = self._get_text(args.at(0).get().ctx)
 
         self._w.deleteTokens(node.ctx.start, node.ctx.stop)
 
@@ -211,9 +216,9 @@ class _RewriteVisitor(CodeVisitor):
 
         txt += u"\n\nlabel_%s:" % nxt
 
-        args = node.child_argument_list.childs_arguments
-        assert len(args) >= 1
-        arg0 = self._get_text(args[0].ctx)
+        args = node.argument_list.get().arguments
+        assert args.get_size() >= 1
+        arg0 = self._get_text(args.at(0).get().ctx)
 
         txt += u"\nif(papi_wait_handler_is_waiting_for_timeout(0, sa_wf)) {"
         txt += self._format_result_return("PLUGIN_WAITING")
@@ -250,42 +255,6 @@ class _RewriteVisitor(CodeVisitor):
             txt += u"\n//#line %s\n" % node.ctx.line
 
         self._w.insertAfterToken(node.ctx, txt)
-
-    def visit_WaitStateStmtNode(self, node):
-
-        nxt = str(node.int_next_state)
-        txt = u"\nsa_state->sa_next = %s;" % nxt
-
-        txt += self._format_result_return("PLUGIN_WAITING")
-
-        txt += u"\n\nlabel_%s:" % nxt
-
-        n = node.ref_waiting_for.txt_name
-        args = node.ref_waiting_for.child_argument_list.childs_arguments
-        assert len(args) >= 1
-        arg0 = self._get_text(args[0].ctx)
-
-        if n == "papi_sleep":
-            f = u"timeout(0, sa_wf)"
-        elif n == "papi_wait_for_spi_send":
-            f = u"spi_send(sa_wf, %s)" % arg0
-        elif n == "papi_wait_for_i2c_send":
-            f = u"i2c_send(sa_wf, %s)" % arg0
-        elif n == "papi_wait_for_spi_receive":
-            f = u"spi_receive(sa_wf, %s)" % arg0
-        elif n == "papi_wait_for_i2c_receive":
-            f = u"i2c_receive(sa_wf, %s)" % arg0
-        else:
-            assert False
-
-        txt += u"\nif(papi_wait_handler_is_waiting_for_%s) {" % f
-        txt += self._format_result_return("PLUGIN_WAITING")
-        txt += u"\n}\n"
-
-        if node.ctx.stop.line is not None:
-            txt += u"//#line %s\n" % node.ctx.stop.line
-
-        self._w.insertAfterToken(node.ctx.stop, txt)
 
     def visit_DebugStateStmtNode(self, node):
 
@@ -327,9 +296,9 @@ class _RewriteVisitor(CodeVisitor):
 
     def visit_FunctionCallSubStmtNode(self, node):
 
-        args = node.child_expression.child_argument_list
+        args = node.expression.get().argument_list.get()
         txt_args = u"(void*)(sa_state + 1), sa_wf, sa_result"
-        if len(args.childs_arguments) >= 2:
+        if args.arguments.get_size() >= 2:
             txt_args += u", "
         self._w.insertAfterToken(args.ctx.symbol, txt_args)
 
@@ -338,9 +307,9 @@ class _RewriteVisitor(CodeVisitor):
         txt += u"\nsa_state->sa_next = %s;" % nxt
         txt += u"\nlabel_%s: ;/*nop*/" % nxt
 
-        t = node.child_expression.ref_declaration.child_return_type.txt_name
+        t = node.expression.get().ref_declaration.return_type.get().txt_name
         txt += u"\n%s %s = %s;" % (t, node.txt_name,
-                                   self._get_text(node.child_expression.ctx))
+                                   self._get_text(node.expression.get().ctx))
 
         txt += u"\nif(*(uint8_t*)(sa_state + 1) != 0) "
 
@@ -380,33 +349,33 @@ class _RewriteVisitor(CodeVisitor):
 
         self._w.insertAfterToken(node.ctx, txt)
 
-    def visit_DontCareExprNode(self, node):
-        self.visit(node.child_argument_list)
-
     def visit_OperatorExprNode(self, node):
-        self.visit(node.child_argument_list)
+        self.visit_childs(node)
 
     def visit_MemberOperatorExprNode(self, node):
-        self.visit(node.child0_expression)
-        self.visit(node.child1_argument_list)
+        self.visit_childs(node)
 
-    def visit_MemberExprNode(self, node):
-        self.visit(node.child_expression)
+    def visit_MemberAccessExprNode(self, node):
+        self.visit_childs(node)
+
+    def visit_PointerExprNode(self, node):
+        self.visit_childs(node)
+
+    def visit_AddressOfExprNode(self, node):
+        self.visit_childs(node)
 
     def visit_CastExprNode(self, node):
-        self.visit(node.child1_expression)
+        self.visit(node.expression)
 
     def visit_LiteralExprNode(self, node):
         # nothing to do here
         pass
 
     def visit_AssignmentExprNode(self, node):
-        # nothing to do here
-        pass
+        self.visit_childs(node)
 
     def visit_TrivialCastExprNode(self, node):
-        # nothing to do here
-        pass
+        self.visit(node.expression)
 
     def visit_VariableExprNode(self, node):
 
@@ -418,12 +387,12 @@ class _RewriteVisitor(CodeVisitor):
                         u"(sa_state->%s)" % node.ref_declaration.txt_name)
 
     def visit_FunctionCallExprNode(self, node):
-        self.visit(node.child_argument_list)
+        self.visit_childs(node)
 
         if self._nb.has_states(node.ref_declaration):
-            args = node.child_argument_list
+            args = node.argument_list.get()
             txt = u"(void*)(sa_state + 1), sa_wf, sa_result"
-            if len(args.childs_arguments) >= 2:
+            if args.arguments.get_size() >= 2:
                 txt += u", "
 
             self._w.insertAfterToken(args.ctx.symbol, txt)
@@ -437,5 +406,4 @@ class _RewriteVisitor(CodeVisitor):
         pass
 
     def visit_ArgumentListNode(self, node):
-        for each in node.childs_arguments:
-            self.visit(each)
+        self.visit_childs(node)

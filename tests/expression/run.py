@@ -19,10 +19,12 @@ from tests import run
 
 def main():
 
-    run.make_header_only('write_digital_pin')
+    run.make_non_blocking('expression', False)
+    run.build_and_run('expression')
 
 
 # temporary entrance
 if __name__ == "__main__":
     main()
+#    cProfile.run("main()", sort="cumulative")
     sys.exit()

@@ -16,6 +16,7 @@
     
 *****************************************************************************/
 
+#include "sub_machine_state.h"
 #include "papi.h"
 #include "sub_machine.h"
 #include "sub_machine_state.h"

@@ -14,8 +14,8 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-from smartanthill_phc.common.base import ExpressionNode,\
-    ResolutionHelper, StatementNode, StmtListNode, TypeNode
+from smartanthill_phc.common.base import OnDemandResolution, StatementNode,\
+    StmtListNode, TypeNode, ChildExprOpt, ChildExpr, Child
 
 
 def make_statement_list(compiler, statement):
@@ -33,7 +33,7 @@ def make_statement_list(compiler, statement):
         return statement
 
     stmt_list = compiler.init_node(StmtListNode(), statement.ctx)
-    stmt_list.add_statement(statement)
+    stmt_list.statements.add(statement)
 
     return stmt_list
 
@@ -77,15 +77,7 @@ class ReturnStmtNode(StatementNode):
         Constructor
         '''
         super(ReturnStmtNode, self).__init__()
-        self.child_expression = None
-
-    def set_expression(self, child):
-        '''
-        expression setter
-        '''
-        assert isinstance(child, ExpressionNode)
-        child.set_parent(self)
-        self.child_expression = child
+        self.expression = ChildExprOpt(self)
 
     def is_closed_stmt(self):
         '''
@@ -98,13 +90,13 @@ class ReturnStmtNode(StatementNode):
         '''
         Returns the type returned by this return, or void_type if no expression
         '''
-        if self.child_expression is not None:
-            return self.child_expression.get_type()
+        if not self.expression.is_none():
+            return self.expression.get().get_type()
         else:
             return void_type
 
 
-class VariableDeclarationStmtNode(StatementNode, ResolutionHelper):
+class VariableDeclarationStmtNode(StatementNode, OnDemandResolution):
 
     '''
     Node class representing variable declaration statement
@@ -116,24 +108,8 @@ class VariableDeclarationStmtNode(StatementNode, ResolutionHelper):
         '''
         super(VariableDeclarationStmtNode, self).__init__()
         self.txt_name = None
-        self.child_declaration_type = None
-        self.child_initializer_expression = None
-
-    def set_declaration_type(self, child):
-        '''
-        statement list setter
-        '''
-        assert isinstance(child, TypeNode)
-        child.set_parent(self)
-        self.child_declaration_type = child
-
-    def set_initializer(self, child):
-        '''
-        expression setter
-        '''
-        assert isinstance(child, ExpressionNode)
-        child.set_parent(self)
-        self.child_initializer_expression = child
+        self.declaration_type = Child(self, TypeNode)
+        self.initializer_expression = ChildExprOpt(self)
 
     def get_static_value(self):
         '''
@@ -141,8 +117,8 @@ class VariableDeclarationStmtNode(StatementNode, ResolutionHelper):
         Returns None otherwise
         '''
 
-        if self.child_initializer_expression is not None:
-            return self.child_initializer_expression.get_static_value()
+        if not self.initializer_expression.is_none():
+            return self.initializer_expression.get().get_static_value()
         else:
             return None
 
@@ -159,15 +135,7 @@ class ExpressionStmtNode(StatementNode):
         Constructor
         '''
         super(ExpressionStmtNode, self).__init__()
-        self.child_expression = None
-
-    def set_expression(self, child):
-        '''
-        expression setter
-        '''
-        assert isinstance(child, ExpressionNode)
-        child.set_parent(self)
-        self.child_expression = child
+        self.expression = ChildExpr(self)
 
 
 class IfElseStmtNode(StatementNode):
@@ -181,47 +149,16 @@ class IfElseStmtNode(StatementNode):
         Constructor
         '''
         super(IfElseStmtNode, self).__init__()
-        self.child0_expression = None
-        self.child1_if_stmt_list = None
-        self.child2_else_stmt_list = None
-
-    def set_expression(self, child):
-        '''
-        expression setter
-        '''
-        assert isinstance(child, ExpressionNode)
-        child.set_parent(self)
-        self.child0_expression = child
-
-    def set_if_stmt_list(self, child):
-        '''
-        if_branch setter
-        '''
-        assert isinstance(child, StmtListNode)
-        child.set_parent(self)
-        self.child1_if_stmt_list = child
-
-    def set_else_stmt_list(self, child):
-        '''
-        else_branch setter
-        '''
-        assert isinstance(child, StmtListNode)
-        child.set_parent(self)
-        self.child2_else_stmt_list = child
+        self.expression = ChildExpr(self)
+        self.if_stmt_list = Child(self, StmtListNode)
+        self.else_stmt_list = Child(self, StmtListNode, True)
 
     def is_closed_stmt(self):
         '''
         Returns true when last statement is closed
         '''
-        if self.child2_else_stmt_list is not None:
-            return self.child1_if_stmt_list.is_closed_stmt() and\
-                self.child2_else_stmt_list.is_closed_stmt()
+        if not self.else_stmt_list.is_none():
+            return self.if_stmt_list.get().is_closed_stmt() and\
+                self.else_stmt_list.get().is_closed_stmt()
         else:
             return False
-
-#         t = self.get_scope(RootScope).lookup_type('_zc_boolean')
-#
-#         if not expression_type_match(compiler, t, self, 'child_expression'):
-#             compiler.report_error(
-#                 self.ctx, "Condition can not be evaluated to boolean")
-        # no need to raise here

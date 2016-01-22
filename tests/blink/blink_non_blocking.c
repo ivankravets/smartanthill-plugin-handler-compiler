@@ -16,6 +16,7 @@
     
 *****************************************************************************/
 
+#include "blink_state.h"
 #include "papi.h"
 #include "blink.h"
 #define HAPI_GPIO_VALUE_LOW 0

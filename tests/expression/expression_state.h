@@ -1,6 +1,6 @@
 /*****************************************************************************
     Copyright (C) 2015 OLogN Technologies AG
-
+    
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License version 2 as
     published by the Free Software Foundation.
@@ -16,32 +16,18 @@
     
 *****************************************************************************/
 
-#if !defined __SA_STATELESS_PLUGIN_PARSER_H__
-#define __SA_STATELESS_PLUGIN_PARSER_H__
+#if !defined __SA_EXPRESSION_PLUGIN_STATE_H__
+#define __SA_EXPRESSION_PLUGIN_STATE_H__
 
 #include <stdint.h>
-#include "papi.h"
 
 
-typedef struct _stateless_plugin_data {
-uint16_t delay_ms;
-uint8_t total_blinks;
-} stateless_plugin_data;
+typedef struct _expression_plugin_state {
+uint8_t sa_next;
+#line 49 "expression.c"
+expression_plugin_data req;
 
-static inline
-stateless_plugin_data stateless_plugin_parser_read(ZEPTO_PARSER* po)
-{
-stateless_plugin_data sa_res;
-sa_res.delay_ms = papi_parser_read_encoded_uint16(po);
-sa_res.total_blinks = papi_parser_read_byte(po);
-return sa_res;
-}
+uint8_t i;
+} expression_plugin_state;
 
-
-static inline
-void stateless_plugin_reply_write(REPLY_HANDLE mem_h, uint8_t made_blinks)
-{
-papi_reply_write_byte(mem_h, made_blinks);
-}
-
-#endif // __SA_STATELESS_PLUGIN_PARSER_H__
+#endif // __SA_EXPRESSION_PLUGIN_STATE_H__

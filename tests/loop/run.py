@@ -19,7 +19,6 @@ from tests import run
 
 def main():
 
-    run.make_composer('loop')
     run.make_non_blocking('loop', False)
     run.build_and_run('loop')
 

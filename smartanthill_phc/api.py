@@ -22,6 +22,7 @@ from smartanthill_phc.common.antlr_helper import dump_antlr_tree
 from smartanthill_phc.common.compiler import Compiler, Ctx
 from smartanthill_phc.common.visitor import dump_tree,\
     check_all_nodes_reachables
+from smartanthill_phc.manifest import create_manifest
 from smartanthill_phc.parser import c_parse_tree_to_syntax_tree
 from smartanthill_phc.resolve import resolve_tree
 from smartanthill_phc.rewrite import rewrite_code
@@ -44,10 +45,11 @@ class _Helper(object):
         self.cparser = CParser.CParser(self.token_stream)
 
 
-def process_file(file_name, prefix, split_all, dump):
+def process_file(file_name, zepto_plugin, prefix, split_all, dump):
     '''
     Process a c input file, and returns an string with output text
     '''
+    # pylint: disable=too-many-locals
 
     helper = _Helper(file_name)
     ptree = helper.cparser.compilationUnit()
@@ -58,10 +60,14 @@ def process_file(file_name, prefix, split_all, dump):
     c = Compiler()
     root = c.init_node(RootNode(), Ctx.ROOT)
     builtin = create_builtins(c, Ctx.BUILTIN)
-    root.set_builtins(builtin)
+    root.builtins.set(builtin)
+
+    manif = create_manifest(c, Ctx.MANIFEST, prefix, zepto_plugin)
+    root.manifest.set(manif)
+
     source = c_parse_tree_to_syntax_tree(
-        c, ptree, root.get_scope(NonBlockingData))
-    root.set_source(source)
+        c, ptree, root.get_scope(NonBlockingData), prefix)
+    root.source.set(source)
 
     if dump:
         print
@@ -79,5 +85,33 @@ def process_file(file_name, prefix, split_all, dump):
     async2 = rewrite_code(c, root, helper.token_stream)
     header = writer.write_header(c, root, file_name)
     async = writer.write_code(c, root, file_name)
+    parser = writer.write_parser(c, root)
+    return (async, header, async2, parser)
 
-    return (async, header, async2)
+
+def process_manifest(zepto_plugin, prefix, dump):
+    '''
+    Process a c input file, and returns an string with output text
+    '''
+
+    c = Compiler()
+    root = c.init_node(RootNode(), Ctx.ROOT)
+    builtin = create_builtins(c, Ctx.BUILTIN)
+    root.builtins.set(builtin)
+
+    manif = create_manifest(c, Ctx.MANIFEST, prefix, zepto_plugin)
+    root.manifest.set(manif)
+
+    if dump:
+        print
+        print '\n'.join(dump_tree(root))
+
+    check_all_nodes_reachables(c, root)
+    resolve_tree(c, root)
+
+    if dump:
+        print
+        print '\n'.join(dump_tree(root))
+
+    parser = writer.write_parser(c, root)
+    return parser

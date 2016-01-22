@@ -13,10 +13,9 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from smartanthill_phc.common.base import Node, ResolutionHelper, TypeNode,\
-    StmtListNode, DeclarationListNode, TypeDeclNode
-from smartanthill_phc.common.lookup import ReturnStmtScope, StatementListScope,\
-    FunctionScope
+from smartanthill_phc.common.base import Node, OnDemandResolution, TypeNode,\
+    StmtListNode, DeclarationListNode, TypeDeclNode, Child
+from smartanthill_phc.common.lookup import FunctionScope, StatementListScope
 
 
 class CallableDeclNode(Node):
@@ -35,7 +34,7 @@ class CallableDeclNode(Node):
         '''
         Base method for argument matching
         Returns where this declaration can be called with given expressions
-        as arguments 
+        as arguments
         '''
         # pylint: disable=no-self-use
         # pylint: disable=unused-argument
@@ -51,7 +50,48 @@ class CallableDeclNode(Node):
         assert False
 
 
-class FunctionDeclNode(CallableDeclNode, ResolutionHelper):
+def _can_match_helper(compiler, ctx, args, decls, make_match):
+    '''
+    If this argument list can not used to initialize given argument list
+    Returns TypeDeclNode.NO_MATCH when there is no chance to make it match
+    TypeDeclNode.EXACT_MATCH when match does not need any cast
+    and TypeDeclNode.CAST_MATCH when it can match but casting needed
+    '''
+
+    if args.get_size() != decls.get_size():
+        if make_match:
+            compiler.report_error(
+                ctx, "Wrong number of arguments, need %s but given %s" % (
+                    args.get_size(),
+                    decls.get_size()))
+            compiler.raise_error()
+
+        return TypeDeclNode.NO_MATCH
+
+    result = TypeDeclNode.EXACT_MATCH
+    for i in range(args.get_size()):
+
+        source = args.at(i).get().get_type()
+        target = decls.at(i).get().get_type()
+
+        if source == target:
+            pass
+        elif target.can_cast_from(source):
+            result += TypeDeclNode.CAST_MATCH
+            if make_match:
+                target.insert_cast_from(compiler, source, args.at(i))
+        else:
+            if make_match:
+                compiler.report_error(
+                    ctx, "Bad argument type at position %s" % i)
+                compiler.raise_error()
+
+            return TypeDeclNode.NO_MATCH
+
+    return result
+
+
+class FunctionDeclNode(CallableDeclNode, OnDemandResolution):
 
     '''
     Node class representing a function declaration
@@ -62,40 +102,43 @@ class FunctionDeclNode(CallableDeclNode, ResolutionHelper):
         Constructor
         '''
         super(FunctionDeclNode, self).__init__()
+        self.bool_static = False
+        self.bool_inline = False
         self.txt_name = None
-        self.child_return_type = None
-        self.child_stmt_list = None
-        self.child_argument_decl_list = None
-        self.add_scope(ReturnStmtScope, ReturnStmtScope(self))
+        self.return_type = Child(self, TypeNode)
+        self.argument_decl_list = Child(self, ArgumentDeclListNode)
+
+    def can_match_arguments(self, compiler, ctx, args):
+
+        return _can_match_helper(
+            compiler, ctx, args,
+            self.argument_decl_list.get().declarations, False)
+
+    def make_arguments_match(self, compiler, ctx, args):
+
+        return _can_match_helper(
+            compiler, ctx, args,
+            self.argument_decl_list.get().declarations, True)
+
+
+class FunctionDefinitionNode(Node):
+
+    '''
+    Node class representing a function definition
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(FunctionDefinitionNode, self).__init__()
+        self.declaration = Child(self, FunctionDeclNode)
+        self.statement_list = Child(self, StmtListNode)
         self.add_scope(StatementListScope, None)  # stop scope recursion
         self.add_scope(FunctionScope, FunctionScope(self))
 
-    def set_return_type(self, child):
-        '''
-        Setter
-        '''
-        assert isinstance(child, TypeNode)
-        child.set_parent(self)
-        self.child_return_type = child
 
-    def set_statement_list(self, child):
-        '''
-        Setter
-        '''
-        assert isinstance(child, StmtListNode)
-        child.set_parent(self)
-        self.child_stmt_list = child
-
-    def set_argument_decl_list(self, child):
-        '''
-        Setter
-        '''
-        assert isinstance(child, ArgumentDeclListNode)
-        child.set_parent(self)
-        self.child_argument_decl_list = child
-
-
-class ArgumentDeclNode(Node, ResolutionHelper):
+class ArgumentDeclNode(Node, OnDemandResolution):
 
     '''
     Node class representing a function argument declaration
@@ -106,16 +149,8 @@ class ArgumentDeclNode(Node, ResolutionHelper):
         Constructor
         '''
         super(ArgumentDeclNode, self).__init__()
-        self.child_argument_type = None
+        self.argument_type = Child(self, TypeNode)
         self.txt_name = None
-
-    def set_argument_type(self, child):
-        '''
-        Setter
-        '''
-        assert isinstance(child, TypeNode)
-        child.set_parent(self)
-        self.child_argument_type = child
 
 
 class ArgumentDeclListNode(DeclarationListNode):

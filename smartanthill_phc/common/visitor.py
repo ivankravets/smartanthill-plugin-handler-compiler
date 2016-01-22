@@ -23,48 +23,22 @@ def visit_node(visitor, node):
     in the Node hierarchy
     '''
     assert isinstance(node, Node)
-    return _visit_node_base(visitor, node, type(node))
+    cls = type(node)
 
-
-def _visit_node_base(visitor, node, cls):
-    '''
-    Dynamic version of node visitor using reflection
-    If visitor of specific type is not found, we look up for base classes
-    in the Node hierarchy
-    '''
-    assert issubclass(cls, Node)
-    name = 'visit_' + cls.__name__
-    attr = getattr(visitor, name, None)
-    if attr:
-        return attr(node)
-    else:
-        b = None
-        for each in cls.__bases__:
-            if issubclass(each, Node):
-                assert b is None
-                b = each
-        if b is None:
-            return getattr(visitor, 'default_visit')(node)
+    while cls is not None:
+        name = 'visit_' + cls.__name__
+        attr = getattr(visitor, name, None)
+        if attr is not None:
+            return attr(node)
         else:
-            return _visit_node_base(visitor, node, b)
+            b = None
+            for each in cls.__bases__:
+                if issubclass(each, Node):
+                    assert b is None  # only one Node super is allowed
+                    b = each
+            cls = b
 
-
-def walk_node_childs(walker, node):
-    '''
-    Dynamic version of node walker using reflection
-    Trivial implementation
-    '''
-    assert isinstance(node, Node)
-    names = dir(node)
-    for current in names:
-        if current.startswith('childs') or current.startswith('chlist'):
-            chs = getattr(node, current)
-            for ch in chs:
-                walker.walk_node(ch)
-        elif current.startswith('child'):
-            ch = getattr(node, current)
-            if ch:
-                walker.walk_node(ch)
+    return getattr(visitor, 'default_visit')(node)
 
 
 class NodeWalker(object):
@@ -72,7 +46,32 @@ class NodeWalker(object):
     '''
     Base class for walker
     '''
-    pass
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(NodeWalker, self).__init__()
+
+    def walk_childs(self, node):
+        '''
+        Walks all node childs
+        '''
+        node.for_each_child(self.walk)
+
+    def walk(self, box):
+        '''
+        Callback of for_each_child
+        '''
+        self.walk_node(box.get())
+
+    def walk_node(self, node):
+        '''
+        Base method node walking
+        '''
+        # pylint: disable=no-self-use
+        # pylint: disable=unused-argument
+        assert False
 
 
 class NodeVisitor(object):
@@ -86,12 +85,20 @@ class NodeVisitor(object):
         Constructor
         '''
         super(NodeVisitor, self).__init__()
+        self._current_child = None
 
-    def visit(self, node):
+    def visit(self, box):
         '''
         Generic visit function wrapper
         '''
-        visit_node(self, node)
+        return visit_node(self, box.get())
+
+    def visit_childs(self, node):
+        '''
+        Visit childs of node
+        '''
+
+        node.for_each_child(self.visit)
 
     def default_visit(self, node):
         '''
@@ -117,7 +124,7 @@ class CodeVisitor(NodeVisitor):
         super(CodeVisitor, self).__init__()
         self._stmt_list = []
         self._index = []
-        self._replacement = None
+        self._expr = []
 
     def visit_stmt_list(self, stmt_list, begin=0):
         '''
@@ -133,78 +140,33 @@ class CodeVisitor(NodeVisitor):
         self._stmt_list.append(stmt_list)
         self._index.append(begin)
 
-        while self._index[-1] < len(self._stmt_list[-1].childs_statements):
-            s = self._stmt_list[-1].childs_statements[self._index[-1]]
-            self.visit(s)
+        while self._index[-1] < self._stmt_list[-1].statements.get_size():
+
+            s = self._stmt_list[-1].statements.at(self._index[-1])
+            visit_node(self, s.get())
 
             self._index[-1] += 1
 
         self._stmt_list.pop()
         self._index.pop()
 
-    def visit_expression(self, parent, child_name):
+    def visit_expression(self, box):
         '''
-        Visit a child expression by attribute name, to allow expression
-        replacement
+        Visit a child expression, allow expression replacement
         '''
-        assert self._replacement is None
+        self._expr.append(box)
+        res = visit_node(self, box.get())
+        self._expr.pop()
+        return res
 
-        e = getattr(parent, child_name)
-        if e is not None:
-            self.visit(e)
-
-            if self._replacement is not None:
-                assert self._replacement is not e
-                self._replacement.set_parent(parent)
-                setattr(parent, child_name, self._replacement)
-                self._replacement = None
-
-                # visit again (replacement)
-                self.visit_expression(parent, child_name)
-
-    def visit_expression_list(self, parent, expr_list):
+    def visit(self, box):
         '''
-        Visit child expression list, to allow expression replacement
+        Generic visit function wrapper
         '''
-        for i in range(len(expr_list)):
-            self._visit_expression_list_item(parent, expr_list, i)
-
-    def _visit_expression_list_item(self, parent, expr_list, i):
-        '''
-        Visit child expression list by index, to allow expression
-        replacement
-        '''
-        self.visit(expr_list[i])
-
-        if self._replacement is not None:
-            assert self._replacement is not expr_list[i]
-            self._replacement.set_parent(parent)
-            expr_list[i] = self._replacement
-            self._replacement = None
-
-            # visit again (replacement)
-            self._visit_expression_list_item(parent, expr_list, i)
-
-    def visit_childs(self, node):
-        '''
-        Dynamic version of node walker using reflection
-        Trivial implementation
-        '''
-        assert isinstance(node, Node)
-        names = dir(node)
-        for current in names:
-            if current.startswith('child') and\
-                    not current.startswith('childs'):
-                if current.endswith('expression'):
-                    self.visit_expression(node, current)
-                elif current.endswith('stmt_list'):
-                    stmt_list = getattr(node, current)
-                    if stmt_list is not None:
-                        self.visit_stmt_list(stmt_list)
-                else:
-                    ch = getattr(node, current)
-                    if ch is not None:
-                        self.visit(ch)
+        if box.is_kind(ExpressionNode):
+            return self.visit_expression(box)
+        else:
+            return visit_node(self, box.get())
 
     def insert_before_current(self, statement):
         '''
@@ -213,7 +175,7 @@ class CodeVisitor(NodeVisitor):
         Inserted statement will never be visited, because it will be inserted
         at a place visitor already did
         '''
-        self._stmt_list[-1].insert_statement_at(self._index[-1], statement)
+        self._stmt_list[-1].statements.insert_at(self._index[-1], statement)
 
         self._index[-1] += 1
 
@@ -223,7 +185,8 @@ class CodeVisitor(NodeVisitor):
         Index will be incremented to account for the extra statement
         and to avoid visitation of inserted statement
         '''
-        self._stmt_list[-1].insert_statement_at(self._index[-1] + 1, statement)
+        self._stmt_list[-1].statements.insert_at(self._index[-1] + 1,
+                                                 statement)
 
         self._index[-1] += 1
 
@@ -231,24 +194,24 @@ class CodeVisitor(NodeVisitor):
         '''
         Replace current statement
         '''
-        self._stmt_list[-1].insert_statement_at(self._index[-1] + 1, statement)
-        old = self._stmt_list[-1].remove_statement_at(self._index[-1])
-
-        return old
+        return self._stmt_list[-1].statements.replace_at(self._index[-1],
+                                                         statement)
 
     def get_current_statement(self):
         '''
         Returns current statement
         '''
-        return self._stmt_list[-1].childs_statements[self._index[-1]]
+        return self._stmt_list[-1].statements.at(self._index[-1]).get()
 
     def replace_expression(self, replacement):
         '''
         Replace current expression
         '''
-        assert self._replacement is None
         assert isinstance(replacement, ExpressionNode)
-        self._replacement = replacement
+        if len(self._expr) != 0 and self._expr[-1] is not None:
+            return self._expr[-1].reset(replacement)
+        else:
+            assert False
 
 
 def check_all_nodes_reachables(compiler, root):
@@ -270,6 +233,7 @@ class _CheckReachableWalker(NodeWalker):
     '''
 
     def __init__(self, removed_nodes, next_node_id):
+        super(_CheckReachableWalker, self).__init__()
         self.dones = []
         self.parents = []
         self.removed_nodes = removed_nodes
@@ -283,7 +247,7 @@ class _CheckReachableWalker(NodeWalker):
         self.dones.append(node.node_id)
 
         self.parents.append(node)
-        walk_node_childs(self, node)
+        self.walk_childs(node)
         self.parents.pop()
 
     def finish(self):
@@ -329,6 +293,7 @@ class _DumpTreeWalker(NodeWalker):
     '''
 
     def __init__(self):
+        super(_DumpTreeWalker, self).__init__()
         self.result = []
         self.index = 0
 
@@ -353,5 +318,5 @@ class _DumpTreeWalker(NodeWalker):
         s = '+-' * self.index + type(node).__name__ + ctx_attrs
         self.result.append(s)
         self.index += 1
-        walk_node_childs(self, node)
+        self.walk_childs(node)
         self.index -= 1

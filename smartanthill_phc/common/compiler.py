@@ -17,7 +17,7 @@ from antlr4.ParserRuleContext import ParserRuleContext
 from antlr4.tree.Tree import TerminalNodeImpl
 
 from smartanthill_phc.common.errors import CompilerError
-from smartanthill_phc.common.visitor import NodeWalker, walk_node_childs
+from smartanthill_phc.common.visitor import NodeWalker
 import xml.etree.ElementTree as ET
 
 
@@ -43,15 +43,16 @@ class Ctx(object):
     TARGET = BuiltinCtx('<target>')
     ROOT = BuiltinCtx('<root>')
     NONE = BuiltinCtx('<none>')
+    INTERNAL = BuiltinCtx('<internal>')
+    MANIFEST = BuiltinCtx('<manifest>')
 
 
 def format_location(ctx):
     '''
     Returns formated string with location in source code of given ctx
     '''
-
     if isinstance(ctx, BuiltinCtx):
-        return ctx.text + ', '
+        return '<%s>, ' % ctx.text
     elif isinstance(ctx, TerminalNodeImpl):  # ctx.symbol is CommonToken
         return 'line %s, ' % str(ctx.symbol.line)
     elif isinstance(ctx, ParserRuleContext):
@@ -61,9 +62,9 @@ def format_location(ctx):
             return 'lines %s-%s, ' % (str(ctx.start.line), str(ctx.stop.line))
     elif isinstance(ctx, ET.ElementTree):
         if ctx.start.line == ctx.stop.line:
-            return 'line %s, ' % str(ctx.start.line)
+            return '<xml>, '
     else:
-        return '<unknown>'
+        return '<unknown>, '
 
 
 class Compiler(object):
@@ -145,9 +146,10 @@ class _NodeIdsWalker(NodeWalker):
         '''
         Constructor
         '''
+        super(_NodeIdsWalker, self).__init__()
         self.node_ids = []
 
     def walk_node(self, node):
         assert node
         self.node_ids.append(node.node_id)
-        walk_node_childs(self, node)
+        self.walk_childs(node)

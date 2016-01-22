@@ -15,10 +15,11 @@
 
 
 from smartanthill_phc.common import errors
-from smartanthill_phc.common.lookup import RootScope, StatementListScope
+from smartanthill_phc.common.child import Child, ChildList
+from smartanthill_phc.common.lookup import StatementListScope, TypeScope
 
 
-class ResolutionHelper(object):
+class OnDemandResolution(object):
 
     '''
     Helper base class provides resolution cycle safety
@@ -35,7 +36,7 @@ class ResolutionHelper(object):
         '''
         Constructor
         '''
-        super(ResolutionHelper, self).__init__()
+        super(OnDemandResolution, self).__init__()
         self._resolved_flag = self._NOT_RESOLVED
         self._resolved_type = None
 
@@ -112,6 +113,7 @@ class Node(object):
         self._parent = None
         self._resolved = False
         self._scopes = {}
+        self._childs = []
 
     def get_scope(self, kind):
         '''
@@ -151,6 +153,19 @@ class Node(object):
         assert self._parent is not None
         return self._parent
 
+    def add_child(self, child):
+        '''
+        Adds a child to this node
+        '''
+        self._childs.append(child)
+
+    def for_each_child(self, functor):
+        '''
+        Walks all node childs
+        '''
+        for each in self._childs:
+            each.call(functor)
+
 
 class StatementNode(Node):
 
@@ -181,39 +196,8 @@ class StmtListNode(StatementNode):
         Constructor
         '''
         super(StmtListNode, self).__init__()
-        self.childs_statements = []
+        self.statements = ChildList(self, StatementNode)
         self.add_scope(StatementListScope, StatementListScope(self))
-
-    def add_statement(self, child):
-        '''
-        statement adder
-        '''
-        if not child:
-            assert False
-        assert isinstance(child, StatementNode)
-        child.set_parent(self)
-        self.childs_statements.append(child)
-
-    def insert_statement_at(self, index, child):
-        '''
-        statement adder
-        '''
-        assert child is not None
-        assert isinstance(child, StatementNode)
-        assert index >= 0
-        assert index <= len(self.childs_statements)
-
-        child.set_parent(self)
-        self.childs_statements.insert(index, child)
-
-    def remove_statement_at(self, index):
-        '''
-        statement adder
-        '''
-        assert index >= 0
-        assert index <= len(self.childs_statements)
-
-        return self.childs_statements.pop(index)
 
     def split_at(self, index, other):
         '''
@@ -221,23 +205,17 @@ class StmtListNode(StatementNode):
         all items with index equal or greater than are moved to the other
         '''
         assert isinstance(other, StmtListNode)
-        assert index <= len(self.childs_statements)
-        assert index >= 0
-
-        for i in range(index, len(self.childs_statements)):
-            other.add_statement(self.childs_statements[i])
-            self.childs_statements[i] = None
-
-        self.childs_statements = self.childs_statements[0:index]
+        o = self.statements.split_at(index)
+        o.statements.add_all(o)
 
     def is_closed_stmt(self):
         '''
-        Returns true when last statement is closed
+        Returns true when there is a closed statement is this statement list
         '''
-        if len(self.childs_statements) != 0:
-            return self.childs_statements[-1].is_closed_stmt()
-        else:
-            return False
+        for each in self.statements:
+            if each.get().is_closed_stmt():
+                return True
+        return False
 
 
 class ExpressionNode(Node):
@@ -269,18 +247,38 @@ class ExpressionNode(Node):
         '''
         Returns the type of this expression
         '''
-        assert self._resolved_type
+        if self._resolved_type is None:
+            print self.__name__
+            assert False
         return self._resolved_type
-
-    def assert_resolved(self):
-        '''
-        Asserts this instance has a resolved type
-        '''
-        assert self._resolved_type
 
     def get_static_value(self):
         # pylint: disable=no-self-use
         return None
+
+
+class ChildExpr(Child):
+    '''
+    Specialized Child used for expressions
+    '''
+
+    def __init__(self, parent):
+        '''
+        Constructor
+        '''
+        super(ChildExpr, self).__init__(parent, ExpressionNode, False)
+
+
+class ChildExprOpt(Child):
+    '''
+    Specialized Child used for expressions
+    '''
+
+    def __init__(self, parent):
+        '''
+        Constructor
+        '''
+        super(ChildExprOpt, self).__init__(parent, ExpressionNode, True)
 
 
 class TypeNode(Node):
@@ -321,15 +319,15 @@ class TypeNode(Node):
         compiler.report_error(ctx, "Unsupported qualifier '%s'" % qualifier)
 
 
-class TypeDeclNode(Node):
+class TypeDeclNode(Node, OnDemandResolution):
 
     '''
     Base class for types declarations
     '''
 
-    NO_MATCH = 0
-    EXACT_MATCH = 1
-    CAST_MATCH = 2
+    NO_MATCH = -1
+    EXACT_MATCH = 0
+    CAST_MATCH = 1
 
     def __init__(self, name):
         '''
@@ -337,34 +335,7 @@ class TypeDeclNode(Node):
         '''
         super(TypeDeclNode, self).__init__()
         self.txt_name = name
-        self._resolved = False
-
-    def resolve(self, compiler):
-        '''
-        Resolve
-        '''
-        assert not self._resolved
-        self.get_scope(RootScope).add_type(compiler, self.txt_name, self)
-        self._resolved = True
-
-    def can_cast_to(self, target_type):
-        '''
-        Base method for type casting
-        If self can be casted to target_type returns True
-        Otherwise returns False
-        '''
-        # pylint: disable=no-self-use
-        # pylint: disable=unused-argument
-        return False
-
-    def insert_cast_to(self, compiler, target_type, expression):
-        '''
-        Inserts a cast to the target type
-        Only implemented by types that return true to can_cast_to
-        '''
-        # pylint: disable=unused-argument
-        print "Node: %s" % type(self).__name__
-        assert False
+        self.add_scope(TypeScope, TypeScope(self))
 
     def can_cast_from(self, source_type):
         '''
@@ -376,7 +347,7 @@ class TypeDeclNode(Node):
         # pylint: disable=unused-argument
         return False
 
-    def insert_cast(self, compiler, source_type, expression):
+    def insert_cast_from(self, compiler, source_type, expression):
         '''
         Inserts a cast from the source type
         Only implemented by types that return true to can_cast_from
@@ -387,43 +358,6 @@ class TypeDeclNode(Node):
 
     def to_string(self):
         return self.txt_name
-
-    def lookup_member(self, name):
-        '''
-        Base method for type member look up
-        '''
-        # pylint: disable=no-self-use
-        # pylint: disable=unused-argument
-        return None
-
-    def lookup_operator(self, name):
-        '''
-        Base method for type operator look up
-        '''
-        # pylint: disable=no-self-use
-        # pylint: disable=unused-argument
-        return None
-
-
-def expression_type_match(compiler, lhs_type, parent, child_name):
-    '''
-    Helper function for expression type matching
-    If no match possible just returns false
-    If exact match returns true
-    If can match but needs cast, inserts cast and returns true
-    '''
-    e = getattr(parent, child_name)
-    expr_type = e.get_type()
-
-    if expr_type == lhs_type:
-        return True
-    elif lhs_type.can_cast_from(expr_type):
-        cast = lhs_type.insert_cast(compiler, expr_type, e)
-        cast.set_parent(parent)
-        setattr(parent, child_name, cast)
-        return True
-    else:
-        return False
 
 
 class DeclarationListNode(Node):
@@ -438,28 +372,7 @@ class DeclarationListNode(Node):
         Constructor
         '''
         super(DeclarationListNode, self).__init__()
-        self.childs_declarations = []
-
-    def add_declaration(self, child):
-        '''
-        statement adder
-        '''
-        assert child
-        assert isinstance(child, Node)
-        child.set_parent(self)
-        self.childs_declarations.append(child)
-
-    def insert_declaration_at(self, index, child):
-        '''
-        statement adder
-        '''
-        assert child is not None
-        assert isinstance(child, Node)
-        assert index >= 0
-        assert index <= len(self.childs_declarations)
-
-        child.set_parent(self)
-        self.childs_declarations.insert(index, child)
+        self.declarations = ChildList(self, Node)
 
 
 class ArgumentListNode(Node):
@@ -473,24 +386,4 @@ class ArgumentListNode(Node):
         Constructor
         '''
         super(ArgumentListNode, self).__init__()
-        self.childs_arguments = []
-
-    def add_argument(self, child):
-        '''
-        argument adder
-        '''
-        assert isinstance(child, ExpressionNode)
-        child.set_parent(self)
-        self.childs_arguments.append(child)
-
-    def insert_argument_at(self, index, child):
-        '''
-        statement adder
-        '''
-        assert child is not None
-        assert isinstance(child, ExpressionNode)
-        assert index >= 0
-        assert index <= len(self.childs_arguments)
-
-        child.set_parent(self)
-        self.childs_arguments.insert(index, child)
+        self.arguments = ChildList(self, ExpressionNode)
