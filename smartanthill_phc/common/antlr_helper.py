@@ -54,7 +54,7 @@ def get_reference_lines(ctx):
     elif isinstance(ctx, ParserRuleContext):
         return (ctx.start.line, ctx.stop.line)
     else:
-        return (0, 0)
+        return None
 
 
 class _ProxyAntlrErrorListener(antlr4.error.ErrorListener.ErrorListener):

@@ -23,7 +23,7 @@ from smartanthill_phc.common.antlr_helper import get_identifier_text
 _prefix = 'sa_'
 
 
-def c_parse_tree_to_syntax_tree(compiler, tree, non_blocking_data):
+def c_parse_tree_to_syntax_tree(compiler, tree, non_blocking_data, prefix):
     '''
     Translates a parse tree as returned by antlr4 into a
     syntax tree as used by the compiler, this tree transformation
@@ -38,6 +38,7 @@ def c_parse_tree_to_syntax_tree(compiler, tree, non_blocking_data):
     assert non_blocking_data is not None
 
     source = compiler.init_node(root.PluginSourceNode(), tree)
+    source.txt_prefix = prefix
     ls = compiler.init_node(base.DeclarationListNode(), tree)
     source.declaration_list.set(ls)
     v = _CParseTreeVisitor(compiler, source)
@@ -940,7 +941,8 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
             return
 
         definition = self._c.init_node(decl.FunctionDefinitionNode(), ctx)
-        declaration = self._c.init_node(decl.FunctionDeclNode(), ctx)
+        declaration = self._c.init_node(
+            decl.FunctionDeclNode(), ctx.declarator())
 
         declaration.txt_name = get_identifier_text(
             self._c, dd.directDeclarator().Identifier(), _prefix)

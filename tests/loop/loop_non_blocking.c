@@ -16,6 +16,7 @@
     
 *****************************************************************************/
 
+#include "loop_state.h"
 #include "papi.h"
 #include "loop.h"
 #define HAPI_GPIO_VALUE_LOW 0
@@ -98,8 +99,10 @@ return PLUGIN_WAITING;
 #line 62 "loop.c"
 (sa_state->i1)++;
 }
+
 do
 {
+#line 66 "loop.c"
 (sa_state->i1)--;
 papi_wait_handler_add_wait_for_timeout(sa_wf, (sa_state->req).delay_ms);
 sa_state->sa_next = 4;

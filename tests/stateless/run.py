@@ -19,7 +19,6 @@ from tests import run
 
 def main():
 
-    run.make_composer('stateless')
     run.make_non_blocking('stateless', False)
     run.build_and_run('stateless')
 

@@ -31,8 +31,12 @@ def make_non_blocking(prefix, split_all):
     c_file = "%s.c" % prefix
     nb_file = "%s_non_blocking.c" % prefix
     h_file = "%s_state.h" % prefix
+    p_file = "%s.h" % prefix
 
-    code, header, c2 = api.process_file(c_file, prefix, split_all, True)
+    plugin = ZeptoPlugin('manifest.xml')
+
+    code, header, c2, parser = api.process_file(
+        c_file, plugin, prefix, split_all, True)
 
     f = open(nb_file, 'wb')
     f.write(code)
@@ -40,16 +44,20 @@ def make_non_blocking(prefix, split_all):
     h = open(h_file, 'wb')
     h.write(header)
 
+    p = open(p_file, 'wb')
+    p.write(parser)
 
-def make_composer(prefix):
+
+def make_header_only(prefix):
+
+    p_file = "%s.h" % prefix
 
     plugin = ZeptoPlugin('manifest.xml')
-    h_file = "%s_parser.h" % prefix
 
-    code = write_composer_file(prefix, plugin)
+    header = api.process_manifest(plugin, prefix, True)
 
-    f = open(h_file, 'wb')
-    f.write(code)
+    p = open(p_file, 'wb')
+    p.write(header)
 
 
 def build_and_run(prefix):

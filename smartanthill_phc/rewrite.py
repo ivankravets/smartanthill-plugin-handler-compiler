@@ -98,6 +98,11 @@ class _RewriteVisitor(CodeVisitor):
         # pylint: disable=no-self-use
         pass
 
+    def visit_ConstantDefineNode(self, node):
+        # pylint: disable=unused-argument
+        # pylint: disable=no-self-use
+        pass
+
     def visit_FunctionDefinitionNode(self, node):
         self.visit_childs(node)
 

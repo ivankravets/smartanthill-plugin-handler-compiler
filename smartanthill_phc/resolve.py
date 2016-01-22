@@ -82,7 +82,8 @@ def overload_filter(compiler, ctx, args, decl_list_list):
     if no candidate is found, reports error an raises
     '''
     exact_match = []
-    cast_match = []
+    cast_match = {}
+    min_cast = 0
     for current in decl_list_list:
         r = current.can_match_arguments(compiler, ctx, args)
 
@@ -90,28 +91,27 @@ def overload_filter(compiler, ctx, args, decl_list_list):
             pass
         elif r == TypeDeclNode.EXACT_MATCH:
             exact_match.append(current)
-        elif r == TypeDeclNode.CAST_MATCH:
-            cast_match.append(current)
         else:
-            assert False
+            if r not in cast_match:
+                cast_match[r] = []
+            cast_match[r].append(current)
+            if min_cast == 0 or r < min_cast:
+                min_cast = r
 
     if len(exact_match) == 0:
-        if len(cast_match) == 0:
-            return decl_list_list[0]
+        if min_cast == 0:
             report_overload_error(
                 compiler, ctx, "None of candidates can match the arguments",
                 args, decl_list_list)
-        elif len(cast_match) == 1:
-            return cast_match[0]
+        elif len(cast_match[min_cast]) == 1:
+            return cast_match[min_cast][0]
         else:
-            return decl_list_list[0]
             report_overload_error(
                 compiler, ctx, "More than a candidate can match the arguments",
                 args, decl_list_list)
     elif len(exact_match) == 1:
         return exact_match[0]
     else:
-        return decl_list_list[0]
         report_overload_error(
             compiler, ctx, "More than a candidate match the arguments",
             args, decl_list_list)
@@ -222,9 +222,6 @@ class _ResolveVisitor(CodeVisitor):
         visit_node(self, node)
         return node.get_type()
 
-    def visit_PluginSourceNode(self, node):
-        self.visit(node.declaration_list)
-
     def visit_RootNode(self, node):
 
         # first built-ins
@@ -232,8 +229,16 @@ class _ResolveVisitor(CodeVisitor):
 
         self._zc_dont_care = _get_internal_type('_zc_dont_care', node)
         self._void = _get_internal_type('void', node)
+        self.visit(node.manifest)
 
-        self.visit(node.source)
+        if not node.source.is_none():
+            self.visit(node.source)
+
+    def visit_PluginSourceNode(self, node):
+        self.visit_childs(node)
+
+    def visit_PluginManifestNode(self, node):
+        self.visit_childs(node)
 
     def visit_TypeDeclNode(self, node):
 
@@ -284,12 +289,21 @@ class _ResolveVisitor(CodeVisitor):
         # pylint: disable=no-self-use
         pass
 
+    def visit_ConstantDefineNode(self, node):
+        if node.begin_resolution():
+            node.get_scope(RootScope).constants.add(
+                self._c, node.txt_name, node)
+
+            self.visit_childs(node)
+            node.set_type(node.expression.get().get_type())
+
     def visit_ArgumentDeclNode(self, node):
-        # pylint: disable=no-self-use
         if node.begin_resolution():
             if node.txt_name is not None:
-                node.get_scope(FunctionScope).arguments.add(
-                    self._c, node.txt_name, node)
+                sc = node.get_scope(FunctionScope)
+                # function declaration without implementation don't have scope
+                if sc is not None:
+                    sc.arguments.add(self._c, node.txt_name, node)
 
             self.visit_childs(node)
             node.set_type(node.argument_type.get().get_type())
@@ -299,6 +313,17 @@ class _ResolveVisitor(CodeVisitor):
         if node.begin_resolution():
 
             node.get_scope(StatementListScope).variables.add(
+                self._c, node.txt_name, node)
+
+            self.visit_childs(node)
+
+            node.set_type(node.declaration_type.get().get_type())
+
+    def visit_AttributeDeclarationNode(self, node):
+
+        if node.begin_resolution():
+
+            node.get_scope(TypeScope).attributes.add(
                 self._c, node.txt_name, node)
 
             self.visit_childs(node)
@@ -371,6 +396,12 @@ class _ResolveVisitor(CodeVisitor):
     def visit_ForStmtNode(self, node):
         self.visit_childs(node)
 
+    def visit_ParserStmtNode(self, node):
+        self.visit_childs(node)
+
+    def visit_ComposerStmtNode(self, node):
+        self.visit_childs(node)
+
     def visit_RefTypeNode(self, node):
 
         # pylint: disable=no-self-use
@@ -409,9 +440,6 @@ class _ResolveVisitor(CodeVisitor):
             RootScope).functions.lookup(node.txt_name)
 
         if candidates is None or len(candidates) == 0:
-
-            node.set_type(self._zc_dont_care)
-            return
 
             self._c.report_error(
                 node.ctx, "Unresolved call '%s'" % node.txt_name)
@@ -454,8 +482,15 @@ class _ResolveVisitor(CodeVisitor):
                 node.ref_declaration = d
                 t = self.on_demand_resolve(node.ref_declaration)
             else:
-                print "Unresolved variable '%s'" % node.txt_name
-                t = self._zc_dont_care
+                # Try find as global define
+                sc = node.get_scope(RootScope)
+                d = sc.constants.lookup(node.txt_name)
+                if d is not None:
+                    node.ref_declaration = d
+                    t = self.on_demand_resolve(node.ref_declaration)
+                else:
+                    print "Unresolved variable '%s'" % node.txt_name
+                    t = self._zc_dont_care
 
         node.set_type(t)
 
@@ -552,10 +587,6 @@ class _ResolveVisitor(CodeVisitor):
 
         if node.bool_arrow:
             left = pointer.get_pointed_by(self._c, node.ctx, left)
-
-        if left == self._zc_dont_care:
-            node.set_type(self._zc_dont_care)
-            return
 
         node.ref_declaration = left.get_scope(
             TypeScope).attributes.lookup(node.txt_name)

@@ -19,7 +19,6 @@ from tests import run
 
 def main():
 
-    run.make_composer('expression')
     run.make_non_blocking('expression', False)
     run.build_and_run('expression')
 

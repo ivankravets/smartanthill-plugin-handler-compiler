@@ -44,15 +44,15 @@ class Ctx(object):
     ROOT = BuiltinCtx('<root>')
     NONE = BuiltinCtx('<none>')
     INTERNAL = BuiltinCtx('<internal>')
+    MANIFEST = BuiltinCtx('<manifest>')
 
 
 def format_location(ctx):
     '''
     Returns formated string with location in source code of given ctx
     '''
-
     if isinstance(ctx, BuiltinCtx):
-        return ctx.text + ', '
+        return '<%s>, ' % ctx.text
     elif isinstance(ctx, TerminalNodeImpl):  # ctx.symbol is CommonToken
         return 'line %s, ' % str(ctx.symbol.line)
     elif isinstance(ctx, ParserRuleContext):
@@ -62,9 +62,9 @@ def format_location(ctx):
             return 'lines %s-%s, ' % (str(ctx.start.line), str(ctx.stop.line))
     elif isinstance(ctx, ET.ElementTree):
         if ctx.start.line == ctx.stop.line:
-            return 'line %s, ' % str(ctx.start.line)
+            return '<xml>, '
     else:
-        return '<unknown>'
+        return '<unknown>, '
 
 
 class Compiler(object):

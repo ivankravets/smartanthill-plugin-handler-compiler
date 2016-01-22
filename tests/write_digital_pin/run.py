@@ -19,7 +19,7 @@ from tests import run
 
 def main():
 
-    run.make_composer('write_digital_pin')
+    run.make_header_only('write_digital_pin')
 
 
 # temporary entrance

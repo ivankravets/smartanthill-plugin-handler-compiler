@@ -325,9 +325,9 @@ class TypeDeclNode(Node, OnDemandResolution):
     Base class for types declarations
     '''
 
-    NO_MATCH = 0
-    EXACT_MATCH = 1
-    CAST_MATCH = 2
+    NO_MATCH = -1
+    EXACT_MATCH = 0
+    CAST_MATCH = 1
 
     def __init__(self, name):
         '''

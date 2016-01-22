@@ -441,6 +441,11 @@ class StateMachineVisitor(NodeVisitor):
         # pylint: disable=no-self-use
         pass
 
+    def visit_ConstantDefineNode(self, node):
+        # pylint: disable=unused-argument
+        # pylint: disable=no-self-use
+        pass
+
     def visit_FunctionDefinitionNode(self, node):
         if node.declaration.get().txt_name == self._nb.handler_name:
 
@@ -731,10 +736,7 @@ class _StatementsVisitor(CodeVisitor):
 #     def visit_PostfixOpExprNode(self, node):
 #         self.visit(node.child_argument_list)
 
-    def visit_IntegerLiteralExprNode(self, node):
-        pass
-
-    def visit_BooleanLiteralExprNode(self, node):
+    def visit_LiteralExprNode(self, node):
         pass
 
     def visit_CastExprNode(self, node):

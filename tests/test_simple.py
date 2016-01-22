@@ -16,19 +16,20 @@
 import os
 
 from smartanthill_phc import api
-from smartanthill_phc.parse_write import ZeptoPlugin, write_composer_file
+from smartanthill_phc.api import process_manifest
+from smartanthill_phc.parse_write import ZeptoPlugin
 
 
 def composer_test(prefix):
 
-    h_file = "%s_parser.h" % prefix
+    h_file = "%s.h" % prefix
     xml_file = "manifest.xml"
 
     print os.getcwd()
     os.chdir("tests/%s" % prefix)
     try:
         plugin = ZeptoPlugin(xml_file)
-        code = write_composer_file(prefix, plugin)
+        code = process_manifest(plugin, prefix, False)
 
         f = open(h_file, 'rb')
         assert code == f.read()
@@ -41,18 +42,23 @@ def non_blocking_test(prefix, split_all):
     c_file = "%s.c" % prefix
     nb_file = "%s_non_blocking.c" % prefix
     h_file = "%s_state.h" % prefix
-
+    parser_file = "%s.h" % prefix
     print os.getcwd()
 
     os.chdir("tests/%s" % prefix)
     try:
-        code, header, c2 = api.process_file(c_file, prefix, split_all, False)
+        plugin = ZeptoPlugin('manifest.xml')
+        code, header, c2, parser = api.process_file(
+            c_file, plugin, prefix, split_all, False)
 
         f = open(nb_file, 'rb')
         assert code.splitlines() == f.read().splitlines()
 
         h = open(h_file, 'rb')
         assert header.splitlines() == h.read().splitlines()
+
+        p = open(parser_file, 'rb')
+        assert parser.splitlines() == p.read().splitlines()
     finally:
         os.chdir("../..")
 

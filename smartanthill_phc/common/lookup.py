@@ -186,3 +186,4 @@ class RootScope(TypeScope):
         Constructor
         '''
         super(RootScope, self).__init__(owner)
+        self.constants = LookupHelper(self)

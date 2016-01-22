@@ -16,6 +16,7 @@
     
 *****************************************************************************/
 
+#include "stateless_state.h"
 #include "papi.h"
 #include "stateless.h"
 #define HAPI_GPIO_VALUE_LOW 0

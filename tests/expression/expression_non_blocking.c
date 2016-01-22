@@ -16,6 +16,7 @@
     
 *****************************************************************************/
 
+#include "expression_state.h"
 #include "papi.h"
 #include "expression.h"
 #define HAPI_GPIO_VALUE_LOW 0

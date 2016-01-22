@@ -16,6 +16,7 @@
     
 *****************************************************************************/
 
+#include "debug_state.h"
 #include "papi.h"
 #include "debug.h"
 #include "debug_state.h"

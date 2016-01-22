@@ -16,6 +16,7 @@
     
 *****************************************************************************/
 
+#include "sleep_state.h"
 #include "papi.h"
 #include "sleep.h"
 #include "sleep_state.h"

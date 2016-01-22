@@ -77,7 +77,7 @@ def _can_match_helper(compiler, ctx, args, decls, make_match):
         if source == target:
             pass
         elif target.can_cast_from(source):
-            result = TypeDeclNode.CAST_MATCH
+            result += TypeDeclNode.CAST_MATCH
             if make_match:
                 target.insert_cast_from(compiler, source, args.at(i))
         else:
@@ -102,6 +102,8 @@ class FunctionDeclNode(CallableDeclNode, OnDemandResolution):
         Constructor
         '''
         super(FunctionDeclNode, self).__init__()
+        self.bool_static = False
+        self.bool_inline = False
         self.txt_name = None
         self.return_type = Child(self, TypeNode)
         self.argument_decl_list = Child(self, ArgumentDeclListNode)

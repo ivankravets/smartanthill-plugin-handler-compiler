@@ -74,7 +74,7 @@ class BooleanLiteralExprNode(LiteralExprNode):
 
     def get_static_value(self):
         '''
-        Returns the float value of this literal
+        Returns the bool value of this literal
         Used for complile-time evaluation of expressions
         '''
         return self.bool_value
@@ -239,7 +239,7 @@ class StructTypeDeclNode(CTypeDeclNode):
         '''
         Constructor
         '''
-        super(StructTypeDeclNode, self).__init__(type_name)
+        super(StructTypeDeclNode, self).__init__('struct ' + type_name)
         self.members = ChildList(self, Node)
 
 
@@ -420,6 +420,28 @@ class PreprocessorDirectiveNode(Node):
         '''
         super(PreprocessorDirectiveNode, self).__init__()
         self.txt_body = None
+
+
+class ConstantDefineNode(Node, OnDemandResolution):
+
+    '''
+    Node class representing a preprocessor directive
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(ConstantDefineNode, self).__init__()
+        self.txt_name = None
+        self.expression = ChildExpr(self)
+
+    def get_static_value(self):
+        '''
+        Returns compile-time value of this declaration
+        '''
+
+        return self.expression.get().get_static_value()
 
 
 class OperatorDeclNode(decl.FunctionDeclNode):

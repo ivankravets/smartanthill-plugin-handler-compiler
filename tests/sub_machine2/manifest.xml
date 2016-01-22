@@ -15,9 +15,9 @@ Copyright (C) 2015 OLogN Technologies AG
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 -->
 
-<smartanthill.plugin id="expression" name="Expression" version="1.0">
+<smartanthill.plugin id="sub_machine2" name="SubMachine2" version="1.0">
 
-  <description>Blinks a LED</description>
+  <description>Creates more sub machines</description>
 
   <request>
     <field name="delay_ms" type="encoded-uint[max=2]" min="0" max="1000" default="200" title="Delay between blinks, ms [0-1000]" />

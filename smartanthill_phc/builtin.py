@@ -18,10 +18,30 @@ from smartanthill_phc import c_node
 from smartanthill_phc.common import decl
 from smartanthill_phc.common.base import DeclarationListNode
 
+_builtin_papi_defines = [
+    "#define PLUGIN_OK 0",
+    "#define PLUGIN_WAITING 1",
+    "#define PLUGIN_DEBUG 2",
+
+    "#define HAPI_GPIO_VALUE_LOW 0",
+    "#define HAPI_GPIO_VALUE_HIGH 1",
+    "#define HAPI_GPIO_TYPE_OUTPUT 0"
+]
+
+
+_builtin_typedefs = [
+    "typedef void parser_obj;",
+    "typedef void waiting_for;",
+    "typedef uint8_t ZEPTO_PARSER;",
+    "typedef uint8_t REPLY_HANDLE;",
+    "typedef uint8_t MEMORY_HANDLE;",
+    "typedef uint16_t SA_TIME_VAL;",
+    "typedef uint32_t sa_size_type;"
+]
 
 _builtin_papi = [
     # pylint: disable=line-too-long
-    "void ZEPTO_ASSERT(bool);",
+    "void ZEPTO_ASSERT(bool test);",
 
 
     "uint8_t papi_parser_read_byte( parser_obj* po );",
@@ -151,13 +171,11 @@ def create_builtins(compiler, ctx):
     _make_basic_type(compiler, ctx, decls, '_zc_dont_care')
     _make_basic_type(compiler, ctx, decls, 'sa_int_literal')
     _make_basic_type(compiler, ctx, decls, 'sa_bool_literal')
-    _make_basic_type(compiler, ctx, decls, 'parser_obj')
-    _make_basic_type(compiler, ctx, decls, 'REPLY_HANDLE')
-    _make_basic_type(compiler, ctx, decls, 'waiting_for')
-    _make_basic_type(compiler, ctx, decls, 'SA_TIME_VAL')
-    _make_basic_type(compiler, ctx, decls, 'sa_size_type')
 
-    _make_bool(compiler, ctx, decls)
+    decls.declarations.add(_make_bool_lit(compiler, ctx, "true"))
+    decls.declarations.add(_make_bool_lit(compiler, ctx, "false"))
+
+    _make_bool(compiler, ctx, decls, ['sa_bool_literal', 'sa_int_literal'])
     _make_integer(compiler, ctx, decls, 'uint8_t', ['sa_int_literal'])
     _make_integer(
         compiler, ctx, decls, 'uint16_t', ['sa_int_literal', 'uint8_t'])
@@ -168,8 +186,17 @@ def create_builtins(compiler, ctx):
     _make_integer(
         compiler, ctx, decls, 'int16_t', ['sa_int_literal', 'int8_t'])
 
+    for each in _builtin_typedefs:
+        d = _pseudo_parse_typedef(compiler, ctx, each)
+        decls.declarations.add(d)
+
+    for each in _builtin_papi_defines:
+        d = _pseudo_parse_define(compiler, ctx, each)
+        decls.declarations.add(d)
+
     for each in _builtin_papi:
-        _pseudo_parser(compiler, ctx, decls, each)
+        d = pseudo_parser(compiler, ctx, each)
+        decls.declarations.add(d)
 
     return decls
 
@@ -219,7 +246,7 @@ def _make_integer(compiler, ctx, decls, type_name, trivial_casts):
     tn.cast_rules_list.set(casts)
 
 
-def _make_bool(compiler, ctx, decls):
+def _make_bool(compiler, ctx, decls, trivial_casts):
 
     tn = compiler.init_node(c_node.IntTypeDeclNode('bool'), ctx)
     ol = compiler.init_node(DeclarationListNode(), ctx)
@@ -236,18 +263,20 @@ def _make_bool(compiler, ctx, decls):
 
     casts = compiler.init_node(DeclarationListNode(), ctx)
 
-    c0 = compiler.init_node(c_node.TrivialCastRuleNode(), ctx)
+    for each in trivial_casts:
+        c0 = compiler.init_node(c_node.TrivialCastRuleNode(), ctx)
 
-    t0 = compiler.init_node(c_node.SimpleTypeNode(), ctx)
-    t0.txt_name = 'sa_bool_literal'
+        t0 = compiler.init_node(c_node.SimpleTypeNode(), ctx)
+        t0.txt_name = each
 
-    t1 = compiler.init_node(c_node.RefTypeNode(), ctx)
-    t1.set_type(tn)
+        t1 = compiler.init_node(c_node.RefTypeNode(), ctx)
+        t1.set_type(tn)
 
-    c0.source_type.set(t0)
-    c0.target_type.set(t1)
+        c0.source_type.set(t0)
+        c0.target_type.set(t1)
 
-    casts.declarations.add(c0)
+        casts.declarations.add(c0)
+
     tn.cast_rules_list.set(casts)
 
 
@@ -255,6 +284,20 @@ def _make_basic_type(compiler, ctx, decls, name):
 
     d = compiler.init_node(c_node.BasicTypeDeclNode(name), ctx)
     decls.declarations.add(d)
+
+
+def _make_bool_lit(compiler, ctx, name):
+
+    d = compiler.init_node(c_node.ConstantDefineNode(), ctx)
+    d.txt_name = name
+
+    e = compiler.init_node(c_node.BooleanLiteralExprNode(), ctx)
+    e.txt_literal = name
+    e.bool_value = name == "true"
+
+    d.expression.set(e)
+
+    return d
 
 
 def _make_type_ref(compiler, ctx, name, this_type):
@@ -305,7 +348,42 @@ def _pseudo_parse_operator(compiler, ctx, text, this_type):
     return d
 
 
-def _pseudo_parser(compiler, ctx, decls, text):
+def _pseudo_parse_define(compiler, ctx, text):
+    '''
+    creates a define constant declaration from a line of text
+    '''
+    t = _pseudo_tokenize(text)
+    assert len(t) == 3
+    assert t[0] == "#define"
+
+    d = compiler.init_node(c_node.ConstantDefineNode(), ctx)
+    d.txt_name = t[1]
+
+    e = compiler.init_node(c_node.IntegerLiteralExprNode(), ctx)
+    e.txt_literal = t[2]
+    e.int_value = int(t[2])
+
+    d.expression.set(e)
+
+    return d
+
+
+def _pseudo_parse_typedef(compiler, ctx, text):
+    '''
+    creates a define constant declaration from a line of text
+    '''
+    t = _pseudo_tokenize(text)
+    assert len(t) == 3
+    assert t[0] == "typedef"
+
+    tpd = compiler.init_node(c_node.TypedefStmtNode(), ctx)
+    tpd.txt_name = t[2]
+    tpd.typedef_type.set(_pseudo_parse_type(compiler, ctx, t[1]))
+
+    return tpd
+
+
+def pseudo_parser(compiler, ctx, text):
     '''
     Pseudo parser, creates a function declaration from a line of text
     '''
@@ -337,13 +415,27 @@ def _pseudo_parser(compiler, ctx, decls, text):
 
         at.txt_name = each
         a.argument_type.set(ptr)
-#        a.txt_name = t[i + 1]
+        a.txt_name = t[i + 1]
         args.declarations.add(a)
         i += 2
 
     d.argument_decl_list.set(args)
 
-    decls.declarations.add(d)
+    return d
+
+
+def _pseudo_parse_type(compiler, ctx, text):
+    at = compiler.init_node(c_node.SimpleTypeNode(), ctx)
+    each = text
+    ptr = at
+    while each.endswith('*'):
+        each = each[:-1]
+        temp = compiler.init_node(c_node.PointerTypeNode(), ctx)
+        temp.pointed_type.set(ptr)
+        ptr = temp
+
+    at.txt_name = each
+    return ptr
 
 
 def _pseudo_tokenize(text):

@@ -16,6 +16,7 @@
     
 *****************************************************************************/
 
+#include "spi_state.h"
 #include "papi.h"
 #include "spi.h"
 #include "spi_state.h"
