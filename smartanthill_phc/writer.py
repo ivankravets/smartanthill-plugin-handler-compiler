@@ -127,7 +127,7 @@ class _WriterVisitor(NodeVisitor):
 
         if expr_box.get().bool_parenthesis:
             self._w.write('(')
-        self.visit(expr_box)
+        self.visit_boxed(expr_box)
         if expr_box.get().bool_parenthesis:
             self._w.write(')')
 
@@ -471,7 +471,7 @@ class _WriterVisitor(NodeVisitor):
         self._w.write(' ')
         self._w.write(node.txt_name)
         self._w.write(' = ')
-        self.visit(node.expression)
+        self.write_expr(node.expression)
         self._w.write(';')
         self._w.end_of_statement(node.ctx)
 
@@ -532,126 +532,6 @@ class _WriterVisitor(NodeVisitor):
             self._w.write_line("papi_reply_write_%s(sa_rh, %s);" %
                                (pn, each.name))
 
-    def visit_AssignmentExprNode(self, node):
-
-        self.write_expr(node.left_expression)
-        self._w.write('=')
-        self.write_expr(node.right_expression)
-
-    def visit_ConditionalExprNode(self, node):
-
-        self.write_expr(node.condition_expression)
-        self._w.write('?')
-        self.write_expr(node.true_expression)
-        self._w.write(':')
-        self.write_expr(node.false_expression)
-
-    def visit_BinaryOpExprNode(self, node):
-        assert node.argument_list.get().arguments.get_size() == 2
-        self.write_expr(node.argument_list.get().arguments.at(0))
-        self._w.write(node.txt_operator)
-        self.write_expr(node.argument_list.get().arguments.at(1))
-
-    def visit_MemberBinaryOpExprNode(self, node):
-        assert node.argument_list.get().arguments.get_size() == 1
-        self.write_expr(node.expression)
-        self._w.write(node.txt_operator)
-        self.write_expr(node.argument_list.get().arguments.at(0))
-
-    def visit_UnaryOpExprNode(self, node):
-        assert node.argument_list.get().arguments.get_size() == 0
-        self._w.write(node.txt_operator)
-        self.write_expr(node.expression)
-
-    def visit_PostUnaryOpExprNode(self, node):
-        assert node.argument_list.get().arguments.get_size() == 0
-        self.write_expr(node.expression)
-        self._w.write(node.txt_operator[4:])
-
-    def visit_IndexExprNode(self, node):
-        assert node.argument_list.get().arguments.get_size() == 2
-        self.write_expr(node.expression)
-        self._w.write('[')
-        self.write_expr(node.argument_list.get().arguments.at(0))
-        self._w.write(']')
-
-    def visit_PointerExprNode(self, node):
-        self._w.write('*')
-        self.write_expr(node.expression)
-
-    def visit_AddressOfExprNode(self, node):
-        self._w.write('&')
-        self.write_expr(node.expression)
-
-    def visit_LiteralExprNode(self, node):
-        self._w.write(node.txt_literal)
-
-    def visit_MemberAccessExprNode(self, node):
-
-        self.write_expr(node.expression)
-
-        if node.bool_arrow:
-            self._w.write('->')
-        else:
-            self._w.write('.')
-
-        self._w.write(node.txt_name)
-
-    def visit_CastExprNode(self, node):
-        self._w.write('(')
-        self.visit(node.cast_type)
-        self._w.write(')')
-        self.write_expr(node.expression)
-
-    def visit_TrivialCastExprNode(self, node):
-        #         self._w.write('(')
-        #         self.visit(node.child0_cast_type)
-        #         self._w.write(')')
-        self.write_expr(node.expression)
-
-    def visit_VariableExprNode(self, node):
-        if node.ref_declaration is not None:
-            if self._sm is not None and\
-                    self._sm.is_moved_var_decl(node.ref_declaration):
-                self._w.write("(sa_state->%s)" % node.ref_declaration.txt_name)
-            else:
-                self._w.write(node.ref_declaration.txt_name)
-        else:
-            self._w.write(node.txt_name)
-
-    def visit_FunctionCallExprNode(self, node):
-
-        if node.ref_declaration is not None:
-            self._w.write(node.ref_declaration.txt_name)
-        else:
-            self._w.write(node.txt_name)
-
-        self._writeArgumentListNode(node.argument_list.get())
-
-    def visit_FunctionCallSubExprNode(self, node):
-
-        self._w.write(node.ref_declaration.txt_name)
-
-#         self._w.replaceTokens(node.ctx.start, node.ctx.stop,
-#                               u"(%s)" % node.ref_declaration.txt_name)
-
-    def visit_StatefullCallArgumentExprNode(self, node):
-        # pylint: disable=unused-argument
-        self._w.write("(void*)(sa_state + 1), sa_wf, sa_result")
-
-    def _writeArgumentListNode(self, node):
-
-        self._w.write('(')
-
-        first = True
-        for each in node.arguments:
-            if not first:
-                self._w.write(', ')
-            first = False
-            self.write_expr(each)
-
-        self._w.write(')')
-
     def visit_RefTypeNode(self, node):
 
         self._w.write(node.get_type().to_string())
@@ -669,6 +549,126 @@ class _WriterVisitor(NodeVisitor):
         self._w.write('*')
         if node.bool_const:
             self._w.write(" const")
+
+    def visit_AssignmentExprNode(self, node, box):
+
+        self.write_expr(node.left_expression)
+        self._w.write('=')
+        self.write_expr(node.right_expression)
+
+    def visit_ConditionalExprNode(self, node, box):
+
+        self.write_expr(node.condition_expression)
+        self._w.write('?')
+        self.write_expr(node.true_expression)
+        self._w.write(':')
+        self.write_expr(node.false_expression)
+
+    def visit_BinaryOpExprNode(self, node, box):
+        assert node.argument_list.get().arguments.get_size() == 2
+        self.write_expr(node.argument_list.get().arguments.at(0))
+        self._w.write(node.txt_operator)
+        self.write_expr(node.argument_list.get().arguments.at(1))
+
+    def visit_MemberBinaryOpExprNode(self, node, box):
+        assert node.argument_list.get().arguments.get_size() == 1
+        self.write_expr(node.expression)
+        self._w.write(node.txt_operator)
+        self.write_expr(node.argument_list.get().arguments.at(0))
+
+    def visit_UnaryOpExprNode(self, node, box):
+        assert node.argument_list.get().arguments.get_size() == 0
+        self._w.write(node.txt_operator)
+        self.write_expr(node.expression)
+
+    def visit_PostUnaryOpExprNode(self, node, box):
+        assert node.argument_list.get().arguments.get_size() == 0
+        self.write_expr(node.expression)
+        self._w.write(node.txt_operator[4:])
+
+    def visit_IndexExprNode(self, node, box):
+        assert node.argument_list.get().arguments.get_size() == 2
+        self.write_expr(node.expression)
+        self._w.write('[')
+        self.write_expr(node.argument_list.get().arguments.at(0))
+        self._w.write(']')
+
+    def visit_PointerExprNode(self, node, box):
+        self._w.write('*')
+        self.write_expr(node.expression)
+
+    def visit_AddressOfExprNode(self, node, box):
+        self._w.write('&')
+        self.write_expr(node.expression)
+
+    def visit_LiteralExprNode(self, node, box):
+        self._w.write(node.txt_literal)
+
+    def visit_MemberAccessExprNode(self, node, box):
+
+        self.write_expr(node.expression)
+
+        if node.bool_arrow:
+            self._w.write('->')
+        else:
+            self._w.write('.')
+
+        self._w.write(node.txt_name)
+
+    def visit_CastExprNode(self, node, box):
+        self._w.write('(')
+        self.visit(node.cast_type)
+        self._w.write(')')
+        self.write_expr(node.expression)
+
+    def visit_TrivialCastExprNode(self, node, box):
+        #         self._w.write('(')
+        #         self.visit(node.child0_cast_type)
+        #         self._w.write(')')
+        self.write_expr(node.expression)
+
+    def visit_VariableExprNode(self, node, box):
+        if node.ref_declaration is not None:
+            if self._sm is not None and\
+                    self._sm.is_moved_var_decl(node.ref_declaration):
+                self._w.write("(sa_state->%s)" % node.ref_declaration.txt_name)
+            else:
+                self._w.write(node.ref_declaration.txt_name)
+        else:
+            self._w.write(node.txt_name)
+
+    def visit_FunctionCallExprNode(self, node, box):
+
+        if node.ref_declaration is not None:
+            self._w.write(node.ref_declaration.txt_name)
+        else:
+            self._w.write(node.txt_name)
+
+        self._writeArgumentListNode(node.argument_list.get())
+
+    def visit_FunctionCallSubExprNode(self, node, box):
+
+        self._w.write(node.ref_declaration.txt_name)
+
+#         self._w.replaceTokens(node.ctx.start, node.ctx.stop,
+#                               u"(%s)" % node.ref_declaration.txt_name)
+
+    def visit_StatefullCallArgumentExprNode(self, node, box):
+        # pylint: disable=unused-argument
+        self._w.write("(void*)(sa_state + 1), sa_wf, sa_result")
+
+    def _writeArgumentListNode(self, node):
+
+        self._w.write('(')
+
+        first = True
+        for each in node.arguments:
+            if not first:
+                self._w.write(', ')
+            first = False
+            self.write_expr(each)
+
+        self._w.write(')')
 
 
 class _HeaderWriterVisitor(_WriterVisitor):

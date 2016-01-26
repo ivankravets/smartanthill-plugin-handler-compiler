@@ -19,7 +19,8 @@ class Child(object):
     Intermediate instance to hold a child reference
     '''
 
-    def __init__(self, parent, allowed_type, optional=False, list_item=False):
+    def __init__(self, parent, allowed_type, optional=False, list_item=False,
+                 use_boxed_functor=False):
         '''
         Constructor
         '''
@@ -28,6 +29,7 @@ class Child(object):
         self._parent = parent
         self._allowed_type = allowed_type
         self._optional = optional
+        self._use_boxed_functor = use_boxed_functor
 
         if not list_item:
             parent.add_child(self)
@@ -48,12 +50,6 @@ class Child(object):
         '''
         assert self._optional
         return self._child_node is None
-
-    def is_kind(self, some_kind):
-        '''
-        Returns where there is a child here
-        '''
-        return self._allowed_type == some_kind
 
     def get(self):
         '''
@@ -79,12 +75,15 @@ class Child(object):
         self._child_node = None
         return temp
 
-    def call(self, functor):
+    def call(self, functor, boxed_functor):
         '''
         Walks this child
         '''
         if self._child_node is not None:
-            functor(self)
+            if boxed_functor is not None and self._use_boxed_functor:
+                boxed_functor(self)
+            else:
+                functor(self)
 
 
 class ChildList(object):
@@ -93,7 +92,7 @@ class ChildList(object):
 
     '''
 
-    def __init__(self, parent, allowed_type):
+    def __init__(self, parent, allowed_type, use_boxed_functor=False):
         '''
         Constructor
         '''
@@ -101,6 +100,7 @@ class ChildList(object):
         self._child_list = []
         self._parent = parent
         self._allowed_type = allowed_type
+        self._use_boxed_functor = use_boxed_functor
 
         parent.add_child(self)
 
@@ -114,7 +114,9 @@ class ChildList(object):
         '''
         Helper method
         '''
-        box = Child(self._parent, self._allowed_type, False, True)
+        box = Child(
+            self._parent, self._allowed_type, False, True,
+            self._use_boxed_functor)
         box.set(child)
         return box
 
@@ -180,9 +182,9 @@ class ChildList(object):
         self._child_list = self._child_list[0:index]
         return other
 
-    def call(self, functor):
+    def call(self, functor, boxed_functor):
         '''
         Walks all childs
         '''
         for each in self._child_list:
-            functor(each)
+            each.call(functor, boxed_functor)

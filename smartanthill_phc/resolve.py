@@ -432,7 +432,7 @@ class _ResolveVisitor(CodeVisitor):
         d = self.on_demand_resolve(ptr)
         node.set_type(d)
 
-    def visit_FunctionCallExprNode(self, node):
+    def visit_FunctionCallExprNode(self, node, box):
 
         self.visit_childs(node)
 
@@ -456,17 +456,17 @@ class _ResolveVisitor(CodeVisitor):
 #         d.make_arguments_match(
 #             self._c, node.ctx, node.argument_list.get().arguments)
 
-    def visit_IntegerLiteralExprNode(self, node):
+    def visit_IntegerLiteralExprNode(self, node, box):
         # pylint: disable=no-self-use
         t = _get_internal_type('sa_int_literal', node)
         node.set_type(t)
 
-    def visit_BooleanLiteralExprNode(self, node):
+    def visit_BooleanLiteralExprNode(self, node, box):
         # pylint: disable=no-self-use
         t = _get_internal_type('sa_bool_literal', node)
         node.set_type(t)
 
-    def visit_VariableExprNode(self, node):
+    def visit_VariableExprNode(self, node, box):
 
         sc = node.get_scope(StatementListScope)
 
@@ -494,7 +494,7 @@ class _ResolveVisitor(CodeVisitor):
 
         node.set_type(t)
 
-    def visit_AssignmentExprNode(self, node):
+    def visit_AssignmentExprNode(self, node, box):
 
         self.visit_childs(node)
 
@@ -506,11 +506,11 @@ class _ResolveVisitor(CodeVisitor):
         # allow chained assignment
         node.set_type(t)
 
-    def visit_ConditionalExprNode(self, node):
+    def visit_ConditionalExprNode(self, node, box):
         self.visit_childs(node)
         node.set_type(self._zc_dont_care)
 
-    def visit_OperatorExprNode(self, node):
+    def visit_OperatorExprNode(self, node, box):
 
         self.visit_childs(node)
         candidates = node.get_scope(
@@ -535,7 +535,7 @@ class _ResolveVisitor(CodeVisitor):
 #         if r is not None:
 #             self.replace_expression(r)
 
-    def visit_MemberOperatorExprNode(self, node):
+    def visit_MemberOperatorExprNode(self, node, box):
 
         self.visit_childs(node)
 
@@ -560,14 +560,14 @@ class _ResolveVisitor(CodeVisitor):
 #         d.make_arguments_match(
 #             self._c, node.ctx, node.argument_list.get().arguments)
 
-    def visit_PointerExprNode(self, node):
+    def visit_PointerExprNode(self, node, box):
         self.visit_childs(node)
 
         ref_type = node.expression.get().get_type()
         p = pointer.get_pointed_by(self._c, node.ctx, ref_type)
         node.set_type(p)
 
-    def visit_AddressOfExprNode(self, node):
+    def visit_AddressOfExprNode(self, node, box):
         self.visit_childs(node)
 
         ref_type = node.expression.get().get_type()
@@ -575,12 +575,12 @@ class _ResolveVisitor(CodeVisitor):
         p = pointer.make_pointer_of(self._c, ref_type)
         node.set_type(p)
 
-    def visit_IndexExprNode(self, node):
+    def visit_IndexExprNode(self, node, box):
 
         self.visit_childs(node)
         node.set_type(self._zc_dont_care)
 
-    def visit_MemberAccessExprNode(self, node):
+    def visit_MemberAccessExprNode(self, node, box):
 
         self.visit_childs(node)
         left = node.expression.get().get_type()
@@ -602,7 +602,7 @@ class _ResolveVisitor(CodeVisitor):
 
         node.set_type(t)
 
-    def visit_CastExprNode(self, node):
+    def visit_CastExprNode(self, node, box):
 
         self.visit_childs(node)
         node.set_type(node.cast_type.get().get_type())

@@ -159,12 +159,12 @@ class Node(object):
         '''
         self._childs.append(child)
 
-    def for_each_child(self, functor):
+    def for_each_child(self, functor, boxed_functor):
         '''
         Walks all node childs
         '''
         for each in self._childs:
-            each.call(functor)
+            each.call(functor, boxed_functor)
 
 
 class StatementNode(Node):
@@ -266,7 +266,8 @@ class ChildExpr(Child):
         '''
         Constructor
         '''
-        super(ChildExpr, self).__init__(parent, ExpressionNode, False)
+        super(ChildExpr, self).__init__(
+            parent, ExpressionNode, False, False, True)
 
 
 class ChildExprOpt(Child):
@@ -278,7 +279,8 @@ class ChildExprOpt(Child):
         '''
         Constructor
         '''
-        super(ChildExprOpt, self).__init__(parent, ExpressionNode, True)
+        super(ChildExprOpt, self).__init__(
+            parent, ExpressionNode, True, False, True)
 
 
 class TypeNode(Node):
@@ -386,4 +388,4 @@ class ArgumentListNode(Node):
         Constructor
         '''
         super(ArgumentListNode, self).__init__()
-        self.arguments = ChildList(self, ExpressionNode)
+        self.arguments = ChildList(self, ExpressionNode, True)

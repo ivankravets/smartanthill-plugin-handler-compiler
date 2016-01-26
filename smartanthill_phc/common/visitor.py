@@ -13,10 +13,10 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from smartanthill_phc.common.base import Node, ExpressionNode, StmtListNode
+from smartanthill_phc.common.base import Node, StmtListNode
 
 
-def visit_node(visitor, node):
+def visit_node(visitor, node, box=None):
     '''
     Dynamic version of node visitor using reflection
     If visitor of specific type is not found, we look up for base classes
@@ -29,7 +29,10 @@ def visit_node(visitor, node):
         name = 'visit_' + cls.__name__
         attr = getattr(visitor, name, None)
         if attr is not None:
-            return attr(node)
+            if box is not None:
+                return attr(node, box)
+            else:
+                return attr(node)
         else:
             b = None
             for each in cls.__bases__:
@@ -57,7 +60,7 @@ class NodeWalker(object):
         '''
         Walks all node childs
         '''
-        node.for_each_child(self.walk)
+        node.for_each_child(self.walk, None)
 
     def walk(self, box):
         '''
@@ -93,12 +96,18 @@ class NodeVisitor(object):
         '''
         return visit_node(self, box.get())
 
+    def visit_boxed(self, box):
+        '''
+        Generic visit function wrapper
+        '''
+        return visit_node(self, box.get(), box)
+
     def visit_childs(self, node):
         '''
         Visit childs of node
         '''
 
-        node.for_each_child(self.visit)
+        node.for_each_child(self.visit, self.visit_boxed)
 
     def default_visit(self, node):
         '''
@@ -112,8 +121,7 @@ class NodeVisitor(object):
 class CodeVisitor(NodeVisitor):
 
     '''
-    Base visitor with helpers for expression replacement
-    and statement list modification
+    Base visitor with helpers for statement list modification
 
     '''
 
@@ -124,7 +132,6 @@ class CodeVisitor(NodeVisitor):
         super(CodeVisitor, self).__init__()
         self._stmt_list = []
         self._index = []
-        self._expr = []
 
     def visit_stmt_list(self, stmt_list, begin=0):
         '''
@@ -149,24 +156,6 @@ class CodeVisitor(NodeVisitor):
 
         self._stmt_list.pop()
         self._index.pop()
-
-    def visit_expression(self, box):
-        '''
-        Visit a child expression, allow expression replacement
-        '''
-        self._expr.append(box)
-        res = visit_node(self, box.get())
-        self._expr.pop()
-        return res
-
-    def visit(self, box):
-        '''
-        Generic visit function wrapper
-        '''
-        if box.is_kind(ExpressionNode):
-            return self.visit_expression(box)
-        else:
-            return visit_node(self, box.get())
 
     def insert_before_current(self, statement):
         '''
@@ -202,16 +191,6 @@ class CodeVisitor(NodeVisitor):
         Returns current statement
         '''
         return self._stmt_list[-1].statements.at(self._index[-1]).get()
-
-    def replace_expression(self, replacement):
-        '''
-        Replace current expression
-        '''
-        assert isinstance(replacement, ExpressionNode)
-        if len(self._expr) != 0 and self._expr[-1] is not None:
-            return self._expr[-1].reset(replacement)
-        else:
-            assert False
 
 
 def check_all_nodes_reachables(compiler, root):

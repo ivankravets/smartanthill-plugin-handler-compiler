@@ -147,7 +147,7 @@ class _RewriteVisitor(CodeVisitor):
                     self._w.deleteTokens(node.ctx.start, node.ctx.stop)
 
             if not node.initializer_expression.is_none():
-                self.visit(node.initializer_expression)
+                self.visit_boxed(node.initializer_expression)
 
     def visit_ExpressionStmtNode(self, node):
         self.visit_childs(node)
@@ -349,35 +349,13 @@ class _RewriteVisitor(CodeVisitor):
 
         self._w.insertAfterToken(node.ctx, txt)
 
-    def visit_OperatorExprNode(self, node):
-        self.visit_childs(node)
-
-    def visit_MemberOperatorExprNode(self, node):
-        self.visit_childs(node)
-
-    def visit_MemberAccessExprNode(self, node):
-        self.visit_childs(node)
-
-    def visit_PointerExprNode(self, node):
-        self.visit_childs(node)
-
-    def visit_AddressOfExprNode(self, node):
-        self.visit_childs(node)
-
-    def visit_CastExprNode(self, node):
-        self.visit(node.expression)
-
-    def visit_LiteralExprNode(self, node):
-        # nothing to do here
+    def visit_TypeNode(self, node):
         pass
 
-    def visit_AssignmentExprNode(self, node):
+    def visit_ExpressionNode(self, node, box):
         self.visit_childs(node)
 
-    def visit_TrivialCastExprNode(self, node):
-        self.visit(node.expression)
-
-    def visit_VariableExprNode(self, node):
+    def visit_VariableExprNode(self, node, box):
 
         if node.ref_declaration is not None:
             if self._sm is not None:
@@ -386,7 +364,7 @@ class _RewriteVisitor(CodeVisitor):
                         node.ctx.symbol,
                         u"(sa_state->%s)" % node.ref_declaration.txt_name)
 
-    def visit_FunctionCallExprNode(self, node):
+    def visit_FunctionCallExprNode(self, node, box):
         self.visit_childs(node)
 
         if self._nb.has_states(node.ref_declaration):
@@ -397,13 +375,10 @@ class _RewriteVisitor(CodeVisitor):
 
             self._w.insertAfterToken(args.ctx.symbol, txt)
 
-    def visit_FunctionCallSubExprNode(self, node):
+    def visit_FunctionCallSubExprNode(self, node, box):
 
         self._w.replaceTokens(node.ctx.start, node.ctx.stop,
                               u"(%s)" % node.ref_declaration.txt_name)
-
-    def visit_StatefullCallArgumentExprNode(self, node):
-        pass
 
     def visit_ArgumentListNode(self, node):
         self.visit_childs(node)
