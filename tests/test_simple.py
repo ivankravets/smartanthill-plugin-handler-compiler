@@ -51,16 +51,27 @@ def non_blocking_test(prefix, split_all):
         code, header, c2, parser = api.process_file(
             c_file, plugin, prefix, split_all, False)
 
-        f = open(nb_file, 'rb')
-        assert code.splitlines() == f.read().splitlines()
+        assert_are_equal(nb_file, code.splitlines())
+        assert_are_equal(h_file, header.splitlines())
+        assert_are_equal(parser_file, parser.splitlines())
 
-        h = open(h_file, 'rb')
-        assert header.splitlines() == h.read().splitlines()
-
-        p = open(parser_file, 'rb')
-        assert parser.splitlines() == p.read().splitlines()
     finally:
         os.chdir("../..")
+
+
+def assert_are_equal(file_name, text_array):
+
+    f = open(file_name, 'rb')
+    fl = f.read().splitlines()
+
+    assert len(fl) == len(text_array)
+    for i in range(len(fl)):
+        if fl[i] == text_array[i]:
+            pass
+        else:
+            l0 = ' '.join(fl[i].strip().split())
+            l1 = ' '.join(text_array[i].strip().split())
+            assert l0 == l1
 
 
 def test_blink():
