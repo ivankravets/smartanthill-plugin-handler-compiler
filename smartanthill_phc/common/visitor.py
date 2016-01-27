@@ -56,19 +56,19 @@ class NodeWalker(object):
         '''
         super(NodeWalker, self).__init__()
 
+    def walk(self, box):
+        '''
+        Walk a single node
+        '''
+        box.call(self.walk_node)
+
     def walk_childs(self, node):
         '''
         Walks all node childs
         '''
-        node.for_each_child(self.walk, None)
+        node.for_each_child(self.walk_node)
 
-    def walk(self, box):
-        '''
-        Callback of for_each_child
-        '''
-        self.walk_node(box.get())
-
-    def walk_node(self, node):
+    def walk_node(self, node, box=None):
         '''
         Base method node walking
         '''
@@ -92,22 +92,22 @@ class NodeVisitor(object):
 
     def visit(self, box):
         '''
-        Generic visit function wrapper
+        Visit a single node
         '''
-        return visit_node(self, box.get())
-
-    def visit_boxed(self, box):
-        '''
-        Generic visit function wrapper
-        '''
-        return visit_node(self, box.get(), box)
+        return box.call(self._visit_wrapper)
 
     def visit_childs(self, node):
         '''
-        Visit childs of node
+        Visit all childs of node
         '''
 
-        node.for_each_child(self.visit, self.visit_boxed)
+        node.for_each_child(self._visit_wrapper)
+
+    def _visit_wrapper(self, node, box=None):
+        '''
+        Generic visit function wrapper
+        '''
+        return visit_node(self, node, box)
 
     def default_visit(self, node):
         '''
@@ -218,7 +218,7 @@ class _CheckReachableWalker(NodeWalker):
         self.removed_nodes = removed_nodes
         self.next_node_id = next_node_id
 
-    def walk_node(self, node):
+    def walk_node(self, node, box=None):
         assert node
         if len(self.parents) != 0:
             assert self.parents[-1] == node.get_parent()
@@ -276,7 +276,7 @@ class _DumpTreeWalker(NodeWalker):
         self.result = []
         self.index = 0
 
-    def walk_node(self, node):
+    def walk_node(self, node, box=None):
         ctx_attrs = ''
         names = dir(node)
         for current in names:

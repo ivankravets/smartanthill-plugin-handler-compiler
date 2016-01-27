@@ -147,7 +147,7 @@ class _RewriteVisitor(CodeVisitor):
                     self._w.deleteTokens(node.ctx.start, node.ctx.stop)
 
             if not node.initializer_expression.is_none():
-                self.visit_boxed(node.initializer_expression)
+                self.visit(node.initializer_expression)
 
     def visit_ExpressionStmtNode(self, node):
         self.visit_childs(node)

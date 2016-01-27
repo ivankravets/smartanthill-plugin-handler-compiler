@@ -127,7 +127,7 @@ class _WriterVisitor(NodeVisitor):
 
         if expr_box.get().bool_parenthesis:
             self._w.write('(')
-        self.visit_boxed(expr_box)
+        self.visit(expr_box)
         if expr_box.get().bool_parenthesis:
             self._w.write(')')
 
@@ -585,13 +585,6 @@ class _WriterVisitor(NodeVisitor):
         assert node.argument_list.get().arguments.get_size() == 0
         self.write_expr(node.expression)
         self._w.write(node.txt_operator[4:])
-
-    def visit_IndexExprNode(self, node, box):
-        assert node.argument_list.get().arguments.get_size() == 2
-        self.write_expr(node.expression)
-        self._w.write('[')
-        self.write_expr(node.argument_list.get().arguments.at(0))
-        self._w.write(']')
 
     def visit_PointerExprNode(self, node, box):
         self._w.write('*')

@@ -40,7 +40,7 @@ class CallableDeclNode(Node):
         # pylint: disable=unused-argument
         return TypeDeclNode.NO_MATCH
 
-    def make_arguments_match(self, compiler, ctx, args):
+    def make_arguments_match(self, compiler, ctx, args, arg_boxes):
         '''
         Base method for argument matching
         Adds any necesary cast to make the types of the given arguments match
@@ -50,28 +50,29 @@ class CallableDeclNode(Node):
         assert False
 
 
-def _can_match_helper(compiler, ctx, args, decls, make_match):
+def _can_match_helper(compiler, ctx, args, arg_boxes, decls, make_match):
     '''
     If this argument list can not used to initialize given argument list
     Returns TypeDeclNode.NO_MATCH when there is no chance to make it match
     TypeDeclNode.EXACT_MATCH when match does not need any cast
     and TypeDeclNode.CAST_MATCH when it can match but casting needed
     '''
+    assert arg_boxes is None or len(args) == arg_boxes.get_size()
 
-    if args.get_size() != decls.get_size():
+    if len(args) != decls.get_size():
         if make_match:
             compiler.report_error(
                 ctx, "Wrong number of arguments, need %s but given %s" % (
-                    args.get_size(),
+                    len(args),
                     decls.get_size()))
             compiler.raise_error()
 
         return TypeDeclNode.NO_MATCH
 
     result = TypeDeclNode.EXACT_MATCH
-    for i in range(args.get_size()):
+    for i in range(len(args)):
 
-        source = args.at(i).get().get_type()
+        source = args[i]
         target = decls.at(i).get().get_type()
 
         if source == target:
@@ -79,7 +80,7 @@ def _can_match_helper(compiler, ctx, args, decls, make_match):
         elif target.can_cast_from(source):
             result += TypeDeclNode.CAST_MATCH
             if make_match:
-                target.insert_cast_from(compiler, source, args.at(i))
+                target.insert_cast_from(compiler, source, arg_boxes.at(i))
         else:
             if make_match:
                 compiler.report_error(
@@ -111,13 +112,13 @@ class FunctionDeclNode(CallableDeclNode, OnDemandResolution):
     def can_match_arguments(self, compiler, ctx, args):
 
         return _can_match_helper(
-            compiler, ctx, args,
+            compiler, ctx, args, None,
             self.argument_decl_list.get().declarations, False)
 
-    def make_arguments_match(self, compiler, ctx, args):
+    def make_arguments_match(self, compiler, ctx, args, arg_boxes):
 
         return _can_match_helper(
-            compiler, ctx, args,
+            compiler, ctx, args, arg_boxes,
             self.argument_decl_list.get().declarations, True)
 
 

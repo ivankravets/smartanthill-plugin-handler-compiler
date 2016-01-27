@@ -120,6 +120,7 @@ class TrivialCastExprNode(ExpressionNode):
         '''
         super(TrivialCastExprNode, self).__init__()
         self.expression = ChildExpr(self)
+        self.ref_cast_type = None
 
     def get_static_value(self):
         return self.expression.get().get_static_value()
@@ -131,7 +132,7 @@ class TrivialCastExprNode(ExpressionNode):
         '''
         node = compiler.init_node(TrivialCastExprNode(), expression.ctx)
         node.expression.set(expression)
-        node.set_type(target_type)
+        node.ref_cast_type = target_type
 
         return node
 

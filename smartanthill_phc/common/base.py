@@ -159,12 +159,12 @@ class Node(object):
         '''
         self._childs.append(child)
 
-    def for_each_child(self, functor, boxed_functor):
+    def for_each_child(self, functor):
         '''
         Walks all node childs
         '''
         for each in self._childs:
-            each.call(functor, boxed_functor)
+            each.call(functor)
 
 
 class StatementNode(Node):
@@ -229,28 +229,7 @@ class ExpressionNode(Node):
         Constructor
         '''
         super(ExpressionNode, self).__init__()
-        self._resolved_type = None
         self.bool_parenthesis = False
-
-    def set_type(self, resolved_type):
-        '''
-        Type setter, this method can be called only once.
-        So type can not change
-        '''
-
-        assert resolved_type
-        assert not self._resolved_type
-
-        self._resolved_type = resolved_type
-
-    def get_type(self):
-        '''
-        Returns the type of this expression
-        '''
-        if self._resolved_type is None:
-            print self.__name__
-            assert False
-        return self._resolved_type
 
     def get_static_value(self):
         # pylint: disable=no-self-use
@@ -262,15 +241,24 @@ class ChildExpr(Child):
     Specialized Child used for expressions
     '''
 
-    def __init__(self, parent):
+    def __init__(
+            self, parent, allowed_type=ExpressionNode, optional=False,
+            list_item=False):
         '''
         Constructor
         '''
         super(ChildExpr, self).__init__(
-            parent, ExpressionNode, False, False, True)
+            parent, allowed_type, optional, False)
+
+    def call(self, functor):
+        '''
+        Walks this child
+        '''
+        if self._child_node is not None:
+            return functor(self._child_node, self)
 
 
-class ChildExprOpt(Child):
+class ChildExprOpt(ChildExpr):
     '''
     Specialized Child used for expressions
     '''
@@ -279,8 +267,7 @@ class ChildExprOpt(Child):
         '''
         Constructor
         '''
-        super(ChildExprOpt, self).__init__(
-            parent, ExpressionNode, True, False, True)
+        super(ChildExprOpt, self).__init__(parent, ExpressionNode, True)
 
 
 class TypeNode(Node):
@@ -388,4 +375,4 @@ class ArgumentListNode(Node):
         Constructor
         '''
         super(ArgumentListNode, self).__init__()
-        self.arguments = ChildList(self, ExpressionNode, True)
+        self.arguments = ChildList(self, ExpressionNode, ChildExpr)
