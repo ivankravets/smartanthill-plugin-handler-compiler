@@ -49,6 +49,12 @@ class Child(object):
         assert self._optional
         return self._child_node is None
 
+    def is_kind(self, some_kind):
+        '''
+        Returns where there is a child here
+        '''
+        return self._allowed_type == some_kind
+
     def get(self):
         '''
         Returns the current child
@@ -78,7 +84,7 @@ class Child(object):
         Walks this child
         '''
         if self._child_node is not None:
-            return functor(self._child_node)
+            return functor(self)
 
 
 class ChildList(object):
@@ -87,7 +93,7 @@ class ChildList(object):
 
     '''
 
-    def __init__(self, parent, allowed_type, box_type=Child):
+    def __init__(self, parent, allowed_type):
         '''
         Constructor
         '''
@@ -95,7 +101,6 @@ class ChildList(object):
         self._child_list = []
         self._parent = parent
         self._allowed_type = allowed_type
-        self._box_type = box_type
 
         parent.add_child(self)
 
@@ -109,8 +114,7 @@ class ChildList(object):
         '''
         Helper method
         '''
-        box = self._box_type(
-            self._parent, self._allowed_type, False, True)
+        box = Child(self._parent, self._allowed_type, False, True)
         box.set(child)
         return box
 

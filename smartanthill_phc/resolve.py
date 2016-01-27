@@ -147,7 +147,7 @@ class _ResolutionCheckWalker(NodeWalker):
         '''
         super(_ResolutionCheckWalker, self).__init__()
 
-    def walk_node(self, node, box=None):
+    def walk_node(self, node):
         assert node
         try:
             m = getattr(node, 'get_type')
@@ -196,7 +196,7 @@ class _ResolveVisitor(CodeVisitor):
         self._c = compiler
         self._stack = []
 
-    def visit(self, box):
+    def visit_callback(self, box):
         '''
         Override base visit function, to keep stack of node being resolved, and
         check for resolution loops
@@ -205,9 +205,8 @@ class _ResolveVisitor(CodeVisitor):
             raise errors.ResolutionCycleError()
 
         self._stack.append(box.get())
-        res = super(_ResolveVisitor, self).visit(box)
+        super(_ResolveVisitor, self).visit_callback(box)
         self._stack.pop()
-        return res
 
     def on_demand_resolve(self, node):
         '''
@@ -287,7 +286,8 @@ class _ResolveVisitor(CodeVisitor):
             node.get_scope(RootScope).constants.add(
                 self._c, node.txt_name, node)
 
-            t = self.visit(node.expression)
+            self.visit_childs(node)
+            t = node.expression.get().get_type()
             node.set_type(t)
 
     def visit_ArgumentDeclNode(self, node):
@@ -425,9 +425,9 @@ class _ResolveVisitor(CodeVisitor):
         d = self.on_demand_resolve(ptr)
         node.set_type(d)
 
-    def visit_FunctionCallExprNode(self, node, box):
+    def visit_FunctionCallExprNode(self, node):
 
-        args = self.resolve_ArgumentListNode(node.argument_list.get())
+        self.visit_childs(node)
 
         candidates = node.get_scope(
             RootScope).functions.lookup(node.txt_name)
@@ -438,25 +438,26 @@ class _ResolveVisitor(CodeVisitor):
                 node.ctx, "Unresolved call '%s'" % node.txt_name)
             self._c.raise_error()
 
+        args = _get_arg_types(node.argument_list.get())
         d = overload_filter(self._c, node.ctx, args, candidates)
 
         d.make_arguments_match(
             self._c, node.ctx, args, node.argument_list.get().arguments)
         node.ref_declaration = d
         t = self.on_demand_resolve(node.ref_declaration)
-        return t
+        node.set_type(t)
 
-    def visit_IntegerLiteralExprNode(self, node, box):
+    def visit_IntegerLiteralExprNode(self, node):
         # pylint: disable=no-self-use
         t = _get_internal_type('sa_int_literal', node)
-        return t
+        node.set_type(t)
 
-    def visit_BooleanLiteralExprNode(self, node, box):
+    def visit_BooleanLiteralExprNode(self, node):
         # pylint: disable=no-self-use
         t = _get_internal_type('sa_bool_literal', node)
-        return t
+        node.set_type(t)
 
-    def visit_VariableExprNode(self, node, box):
+    def visit_VariableExprNode(self, node):
 
         sc = node.get_scope(StatementListScope)
 
@@ -483,30 +484,30 @@ class _ResolveVisitor(CodeVisitor):
                         node.ctx, "Unresolved variable '%s'" % node.txt_name)
                     self._c.raise_error()
 
-        return t
+        node.set_type(t)
 
-    def visit_AssignmentExprNode(self, node, box):
+    def visit_AssignmentExprNode(self, node):
 
-        t = self.visit(node.left_expression)
-        r = self.visit(node.right_expression)
+        self.visit_childs(node)
+        t = node.left_expression.get().get_type()
+        r = node.right_expression.get().get_type()
 
         if not expression_type_match(self._c, t, r, node.right_expression):
             self._c.report_error(node.ctx, "Type mismatch on assignment")
 
         # allow chained assignment
-        return t
+        node.set_type(t)
 
-    def visit_ConditionalExprNode(self, node, box):
+    def visit_ConditionalExprNode(self, node):
 
-        self.visit(node.condition_expression)
-        self.visit(node.true_expression)
-        self.visit(node.false_expression)
+        self.visit_childs(node)
 
-        return _get_internal_type('_zc_dont_care', node)
+        t = _get_internal_type('_zc_dont_care', node)
+        node.set_type(t)
 
-    def visit_OperatorExprNode(self, node, box):
+    def visit_OperatorExprNode(self, node):
 
-        args = self.resolve_ArgumentListNode(node.argument_list.get())
+        self.visit_childs(node)
         candidates = node.get_scope(
             RootScope).operators.lookup(node.txt_operator)
 
@@ -515,25 +516,24 @@ class _ResolveVisitor(CodeVisitor):
                 node.ctx, "Unresolved operator '%s'" % node.txt_operator)
             self._c.raise_error()
 
-        d = overload_filter(
-            self._c, node.ctx, args,
-            candidates)
+        args = _get_arg_types(node.argument_list.get())
+        d = overload_filter(self._c, node.ctx, args, candidates)
         d.make_arguments_match(
             self._c, node.ctx, args, node.argument_list.get().arguments)
         node.ref_declaration = d
         t = self.on_demand_resolve(node.ref_declaration)
-        return t
+        node.set_type(t)
 
 
 #         r = d.static_evaluate(self._c, node.child_argument_list)
 #         if r is not None:
 #             self.replace_expression(r)
 
-    def visit_MemberOperatorExprNode(self, node, box):
+    def visit_MemberOperatorExprNode(self, node):
 
-        args = self.resolve_ArgumentListNode(node.argument_list.get())
+        self.visit_childs(node)
 
-        ref_type = self.visit(node.expression)
+        ref_type = node.expression.get().get_type()
 
         candidates = ref_type.get_scope(
             TypeScope).operators.lookup(node.txt_operator)
@@ -543,32 +543,35 @@ class _ResolveVisitor(CodeVisitor):
                 node.ctx, "Unresolved operator '%s'" % node.txt_operator)
             self._c.raise_error()
 
-        d = overload_filter(
-            self._c, node.ctx, args, candidates)
+        args = _get_arg_types(node.argument_list.get())
+        d = overload_filter(self._c, node.ctx, args, candidates)
 
         d.make_arguments_match(
             self._c, node.ctx, args, node.argument_list.get().arguments)
 
         node.ref_declaration = d
         t = self.on_demand_resolve(node.ref_declaration)
-        return t
+        node.set_type(t)
 
-    def visit_PointerExprNode(self, node, box):
+    def visit_PointerExprNode(self, node):
 
-        ref_type = self.visit(node.expression)
-        p = pointer.get_pointed_by(self._c, node.ctx, ref_type)
-        return p
+        self.visit_childs(node)
+        ref_type = node.expression.get().get_type()
+        t = pointer.get_pointed_by(self._c, node.ctx, ref_type)
+        node.set_type(t)
 
-    def visit_AddressOfExprNode(self, node, box):
+    def visit_AddressOfExprNode(self, node):
 
-        ref_type = self.visit(node.expression)
+        self.visit_childs(node)
+        ref_type = node.expression.get().get_type()
         # TODO check valid
-        p = pointer.make_pointer_of(self._c, ref_type)
-        return p
+        t = pointer.make_pointer_of(self._c, ref_type)
+        node.set_type(t)
 
-    def visit_MemberAccessExprNode(self, node, box):
+    def visit_MemberAccessExprNode(self, node):
 
-        left = self.visit(node.expression)
+        self.visit_childs(node)
+        left = node.expression.get().get_type()
 
         if node.bool_arrow:
             left = pointer.get_pointed_by(self._c, node.ctx, left)
@@ -582,17 +585,21 @@ class _ResolveVisitor(CodeVisitor):
                 node.txt_name, left.txt_name))
             self._c.raise_error()
 
-        return t
+        node.set_type(t)
 
-    def visit_CastExprNode(self, node, box):
+    def visit_CastExprNode(self, node):
 
         self.visit_childs(node)
-        return node.cast_type.get().get_type()
+        t = node.cast_type.get().get_type()
+        node.set_type(t)
 
-    def resolve_ArgumentListNode(self, node):
+    def visit_ArgumentListNode(self, node):
+        self.visit_childs(node)
 
-        result = []
-        for each in node.arguments:
-            t = self.visit(each)
-            result.append(t)
-        return result
+
+def _get_arg_types(node):
+
+    result = []
+    for each in node.arguments:
+        result.append(each.get().get_type())
+    return result

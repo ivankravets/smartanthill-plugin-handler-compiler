@@ -13,35 +13,33 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from smartanthill_phc.common.base import Node, StmtListNode
+from smartanthill_phc.common import base
 
 
-def visit_node(visitor, node, box=None):
+def visit_node(visitor, node):
     '''
     Dynamic version of node visitor using reflection
     If visitor of specific type is not found, we look up for base classes
     in the Node hierarchy
     '''
-    assert isinstance(node, Node)
+    assert isinstance(node, base.Node)
     cls = type(node)
 
     while cls is not None:
         name = 'visit_' + cls.__name__
         attr = getattr(visitor, name, None)
         if attr is not None:
-            if box is not None:
-                return attr(node, box)
-            else:
-                return attr(node)
+            attr(node)
+            return
         else:
             b = None
             for each in cls.__bases__:
-                if issubclass(each, Node):
+                if issubclass(each, base.Node):
                     assert b is None  # only one Node super is allowed
                     b = each
             cls = b
 
-    return getattr(visitor, 'default_visit')(node)
+    getattr(visitor, 'default_visit')(node)
 
 
 class NodeWalker(object):
@@ -66,9 +64,15 @@ class NodeWalker(object):
         '''
         Walks all node childs
         '''
-        node.for_each_child(self.walk_node)
+        node.for_each_child(self.walk_callback)
 
-    def walk_node(self, node, box=None):
+    def walk_callback(self, box):
+        '''
+        Base method node walking
+        '''
+        self.walk_node(box.get())
+
+    def walk_node(self, node):
         '''
         Base method node walking
         '''
@@ -94,20 +98,20 @@ class NodeVisitor(object):
         '''
         Visit a single node
         '''
-        return box.call(self._visit_wrapper)
+        return box.call(self.visit_callback)
 
     def visit_childs(self, node):
         '''
         Visit all childs of node
         '''
 
-        node.for_each_child(self._visit_wrapper)
+        node.for_each_child(self.visit_callback)
 
-    def _visit_wrapper(self, node, box=None):
+    def visit_callback(self, box):
         '''
         Generic visit function wrapper
         '''
-        return visit_node(self, node, box)
+        return visit_node(self, box.get())
 
     def default_visit(self, node):
         '''
@@ -132,6 +136,24 @@ class CodeVisitor(NodeVisitor):
         super(CodeVisitor, self).__init__()
         self._stmt_list = []
         self._index = []
+        self._exprs = []
+
+    def visit_callback(self, box):
+        '''
+        Generic visit function wrapper
+        '''
+        if box.is_kind(base.ExpressionNode):
+            self.visit_expression(box)
+        else:
+            visit_node(self, box.get())
+
+    def visit_expression(self, box):
+        '''
+        Visit a child expression, allow expression replacement
+        '''
+        self._exprs.append(box)
+        visit_node(self, box.get())
+        self._exprs.pop()
 
     def visit_stmt_list(self, stmt_list, begin=0):
         '''
@@ -142,7 +164,7 @@ class CodeVisitor(NodeVisitor):
         list we currently are
         '''
 
-        assert isinstance(stmt_list, StmtListNode)
+        assert isinstance(stmt_list, base.StmtListNode)
 
         self._stmt_list.append(stmt_list)
         self._index.append(begin)
@@ -192,6 +214,13 @@ class CodeVisitor(NodeVisitor):
         '''
         return self._stmt_list[-1].statements.at(self._index[-1]).get()
 
+    def replace_current_expression(self, replacement):
+        '''
+        Replace current statement
+        '''
+        assert len(self._exprs) != 0
+        return self._exprs[-1].reset(replacement)
+
 
 def check_all_nodes_reachables(compiler, root):
     '''
@@ -218,7 +247,7 @@ class _CheckReachableWalker(NodeWalker):
         self.removed_nodes = removed_nodes
         self.next_node_id = next_node_id
 
-    def walk_node(self, node, box=None):
+    def walk_node(self, node):
         assert node
         if len(self.parents) != 0:
             assert self.parents[-1] == node.get_parent()
@@ -276,7 +305,7 @@ class _DumpTreeWalker(NodeWalker):
         self.result = []
         self.index = 0
 
-    def walk_node(self, node, box=None):
+    def walk_node(self, node):
         ctx_attrs = ''
         names = dir(node)
         for current in names:

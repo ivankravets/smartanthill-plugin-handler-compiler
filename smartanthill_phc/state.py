@@ -712,25 +712,25 @@ class _StatementsVisitor(CodeVisitor):
     def visit_TypeNode(self, node):
         pass
 
-    def visit_MemberAccessExprNode(self, node, box):
+    def visit_MemberAccessExprNode(self, node):
         self.visit_childs(node)
 
-    def visit_AssignmentExprNode(self, node, box):
+    def visit_AssignmentExprNode(self, node):
         self.visit_childs(node)
 
-    def visit_ConditionalExprNode(self, node, box):
+    def visit_ConditionalExprNode(self, node):
         self.visit_childs(node)
 
-    def visit_OperatorExprNode(self, node, box):
+    def visit_OperatorExprNode(self, node):
         self.visit_childs(node)
 
-    def visit_PointerExprNode(self, node, box):
+    def visit_PointerExprNode(self, node):
         self.visit_childs(node)
 
-    def visit_AddressOfExprNode(self, node, box):
+    def visit_AddressOfExprNode(self, node):
         self.visit_childs(node)
 
-    def visit_MemberOperatorExprNode(self, node, box):
+    def visit_MemberOperatorExprNode(self, node):
         self.visit_childs(node)
 
 #     def visit_UnaryOpExprNode(self, node):
@@ -739,19 +739,19 @@ class _StatementsVisitor(CodeVisitor):
 #     def visit_PostfixOpExprNode(self, node):
 #         self.visit(node.child_argument_list)
 
-    def visit_LiteralExprNode(self, node, box):
+    def visit_LiteralExprNode(self, node):
         pass
 
-    def visit_CastExprNode(self, node, box):
+    def visit_CastExprNode(self, node):
         self.visit_childs(node)
 
-    def visit_TrivialCastExprNode(self, node, box):
+    def visit_TrivialCastExprNode(self, node):
         self.visit_childs(node)
 
-    def visit_VariableExprNode(self, node, box):
+    def visit_VariableExprNode(self, node):
         self._h.add_var_expr(node, self._sc.get_last_state())
 
-    def visit_FunctionCallExprNode(self, node, box):
+    def visit_FunctionCallExprNode(self, node):
         self.visit_childs(node)
 
         if self._nb.has_states(node.ref_declaration):
@@ -767,9 +767,9 @@ class _StatementsVisitor(CodeVisitor):
 
             var = self._c.init_node(FunctionCallSubExprNode(), node.ctx)
             var.ref_declaration = s
-            box.reset(var)
+            self.replace_current_expression(var)
 
-    def visit_FunctionCallSubExprNode(self, node, box):
+    def visit_FunctionCallSubExprNode(self, node):
         pass
 
     def visit_ArgumentListNode(self, node):

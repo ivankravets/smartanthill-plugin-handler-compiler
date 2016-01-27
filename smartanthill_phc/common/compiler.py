@@ -149,7 +149,7 @@ class _NodeIdsWalker(NodeWalker):
         super(_NodeIdsWalker, self).__init__()
         self.node_ids = []
 
-    def walk_node(self, node, box=None):
+    def walk_node(self, node):
         assert node
         self.node_ids.append(node.node_id)
         self.walk_childs(node)

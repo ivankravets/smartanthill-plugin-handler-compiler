@@ -40,30 +40,6 @@ class OnDemandResolution(object):
         self._resolved_flag = self._NOT_RESOLVED
         self._resolved_type = None
 
-#     def resolve(self, compiler):
-#         '''
-#         Resolve, will call template method do_resolve_declaration that needs
-#         be at implementing class
-#         '''
-#         try:
-#             if self._resolved_flag == self._NOT_RESOLVED:
-#                 self._resolved_flag = self._RESOLVING_NOW
-#                 self._resolved_type = self.do_resolve_declaration(compiler)
-#                 assert self._resolved_type
-#                 self._resolved_flag = self._RESOLVED_OK
-#             elif self._resolved_flag == self._RESOLVING_NOW:
-#                 raise errors.ResolutionCycleError()
-#             elif self._resolved_flag == self._RESOLVED_OK:
-#                 pass
-#             elif self.resolved_flag == self._RESOLUTION_ERROR:
-#                 pass
-#             else:
-#                 assert False
-#         except:
-#             self._resolved_flag = self._RESOLUTION_ERROR
-#             self._resolved_type = None
-#             raise
-
     def begin_resolution(self):
         if self._resolved_flag == self._NOT_RESOLVED:
             self._resolved_flag = self._RESOLVING_NOW
@@ -111,7 +87,6 @@ class Node(object):
         '''
         super(Node, self).__init__()
         self._parent = None
-        self._resolved = False
         self._scopes = {}
         self._childs = []
 
@@ -229,45 +204,43 @@ class ExpressionNode(Node):
         Constructor
         '''
         super(ExpressionNode, self).__init__()
+        self._resolved_type = None
         self.bool_parenthesis = False
+
+    def set_type(self, resolved_type):
+        '''
+        Type setter, this method can be called only once.
+        So type can not change
+        '''
+
+        assert resolved_type
+        assert not self._resolved_type
+
+        self._resolved_type = resolved_type
+
+    def get_type(self):
+        '''
+        Returns the type of this expression
+        '''
+        if self._resolved_type is None:
+            print self.__name__
+            assert False
+        return self._resolved_type
 
     def get_static_value(self):
         # pylint: disable=no-self-use
         return None
 
 
-class ChildExpr(Child):
+def ChildExpr(parent):
     '''
-    Specialized Child used for expressions
+    Helper function
     '''
-
-    def __init__(
-            self, parent, allowed_type=ExpressionNode, optional=False,
-            list_item=False):
-        '''
-        Constructor
-        '''
-        super(ChildExpr, self).__init__(
-            parent, allowed_type, optional, False)
-
-    def call(self, functor):
-        '''
-        Walks this child
-        '''
-        if self._child_node is not None:
-            return functor(self._child_node, self)
+    return Child(parent, ExpressionNode, False, False)
 
 
-class ChildExprOpt(ChildExpr):
-    '''
-    Specialized Child used for expressions
-    '''
-
-    def __init__(self, parent):
-        '''
-        Constructor
-        '''
-        super(ChildExprOpt, self).__init__(parent, ExpressionNode, True)
+def ChildExprOpt(parent):
+    return Child(parent, ExpressionNode, True, False)
 
 
 class TypeNode(Node):
@@ -375,4 +348,4 @@ class ArgumentListNode(Node):
         Constructor
         '''
         super(ArgumentListNode, self).__init__()
-        self.arguments = ChildList(self, ExpressionNode, ChildExpr)
+        self.arguments = ChildList(self, ExpressionNode)

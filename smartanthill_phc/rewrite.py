@@ -352,10 +352,10 @@ class _RewriteVisitor(CodeVisitor):
     def visit_TypeNode(self, node):
         pass
 
-    def visit_ExpressionNode(self, node, box):
+    def visit_ExpressionNode(self, node):
         self.visit_childs(node)
 
-    def visit_VariableExprNode(self, node, box):
+    def visit_VariableExprNode(self, node):
 
         if node.ref_declaration is not None:
             if self._sm is not None:
@@ -364,7 +364,7 @@ class _RewriteVisitor(CodeVisitor):
                         node.ctx.symbol,
                         u"(sa_state->%s)" % node.ref_declaration.txt_name)
 
-    def visit_FunctionCallExprNode(self, node, box):
+    def visit_FunctionCallExprNode(self, node):
         self.visit_childs(node)
 
         if self._nb.has_states(node.ref_declaration):
@@ -375,7 +375,7 @@ class _RewriteVisitor(CodeVisitor):
 
             self._w.insertAfterToken(args.ctx.symbol, txt)
 
-    def visit_FunctionCallSubExprNode(self, node, box):
+    def visit_FunctionCallSubExprNode(self, node):
 
         self._w.replaceTokens(node.ctx.start, node.ctx.stop,
                               u"(%s)" % node.ref_declaration.txt_name)
