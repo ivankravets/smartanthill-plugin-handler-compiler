@@ -281,6 +281,11 @@ class _ResolveVisitor(CodeVisitor):
         # pylint: disable=no-self-use
         pass
 
+    def visit_IncludeFileNode(self, node):
+        # pylint: disable=unused-argument
+        # pylint: disable=no-self-use
+        pass
+
     def visit_ConstantDefineNode(self, node):
         if node.begin_resolution():
             node.get_scope(RootScope).constants.add(

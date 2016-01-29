@@ -111,7 +111,7 @@ class LookupHelper(object):
                 compiler.report_error(
                     node.ctx, "Redeclaration of '%s'" % name)
                 compiler.report_error(
-                    self._typedefs[name].ctx, "Previous was here")
+                    self._data[name].ctx, "Previous was here")
                 return
             else:
                 self._data[name] = node

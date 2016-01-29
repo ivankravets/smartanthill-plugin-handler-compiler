@@ -706,3 +706,39 @@ class CListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by CParser#includeDirective.
+    def enterIncludeDirective(self, ctx):
+        pass
+
+    # Exit a parse tree produced by CParser#includeDirective.
+    def exitIncludeDirective(self, ctx):
+        pass
+
+
+    # Enter a parse tree produced by CParser#defineConstantDirective.
+    def enterDefineConstantDirective(self, ctx):
+        pass
+
+    # Exit a parse tree produced by CParser#defineConstantDirective.
+    def exitDefineConstantDirective(self, ctx):
+        pass
+
+
+    # Enter a parse tree produced by CParser#defineFunctionArgs.
+    def enterDefineFunctionArgs(self, ctx):
+        pass
+
+    # Exit a parse tree produced by CParser#defineFunctionArgs.
+    def exitDefineFunctionArgs(self, ctx):
+        pass
+
+
+    # Enter a parse tree produced by CParser#defineFunctionDirective.
+    def enterDefineFunctionDirective(self, ctx):
+        pass
+
+    # Exit a parse tree produced by CParser#defineFunctionDirective.
+    def exitDefineFunctionDirective(self, ctx):
+        pass
+
+

@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-void ZEPTO_ASSERT(int a) {assert(a);}
+void ZEPTO_ASSERT(bool condition) {assert(condition);}
 
 
 // Request parsing functions:

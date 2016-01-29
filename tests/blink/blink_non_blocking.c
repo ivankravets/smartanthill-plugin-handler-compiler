@@ -19,10 +19,11 @@
 #include "blink_state.h"
 #include "papi.h"
 #include "blink.h"
+#line 22 "blink.c"
 #define HAPI_GPIO_VALUE_LOW 0
 #define HAPI_GPIO_VALUE_HIGH 1
 #define HAPI_GPIO_TYPE_OUTPUT 0
-#line 26 "blink.c"
+
 void hapi_gpio_init(uint16_t pin_num)
 {
 }

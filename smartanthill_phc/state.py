@@ -441,6 +441,11 @@ class StateMachineVisitor(NodeVisitor):
         # pylint: disable=no-self-use
         pass
 
+    def visit_IncludeFileNode(self, node):
+        # pylint: disable=unused-argument
+        # pylint: disable=no-self-use
+        pass
+
     def visit_ConstantDefineNode(self, node):
         # pylint: disable=unused-argument
         # pylint: disable=no-self-use

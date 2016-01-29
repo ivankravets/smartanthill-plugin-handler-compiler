@@ -21,11 +21,7 @@ from smartanthill_phc.common.base import DeclarationListNode
 _builtin_papi_defines = [
     "#define PLUGIN_OK 0",
     "#define PLUGIN_WAITING 1",
-    "#define PLUGIN_DEBUG 2",
-
-    "#define HAPI_GPIO_VALUE_LOW 0",
-    "#define HAPI_GPIO_VALUE_HIGH 1",
-    "#define HAPI_GPIO_TYPE_OUTPUT 0"
+    "#define PLUGIN_DEBUG 2"
 ]
 
 

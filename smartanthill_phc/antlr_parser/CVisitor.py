@@ -395,3 +395,23 @@ class CVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by CParser#includeDirective.
+    def visitIncludeDirective(self, ctx):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by CParser#defineConstantDirective.
+    def visitDefineConstantDirective(self, ctx):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by CParser#defineFunctionArgs.
+    def visitDefineFunctionArgs(self, ctx):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by CParser#defineFunctionDirective.
+    def visitDefineFunctionDirective(self, ctx):
+        return self.visitChildren(ctx)
+
+

@@ -969,6 +969,20 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
     # Visit a parse tree produced by CParser#preprocessorDirective.
     def visitPreprocessorDirective(self, ctx):
 
-        node = self._c.init_node(c_node.PreprocessorDirectiveNode(), ctx)
-        node.txt_body = get_text(ctx)
+        if ctx.includeDirective() is not None:
+            node = self._c.init_node(c_node.IncludeFileNode(), ctx)
+            node.txt_file_name = get_text(
+                ctx.includeDirective().StringLiteral())
+        elif ctx.defineConstantDirective() is not None:
+            node = self._c.init_node(c_node.ConstantDefineNode(), ctx)
+            node.txt_name = get_identifier_text(
+                self._c, ctx.defineConstantDirective().Identifier(), _prefix)
+            node.expression.set(
+                self.visit(ctx.defineConstantDirective().expression()))
+#         elif ctx.defineFunctionDirective() is not None:
+#             pass
+        else:
+            node = self._c.init_node(c_node.PreprocessorDirectiveNode(), ctx)
+            node.txt_body = get_text(ctx)
+
         self._s.declaration_list.get().declarations.add(node)

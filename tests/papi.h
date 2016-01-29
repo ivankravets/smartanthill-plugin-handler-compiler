@@ -29,7 +29,7 @@ typedef uint16_t SA_TIME_VAL;
 #define PLUGIN_WAITING 1
 #define PLUGIN_DEBUG 2
 
-void ZEPTO_ASSERT(int);
+void ZEPTO_ASSERT(bool condition);
 
 // Request parsing functions:
 uint8_t papi_parser_read_byte( parser_obj* po );

@@ -145,6 +145,11 @@ class _WriterVisitor(NodeVisitor):
     def visit_PreprocessorDirectiveNode(self, node):
         self._w.write_line(node.txt_body)
 
+    def visit_IncludeFileNode(self, node):
+        # pylint: disable=unused-argument
+        # pylint: disable=no-self-use
+        self._w.write_line("#include " + node.txt_file_name)
+
     def visit_ConstantDefineNode(self, node):
         self._w.write("#define ")
         self._w.write(node.txt_name)

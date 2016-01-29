@@ -422,6 +422,20 @@ class PreprocessorDirectiveNode(Node):
         self.txt_body = None
 
 
+class IncludeFileNode(Node):
+
+    '''
+    Node class representing an #include preprocessor directive
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(IncludeFileNode, self).__init__()
+        self.txt_file_name = None
+
+
 class ConstantDefineNode(Node, OnDemandResolution):
 
     '''

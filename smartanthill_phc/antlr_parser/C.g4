@@ -390,9 +390,27 @@ functionDefinition
 preprocessorDirective
     :   LineDirective
     |   PragmaDirective
-    |   IncludeDirective
-    |   DefineDirective
+    |   includeDirective
+    |   defineConstantDirective
+    |   defineFunctionDirective
     ;
+
+includeDirective
+    : '#include' StringLiteral
+    ;
+
+defineConstantDirective
+    : '#define' Identifier expression
+    ;
+
+defineFunctionArgs
+    : '(' Identifier (',' Identifier)+ ')'
+    ;
+    
+defineFunctionDirective
+    : '#define' Identifier defineFunctionArgs expression
+    ;
+
 
 
 Auto : 'auto';
@@ -729,14 +747,6 @@ LineDirective
 
 PragmaDirective
     :   '#' [ \t]* 'pragma' [ \t]+ ~[\r\n]*
-    ;
-
-IncludeDirective
-    :   '#' [ \t]* 'include' [ \t]+ ~[\r\n]*
-    ;
-
-DefineDirective
-    :   '#' [ \t]* 'define' [ \t]+ ~[\r\n]*
     ;
 
 Whitespace
