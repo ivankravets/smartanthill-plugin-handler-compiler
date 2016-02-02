@@ -157,6 +157,14 @@ class _WriterVisitor(NodeVisitor):
         self.write_expr(node.expression)
         self._w.end_of_statement(node.ctx)
 
+    def visit_StaticAssertStmtNode(self, node):
+        self._w.write("_Static_assert (")
+        self.write_expr(node.expression)
+        self._w.write(", ")
+        self._w.write(node.txt_description)
+        self._w.write(");")
+        self._w.end_of_statement(node.ctx)
+
     def visit_FunctionDefinitionNode(self, node):
         self.visit_childs(node)
 

@@ -13,13 +13,13 @@
 // with this program; if not, write to the Free Software Foundation, Inc.,
 // 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <assert.h>
+#include "stdint.h"
+#include "stdbool.h"
+#include "assert.h"
 
 //TODO add real types here
 typedef uint8_t parser_obj;
-typedef uint8_t ZEPTO_PARSER;
+typedef parser_obj ZEPTO_PARSER;
 typedef uint8_t REPLY_HANDLE;
 typedef uint8_t MEMORY_HANDLE;
 typedef uint8_t waiting_for;

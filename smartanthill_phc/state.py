@@ -427,6 +427,12 @@ class StateMachineVisitor(NodeVisitor):
         self._nb = nb
         self._split_all = split_all
 
+    def default_visit(self, node):
+        '''
+        Default action when a node specific action is not found
+        '''
+        self.visit_childs(node)
+
     def visit_RootNode(self, node):
         self.visit(node.source)
 

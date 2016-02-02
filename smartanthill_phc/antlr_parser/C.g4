@@ -49,9 +49,9 @@ unaryExpression
 //    |   '__extension__'? '(' typeName ')' '{' initializerList ','? '}'
     |   ('++'|'--') unaryExpression # PreIncrementExpression
     |   ('&' | '*' | '+' | '-' | '~' | '!') castExpression # UnaryOperatorExpression
-    |   'sizeof' unaryExpression # SizeOfExpression
+//    |   'sizeof' unaryExpression # SizeOfExpression
     |   'sizeof' '(' typeName ')' # SizeOfTypeExpression
-    |   '_Alignof' '(' typeName ')' # AlignOfTypeExpression
+//    |   '_Alignof' '(' typeName ')' # AlignOfTypeExpression
 //    |   '&&' Identifier // GCC extension address of label
     ;
 
@@ -112,7 +112,7 @@ declarationSpecifier
     |   typeSpecifier
     |   typeQualifier
     |   functionSpecifier
-    |   alignmentSpecifier
+//    |   alignmentSpecifier
     ;
 
 initDeclaratorList
@@ -149,7 +149,7 @@ typeSpecifier
 //    |   '__m128d'
 //    |   '__m128i')
 //    |   '__extension__' '(' ('__m128' | '__m128d' | '__m128i') ')'
-    |   atomicTypeSpecifier
+//    |   atomicTypeSpecifier
     |   structOrUnionSpecifier
     |   enumSpecifier
     |   typedefName
@@ -199,30 +199,31 @@ enumerator
     :   Identifier ('=' constantExpression)?
     ;
 
-atomicTypeSpecifier
-    :   '_Atomic' '(' typeName ')'
-    ;
+//atomicTypeSpecifier
+//    :   '_Atomic' '(' typeName ')'
+//    ;
 
 typeQualifier
     :   'const'
-    |   'restrict'
-    |   'volatile'
-    |   '_Atomic'
+//    |   'restrict'
+//    |   'volatile'
+//    |   '_Atomic'
     ;
 
 functionSpecifier
     :   ('inline'
     |   '_Noreturn'
 //    |   '__inline__' // GCC extension
-    |   '__stdcall')
+//    |   '__stdcall'
+    )
 //    |   gccAttributeSpecifier
-    |   '__declspec' '(' Identifier ')'
+//    |   '__declspec' '(' Identifier ')'
     ;
 
-alignmentSpecifier
-    :   '_Alignas' '(' typeName ')'
-    |   '_Alignas' '(' constantExpression ')'
-    ;
+//alignmentSpecifier
+//    :   '_Alignas' '(' typeName ')'
+//    |   '_Alignas' '(' constantExpression ')'
+//    ;
 
 declarator
     :   pointer? directDeclarator
@@ -231,12 +232,12 @@ declarator
 directDeclarator
     :   Identifier
 //    |   '(' declarator ')'
-    |   directDeclarator '[' typeQualifier* assignmentExpression? ']'
-    |   directDeclarator '[' 'static' typeQualifier* assignmentExpression ']'
-    |   directDeclarator '[' typeQualifier+ 'static' assignmentExpression ']'
-    |   directDeclarator '[' typeQualifier* '*' ']'
-    |   directDeclarator '(' parameterTypeList ')'
-    |   directDeclarator '(' identifierList? ')'
+//    |   directDeclarator '[' typeQualifier* assignmentExpression? ']'
+//    |   directDeclarator '[' 'static' typeQualifier* assignmentExpression ']'
+//    |   directDeclarator '[' typeQualifier+ 'static' assignmentExpression ']'
+//    |   directDeclarator '[' typeQualifier* '*' ']'
+    |   directDeclarator '(' parameterTypeList? ')'
+//    |   directDeclarator '(' identifierList? ')'
     ;
 
 //gccAttributeSpecifier
@@ -266,9 +267,9 @@ parameterDeclaration
     |   declarationSpecifier+ abstractDeclarator?
     ;
 
-identifierList
-    :   Identifier ( ',' Identifier )*
-    ;
+//identifierList
+//    :   Identifier ( ',' Identifier )*
+//    ;
 
 typeName
     :   specifierQualifierList abstractDeclarator?
@@ -281,15 +282,15 @@ abstractDeclarator
 
 directAbstractDeclarator
     :   '(' abstractDeclarator ')'
-    |   '[' typeQualifier* assignmentExpression? ']'
-    |   '[' 'static' typeQualifier* assignmentExpression ']'
-    |   '[' typeQualifier* 'static' assignmentExpression ']'
-    |   '[' '*' ']'
+//    |   '[' typeQualifier* assignmentExpression? ']'
+//    |   '[' 'static' typeQualifier* assignmentExpression ']'
+//    |   '[' typeQualifier* 'static' assignmentExpression ']'
+//    |   '[' '*' ']'
     |   '(' parameterTypeList? ')'
-    |   directAbstractDeclarator '[' typeQualifier* assignmentExpression? ']'
-    |   directAbstractDeclarator '[' 'static' typeQualifier* assignmentExpression ']'
-    |   directAbstractDeclarator '[' typeQualifier+ 'static' assignmentExpression ']'
-    |   directAbstractDeclarator '[' '*' ']'
+//    |   directAbstractDeclarator '[' typeQualifier* assignmentExpression? ']'
+//    |   directAbstractDeclarator '[' 'static' typeQualifier* assignmentExpression ']'
+//    |   directAbstractDeclarator '[' typeQualifier+ 'static' assignmentExpression ']'
+//    |   directAbstractDeclarator '[' '*' ']'
     |   directAbstractDeclarator '(' parameterTypeList? ')'
     ;
 

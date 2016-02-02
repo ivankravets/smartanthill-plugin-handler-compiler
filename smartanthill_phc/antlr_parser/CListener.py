@@ -103,24 +103,6 @@ class CListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CParser#AlignOfTypeExpression.
-    def enterAlignOfTypeExpression(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#AlignOfTypeExpression.
-    def exitAlignOfTypeExpression(self, ctx):
-        pass
-
-
-    # Enter a parse tree produced by CParser#SizeOfExpression.
-    def enterSizeOfExpression(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#SizeOfExpression.
-    def exitSizeOfExpression(self, ctx):
-        pass
-
-
     # Enter a parse tree produced by CParser#IntegerLiteralExpression.
     def enterIntegerLiteralExpression(self, ctx):
         pass
@@ -346,15 +328,6 @@ class CListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by CParser#atomicTypeSpecifier.
-    def enterAtomicTypeSpecifier(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#atomicTypeSpecifier.
-    def exitAtomicTypeSpecifier(self, ctx):
-        pass
-
-
     # Enter a parse tree produced by CParser#typeQualifier.
     def enterTypeQualifier(self, ctx):
         pass
@@ -370,15 +343,6 @@ class CListener(ParseTreeListener):
 
     # Exit a parse tree produced by CParser#functionSpecifier.
     def exitFunctionSpecifier(self, ctx):
-        pass
-
-
-    # Enter a parse tree produced by CParser#alignmentSpecifier.
-    def enterAlignmentSpecifier(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#alignmentSpecifier.
-    def exitAlignmentSpecifier(self, ctx):
         pass
 
 
@@ -424,15 +388,6 @@ class CListener(ParseTreeListener):
 
     # Exit a parse tree produced by CParser#parameterDeclaration.
     def exitParameterDeclaration(self, ctx):
-        pass
-
-
-    # Enter a parse tree produced by CParser#identifierList.
-    def enterIdentifierList(self, ctx):
-        pass
-
-    # Exit a parse tree produced by CParser#identifierList.
-    def exitIdentifierList(self, ctx):
         pass
 
 

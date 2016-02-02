@@ -122,6 +122,14 @@ class VariableDeclarationStmtNode(StatementNode, OnDemandResolution):
         else:
             return None
 
+    def add_qualifier(self, compiler, ctx, qualifier):
+        '''
+        Add qualifiers to this type.
+        To be implemented by derived classes
+        '''
+        # pylint: disable=no-self-use
+        compiler.report_error(ctx, "Unsupported qualifier '%s'" % qualifier)
+
 
 class ExpressionStmtNode(StatementNode):
 

@@ -16,7 +16,6 @@
 import os
 
 from smartanthill_phc import api
-from smartanthill_phc.api import process_manifest
 from smartanthill_phc.parse_write import ZeptoPlugin
 
 
@@ -29,7 +28,7 @@ def composer_test(prefix):
     os.chdir("tests/%s" % prefix)
     try:
         plugin = ZeptoPlugin(xml_file)
-        code = process_manifest(plugin, prefix, False)
+        code = api.process_manifest(plugin, prefix, False, "../papi.h")
 
         f = open(h_file, 'rb')
         assert code == f.read()
@@ -47,9 +46,9 @@ def non_blocking_test(prefix, split_all):
 
     os.chdir("tests/%s" % prefix)
     try:
-        plugin = ZeptoPlugin('manifest.xml')
+        plugin = ZeptoPlugin("manifest.xml")
         code, header, c2, parser = api.process_file(
-            c_file, plugin, prefix, split_all, False)
+            c_file, plugin, prefix, split_all, False, "../papi.h")
 
         assert_are_equal(nb_file, code.splitlines())
         assert_are_equal(h_file, header.splitlines())

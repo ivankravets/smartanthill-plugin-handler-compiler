@@ -152,6 +152,7 @@ class RootNode(Node):
         super(RootNode, self).__init__()
         self.builtins = Child(self, DeclarationListNode)
         self.manifest = Child(self, PluginManifestNode)
+        self.papi = Child(self, PluginSourceNode, True)
         self.source = Child(self, PluginSourceNode, True)
         self.add_scope(RootScope, RootScope(self))
         self.add_scope(NonBlockingData, NonBlockingData())

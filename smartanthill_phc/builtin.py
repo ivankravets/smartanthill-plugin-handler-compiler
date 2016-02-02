@@ -150,9 +150,9 @@ _builtin_int_member = [
 ]
 
 _builtin_ptr_member = [
-    "@this-type @op +( sa_size_type );",
-    "@this-type @op -( sa_size_type );",
-    "@this-type @op []( sa_size_type );"
+    "@this-type @op +( uint32_t );",
+    "@this-type @op -( uint32_t );",
+    "@this-type @op []( uint32_t );"
 ]
 
 
@@ -182,17 +182,17 @@ def create_builtins(compiler, ctx):
     _make_integer(
         compiler, ctx, decls, 'int16_t', ['sa_int_literal', 'int8_t'])
 
-    for each in _builtin_typedefs:
-        d = _pseudo_parse_typedef(compiler, ctx, each)
-        decls.declarations.add(d)
+#     for each in _builtin_typedefs:
+#         d = _pseudo_parse_typedef(compiler, ctx, each)
+#         decls.declarations.add(d)
 
-    for each in _builtin_papi_defines:
-        d = _pseudo_parse_define(compiler, ctx, each)
-        decls.declarations.add(d)
-
-    for each in _builtin_papi:
-        d = pseudo_parser(compiler, ctx, each)
-        decls.declarations.add(d)
+#     for each in _builtin_papi_defines:
+#         d = _pseudo_parse_define(compiler, ctx, each)
+#         decls.declarations.add(d)
+#
+#     for each in _builtin_papi:
+#         d = pseudo_parser(compiler, ctx, each)
+#         decls.declarations.add(d)
 
     return decls
 
@@ -386,7 +386,7 @@ def pseudo_parser(compiler, ctx, text):
     t = _pseudo_tokenize(text)
     assert len(t) >= 2
 
-    d = compiler.init_node(c_node.PapiFunctionDeclNode(), ctx)
+    d = compiler.init_node(decl.FunctionDeclNode(), ctx)
     rt = compiler.init_node(c_node.SimpleTypeNode(), ctx)
     rt.txt_name = t[0]
     d.return_type.set(rt)

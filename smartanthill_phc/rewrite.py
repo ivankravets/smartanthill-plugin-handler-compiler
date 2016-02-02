@@ -83,6 +83,12 @@ class _RewriteVisitor(CodeVisitor):
             return u"\n*sa_result = %s;\n%s" % (txt_result,
                                                 self._get_func_return())
 
+    def default_visit(self, node):
+        '''
+        Default action when a node specific action is not found
+        '''
+        self.visit_childs(node)
+
     def visit_RootNode(self, node):
         self._nb = node.get_scope(NonBlockingData)
         self.visit(node.source)

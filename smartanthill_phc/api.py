@@ -26,7 +26,7 @@ from smartanthill_phc.manifest import create_manifest
 from smartanthill_phc.parser import c_parse_tree_to_syntax_tree
 from smartanthill_phc.resolve import resolve_tree
 from smartanthill_phc.rewrite import rewrite_code
-from smartanthill_phc.root import RootNode, NonBlockingData
+from smartanthill_phc.root import RootNode
 from smartanthill_phc.state import create_states
 
 
@@ -45,28 +45,35 @@ class _Helper(object):
         self.cparser = CParser.CParser(self.token_stream)
 
 
-def process_file(file_name, zepto_plugin, prefix, split_all, dump):
+def process_file(file_name, zepto_plugin, prefix, split_all, dump, papi=None):
     '''
     Process a c input file, and returns an string with output text
     '''
     # pylint: disable=too-many-locals
-
-    helper = _Helper(file_name)
-    ptree = helper.cparser.compilationUnit()
-
-    if dump:
-        print '\n'.join(dump_antlr_tree(ptree))
 
     c = Compiler()
     root = c.init_node(RootNode(), Ctx.ROOT)
     builtin = create_builtins(c, Ctx.BUILTIN)
     root.builtins.set(builtin)
 
+    if papi is not None:
+        papi_helper = _Helper(papi)
+        papi_tree = papi_helper.cparser.compilationUnit()
+
+        if dump:
+            print '\n'.join(dump_antlr_tree(papi_tree))
+
+        papi = c_parse_tree_to_syntax_tree(c, papi_tree, prefix)
+        root.papi.set(papi)
+
     manif = create_manifest(c, Ctx.MANIFEST, prefix, zepto_plugin)
     root.manifest.set(manif)
 
-    source = c_parse_tree_to_syntax_tree(
-        c, ptree, root.get_scope(NonBlockingData), prefix)
+    helper = _Helper(file_name)
+    ptree = helper.cparser.compilationUnit()
+    if dump:
+        print '\n'.join(dump_antlr_tree(ptree))
+    source = c_parse_tree_to_syntax_tree(c, ptree, prefix)
     root.source.set(source)
 
     if dump:
@@ -89,7 +96,7 @@ def process_file(file_name, zepto_plugin, prefix, split_all, dump):
     return (async, header, async2, parser)
 
 
-def process_manifest(zepto_plugin, prefix, dump):
+def process_manifest(zepto_plugin, prefix, dump, papi=None):
     '''
     Process a c input file, and returns an string with output text
     '''
@@ -98,6 +105,16 @@ def process_manifest(zepto_plugin, prefix, dump):
     root = c.init_node(RootNode(), Ctx.ROOT)
     builtin = create_builtins(c, Ctx.BUILTIN)
     root.builtins.set(builtin)
+
+    if papi is not None:
+        papi_helper = _Helper(papi)
+        papi_tree = papi_helper.cparser.compilationUnit()
+
+        if dump:
+            print '\n'.join(dump_antlr_tree(papi_tree))
+
+        papi = c_parse_tree_to_syntax_tree(c, papi_tree, prefix)
+        root.papi.set(papi)
 
     manif = create_manifest(c, Ctx.MANIFEST, prefix, zepto_plugin)
     root.manifest.set(manif)

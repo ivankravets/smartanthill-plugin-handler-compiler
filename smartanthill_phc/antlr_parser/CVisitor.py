@@ -60,16 +60,6 @@ class CVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by CParser#AlignOfTypeExpression.
-    def visitAlignOfTypeExpression(self, ctx):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by CParser#SizeOfExpression.
-    def visitSizeOfExpression(self, ctx):
-        return self.visitChildren(ctx)
-
-
     # Visit a parse tree produced by CParser#IntegerLiteralExpression.
     def visitIntegerLiteralExpression(self, ctx):
         return self.visitChildren(ctx)
@@ -195,11 +185,6 @@ class CVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by CParser#atomicTypeSpecifier.
-    def visitAtomicTypeSpecifier(self, ctx):
-        return self.visitChildren(ctx)
-
-
     # Visit a parse tree produced by CParser#typeQualifier.
     def visitTypeQualifier(self, ctx):
         return self.visitChildren(ctx)
@@ -207,11 +192,6 @@ class CVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by CParser#functionSpecifier.
     def visitFunctionSpecifier(self, ctx):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by CParser#alignmentSpecifier.
-    def visitAlignmentSpecifier(self, ctx):
         return self.visitChildren(ctx)
 
 
@@ -237,11 +217,6 @@ class CVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by CParser#parameterDeclaration.
     def visitParameterDeclaration(self, ctx):
-        return self.visitChildren(ctx)
-
-
-    # Visit a parse tree produced by CParser#identifierList.
-    def visitIdentifierList(self, ctx):
         return self.visitChildren(ctx)
 
 

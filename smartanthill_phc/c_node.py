@@ -325,13 +325,8 @@ class SimpleTypeNode(TypeNode):
         '''
         Add qualifiers to this type.
         '''
-        # pylint: disable=no-self-use
         if qualifier == "const":
-            if not self.bool_const:
-                self.bool_const = True
-            else:
-                compiler.report_error(
-                    ctx, "Duplicate qualifier '%s'" % qualifier)
+            self.bool_const = True
         else:
             super(SimpleTypeNode, self).add_qualifier(compiler, ctx, qualifier)
 
@@ -370,11 +365,7 @@ class PointerTypeNode(TypeNode):
         '''
         # pylint: disable=no-self-use
         if qualifier == "const":
-            if not self.bool_const:
-                self.bool_const = True
-            else:
-                compiler.report_error(
-                    ctx, "Duplicate qualifier '%s'" % qualifier)
+            self.bool_const = True
         else:
             super(PointerTypeNode, self).add_qualifier(
                 compiler, ctx, qualifier)
@@ -406,6 +397,17 @@ class TypedefStmtNode(StatementNode, OnDemandResolution):
         super(TypedefStmtNode, self).__init__()
         self.txt_name = None
         self.typedef_type = Child(self, TypeNode)
+
+    def add_qualifier(self, compiler, ctx, qualifier):
+        '''
+        Add qualifiers to this type.
+        '''
+        # pylint: disable=no-self-use
+        if qualifier == "typedef":
+            pass
+        else:
+            super(TypedefStmtNode, self).add_qualifier(
+                compiler, ctx, qualifier)
 
 
 class PreprocessorDirectiveNode(Node):
@@ -469,3 +471,18 @@ class OperatorDeclNode(decl.FunctionDeclNode):
         Constructor
         '''
         super(OperatorDeclNode, self).__init__()
+
+
+class StaticAssertStmtNode(Node):
+
+    '''
+    Node class representing a preprocessor directive
+    '''
+
+    def __init__(self):
+        '''
+        Constructor
+        '''
+        super(StaticAssertStmtNode, self).__init__()
+        self.expression = ChildExpr(self)
+        self.txt_description = None

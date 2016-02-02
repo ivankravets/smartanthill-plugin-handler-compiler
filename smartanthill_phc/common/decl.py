@@ -121,6 +121,14 @@ class FunctionDeclNode(CallableDeclNode, OnDemandResolution):
             compiler, ctx, args, arg_boxes,
             self.argument_decl_list.get().declarations, True)
 
+    def add_qualifier(self, compiler, ctx, qualifier):
+        '''
+        Add qualifiers to this type.
+        To be implemented by derived classes
+        '''
+        # pylint: disable=no-self-use
+        compiler.report_error(ctx, "Unsupported qualifier '%s'" % qualifier)
+
 
 class FunctionDefinitionNode(Node):
 
@@ -152,6 +160,14 @@ class ArgumentDeclNode(Node, OnDemandResolution):
         super(ArgumentDeclNode, self).__init__()
         self.argument_type = Child(self, TypeNode)
         self.txt_name = None
+
+    def add_qualifier(self, compiler, ctx, qualifier):
+        '''
+        Add qualifiers to this type.
+        To be implemented by derived classes
+        '''
+        # pylint: disable=no-self-use
+        compiler.report_error(ctx, "Unsupported qualifier '%s'" % qualifier)
 
 
 class ArgumentDeclListNode(DeclarationListNode):

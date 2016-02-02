@@ -221,6 +221,10 @@ class _ResolveVisitor(CodeVisitor):
 
         # first built-ins
         self.visit(node.builtins)
+
+        if not node.papi.is_none():
+            self.visit(node.papi)
+
         self.visit(node.manifest)
 
         if not node.source.is_none():
@@ -294,6 +298,9 @@ class _ResolveVisitor(CodeVisitor):
             self.visit_childs(node)
             t = node.expression.get().get_type()
             node.set_type(t)
+
+    def visit_StaticAssertStmtNode(self, node):
+        self.visit_childs(node)
 
     def visit_ArgumentDeclNode(self, node):
         if node.begin_resolution():
@@ -411,7 +418,7 @@ class _ResolveVisitor(CodeVisitor):
         stmt_scope = node.get_scope(StatementListScope)
         t = lookup.lookup_type(node.txt_name, root_scope, stmt_scope)
         if t is None:
-            self._c.report_eror(
+            self._c.report_error(
                 node.ctx, "Unresolved type '%s'" % node.txt_name)
             self._c.raise_error()
 
@@ -507,6 +514,7 @@ class _ResolveVisitor(CodeVisitor):
 
         self.visit_childs(node)
 
+        self._c.report_error(node.ctx, "Conditional expression not supported")
         t = _get_internal_type('_zc_dont_care', node)
         node.set_type(t)
 

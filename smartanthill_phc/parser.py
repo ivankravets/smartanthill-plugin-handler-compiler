@@ -19,11 +19,10 @@ from smartanthill_phc.antlr_parser import CVisitor, CParser
 from smartanthill_phc.common import base, decl, expr, stmt
 from smartanthill_phc.common.antlr_helper import get_identifier_text
 
-
 _prefix = 'sa_'
 
 
-def c_parse_tree_to_syntax_tree(compiler, tree, non_blocking_data, prefix):
+def c_parse_tree_to_syntax_tree(compiler, tree, prefix):
     '''
     Translates a parse tree as returned by antlr4 into a
     syntax tree as used by the compiler, this tree transformation
@@ -35,7 +34,6 @@ def c_parse_tree_to_syntax_tree(compiler, tree, non_blocking_data, prefix):
     '''
 
     assert isinstance(tree, CParser.CParser.CompilationUnitContext)
-    assert non_blocking_data is not None
 
     source = compiler.init_node(root.PluginSourceNode(), tree)
     source.txt_prefix = prefix
@@ -85,10 +83,88 @@ def get_declarator_identifier(ctx):
     return _get_direct_declarator_id(ctx.directDeclarator())
 
 
-def is_typedef(ctx):
+def process_pointers(compiler, ctx, t):
 
-    return ctx.storageClassSpecifier() is not None and\
-        ctx.storageClassSpecifier().getText() == u'typedef'
+    last = t
+    current = ctx
+    while current is not None:
+
+        ptr = compiler.init_node(c_node.PointerTypeNode(), ctx)
+        ptr.pointed_type.set(last)
+
+        for each in ctx.typeQualifier():
+            ptr.add_qualifier(compiler, each, get_text(each))
+
+        current = current.pointer()
+        last = ptr
+
+    return last
+
+
+def process_type_specifiers_and_qualifiers(compiler, ts, tq):
+
+    assert len(ts) != 0
+    if len(ts) != 1:
+        for each in ts:
+            if each.atomicTypeSpecifier() is not None or\
+                    each.structOrUnionSpecifier() is not None or\
+                    each.enumSpecifier() is not None or\
+                    each.typedefName() is not None:
+                compiler.report_error(each,
+                                      "Invalid type specifier combination")
+
+    if ts[0].structOrUnionSpecifier() is not None:
+        compiler.report_error(ts[0], "Unsupported type")
+        t = compiler.init_node(c_node.InvalidTypeNode(), ts[0])
+    elif ts[0].enumSpecifier() is not None:
+        compiler.report_error(ts[0], "Unsupported type")
+        t = compiler.init_node(c_node.InvalidTypeNode(), ts[0])
+    elif ts[0].typedefName() is not None:
+        t = compiler.init_node(c_node.SimpleTypeNode(), ts[0])
+        t.txt_name = get_text(ts[0])
+    else:
+        t = compiler.init_node(c_node.SimpleTypeNode(), ts[0])
+        t.txt_name = ' '.join([get_text(each) for each in ts])
+
+    for each in tq:
+        t.add_qualifier(compiler, each, get_text(each))
+
+    return t
+
+
+def process_specifiers(compiler, ctxs):
+
+    stor = None
+    others = []
+    ts = []
+    tq = []
+    for each in ctxs:
+        if each.storageClassSpecifier() is not None:
+            if stor is None:
+                stor = each.storageClassSpecifier()
+            else:
+                compiler.report_error(
+                    each, "More than one storage specifier not allowed")
+        elif each.functionSpecifier() is not None:
+            others.append(each.functionSpecifier())
+        elif each.typeSpecifier() is not None:
+            ts.append(each.typeSpecifier())
+        elif each.typeQualifier() is not None:
+            tq.append(each.typeQualifier())
+        else:
+            assert False
+
+    return stor, others, ts, tq
+
+
+def process_qualifiers(compiler, node, stor, others):
+    '''
+    Adds qualifiers to node
+    '''
+    if stor is not None:
+        node.add_qualifier(compiler, stor, get_text(stor))
+    for each in others:
+        node.add_qualifier(compiler, each, get_text(each))
 
 
 def get_text(ctx):
@@ -407,79 +483,92 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
     def visitConstantExpression(self, ctx):
         return self.visit(ctx.conditionalExpression())
 
-    def _process_specifiers(self, ctxs):
-
-        t = None
-        q = []
-        for each in ctxs:
-            if each.storageClassSpecifier() is not None:
-                self._c.report_error(
-                    each, "keyword '%s' not supported" %
-                    each.storageClassSpecifier().getText())
-            elif each.typeQualifier() is not None:
-                q.append(each.typeQualifier())
-            elif each.functionSpecifier() is not None:
-                self._c.report_error(
-                    each, "keyword '%s' not supported" %
-                    each.functionSpecifier().getText())
-            elif each.alignmentSpecifier() is not None:
-                self._c.report_error(
-                    each, "keyword '%s' not supported" %
-                    each.alignmentSpecifier().getText())
-            elif each.typeSpecifier() is not None:
-                if t is not None:
-                    self._c.report_error(each, "More than one type")
-                else:
-                    t = self.visit(each.typeSpecifier())
-            else:
-                assert False
-        assert t is not None
-        if t is None:
-            self._c.report_error(ctxs[0], "Missing type")
-            t = self._c.init_node(c_node.InvalidTypeNode(), ctxs[0])
-        else:
-            for each in q:
-                t.add_qualifier(self._c, each, get_text(each))
-
-        return t
-
     # Visit a parse tree produced by CParser#declaration.
     def visitDeclaration(self, ctx):
 
-        if is_typedef(ctx.declarationSpecifier(0)):
-            self._c.report_error(ctx, "typedef declaration not supported")
-            return []
+        stor, others, ts, tq = process_specifiers(
+            self._c, ctx.declarationSpecifier())
 
-        if ctx.initDeclaratorList() is None:
-            # TODO this is a type declaration without name
-            self._c.report_error(ctx, "Incomplete declaration not supported")
-            return []
+        is_typedef = stor is not None and get_text(stor) == "typedef"
 
-        init_decl = ctx.initDeclaratorList().initDeclarator()
-        if len(init_decl) != 1:
-            self._c.report_error(ctx, "Combined declaration not supported")
-            return []
+        # typedef may hit two different rule sets
+        if is_typedef and ctx.initDeclaratorList() is None:
 
-        node = self._c.init_node(stmt.VariableDeclarationStmtNode(), ctx)
+            if len(ts) < 2 or ts[-1].typedefName() is None:
+                self._c.report_error(ctx, "Invalid typedef declaration")
+                return []
 
-        d = init_decl[0].declarator()
+            node = self._c.init_node(c_node.TypedefStmtNode(), ctx)
 
-        i = d.directDeclarator().Identifier()
-        if i is not None:
-            node.txt_name = get_identifier_text(self._c, i, _prefix)
+            n = ts.pop(-1)
+            node.txt_name = get_identifier_text(
+                self._c, n.typedefName().Identifier(), _prefix)
+
+            t = process_type_specifiers_and_qualifiers(self._c, ts, tq)
+            node.typedef_type.set(t)
+
         else:
-            self._c.report_error(ctx, "Unsupported declaration")
 
-        t = self._process_specifiers(ctx.declarationSpecifier())
-        if d.pointer() is not None:
-            t = self._pointerHelper(d.pointer(), t)
-        node.declaration_type.set(t)
+            if ctx.initDeclaratorList() is None:
+                # TODO this is a type declaration without name
+                self._c.report_error(
+                    ctx, "Incomplete declaration not supported")
+                return []
 
-        init = init_decl[0].initializer()
-        if init is not None:
-            e = self.visit(init)
-            node.initializer_expression.set(e)
+            if len(ctx.initDeclaratorList().initDeclarator()) != 1:
+                self._c.report_error(ctx, "Combined declaration not supported")
+                return []
 
+            init_decl = ctx.initDeclaratorList().initDeclarator()[0]
+            dd = init_decl.declarator().directDeclarator()
+
+            t = process_type_specifiers_and_qualifiers(self._c, ts, tq)
+            t = process_pointers(self._c, init_decl.declarator().pointer(), t)
+
+            if is_typedef:
+                node = self._c.init_node(c_node.TypedefStmtNode(), ctx)
+                node.txt_name = get_identifier_text(
+                    self._c, dd.Identifier(), _prefix)
+
+                node.typedef_type.set(t)
+
+            elif dd.Identifier() is not None:
+                # variable decl
+                node = self._c.init_node(
+                    stmt.VariableDeclarationStmtNode(), ctx)
+                node.txt_name = get_identifier_text(
+                    self._c, dd.Identifier(), _prefix)
+
+                node.declaration_type.set(t)
+
+                if init_decl.initializer() is not None:
+                    e = self.visit(init_decl.initializer())
+                    node.initializer_expression.set(e)
+
+            elif dd.directDeclarator() is not None:
+                # function decl
+                if dd.directDeclarator().Identifier() is None:
+                    self._c.report_error(ctx, "Invalid function declaration")
+                    return []
+
+                node = self._c.init_node(
+                    decl.FunctionDeclNode(), init_decl.declarator())
+
+                node.txt_name = get_identifier_text(
+                    self._c, dd.directDeclarator().Identifier(), _prefix)
+
+                node.return_type.set(t)
+
+                al = self._c.init_node(
+                    decl.ArgumentDeclListNode(), dd.getChild(1))
+                # add argument declarations
+                self._process_arg_list(dd.parameterTypeList(), al)
+                node.argument_decl_list.set(al)
+            else:
+                self._c.report_error(ctx, "Unsupported declaration")
+                return []
+
+        process_qualifiers(self._c, node, stor, others)
         return [node]
 
     # Visit a parse tree produced by CParser#declarationSpecifier.
@@ -498,26 +587,6 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
     def visitStorageClassSpecifier(self, ctx):
         return self.visitChildren(ctx)
 
-    # Visit a parse tree produced by CParser#typeSpecifier.
-    def visitTypeSpecifier(self, ctx):
-
-        t = self._c.init_node(c_node.SimpleTypeNode(), ctx)
-        if ctx.atomicTypeSpecifier() is not None:
-            name = get_text(ctx)
-            self._c.report_error(ctx, "Unsupported type '%s'" % name)
-        elif ctx.structOrUnionSpecifier() is not None:
-            name = get_text(ctx)
-            self._c.report_error(ctx, "Unsupported type '%s'" % name)
-        elif ctx.enumSpecifier() is not None:
-            name = get_text(ctx)
-            self._c.report_error(ctx, "Unsupported type '%s'" % name)
-        elif ctx.typedefName() is not None:
-            t.txt_name = get_text(ctx)
-        else:
-            t.txt_name = get_text(ctx)
-
-        return t
-
     # Visit a parse tree produced by CParser#structOrUnionSpecifier.
     def visitStructOrUnionSpecifier(self, ctx):
         return self.visitChildren(ctx)
@@ -530,37 +599,23 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
     def visitStructDeclaration(self, ctx):
         return self.visitChildren(ctx)
 
-    def _specifierQualifierListHelper(self, ctx, t, q):
-        if ctx.typeSpecifier():
-            if t is None:
-                t = self.visit(ctx.typeSpecifier())
-            else:
-                self._c.report_error(ctx, "Invalid type")
-        elif ctx.typeQualifier():
-            q.append(ctx.typeQualifier())
-        else:
-            assert False
-
-        if ctx.specifierQualifierList() is not None:
-            return self._specifierQualifierListHelper(
-                ctx.specifierQualifierList(), t, q)
-        else:
-            return t
-
     # Visit a parse tree produced by CParser#specifierQualifierList.
     def visitSpecifierQualifierList(self, ctx):
 
-        t = None
-        q = []
-        t = self._specifierQualifierListHelper(ctx, t, q)
+        ts = []
+        tq = []
+        current = ctx
+        while current is not None:
+            if current.typeSpecifier() is not None:
+                ts.append(current.typeSpecifier())
+            elif current.typeQualifier() is not None:
+                tq.append(current.typeQualifier())
+            else:
+                assert False
 
-        if t is None:
-            self._c.report_error(ctx, "Invalid type")
-            t = self._c.init_node(c_node.InvalidTypeNode(), ctx)
-        else:
-            for each in q:
-                t.add_qualifier(self._c, each, get_text(each))
+            current = current.specifierQualifierList()
 
+        t = process_type_specifiers_and_qualifiers(self._c, ts, tq)
         return t
 
     # Visit a parse tree produced by CParser#structDeclaratorList.
@@ -623,10 +678,6 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
     def visitNestedParenthesesBlock(self, ctx):
         return self.visitChildren(ctx)
 
-    # Visit a parse tree produced by CParser#pointer.
-    def visitPointer(self, ctx):
-        return self.visitChildren(ctx)
-
     # Visit a parse tree produced by CParser#parameterTypeList.
     def visitParameterTypeList(self, ctx):
         return self.visitChildren(ctx)
@@ -639,38 +690,16 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
     def visitIdentifierList(self, ctx):
         return self.visitChildren(ctx)
 
-    def _pointerHelper(self, ctx, t):
-
-        ptr = self._c.init_node(c_node.PointerTypeNode(), ctx)
-        ptr.pointed_type.set(t)
-
-        for each in ctx.typeQualifier():
-            q = get_text(each)
-            if q == "const":
-                ptr.bool_const = True
-            else:
-                self._c.report_error(ctx, "Unsupported qualifier '%s'" % q)
-
-        if ctx.pointer() is None:
-            return ptr
-        else:
-            return self._pointerHelper(ctx.pointer(), ptr)
-
     # Visit a parse tree produced by CParser#typeName.
-
     def visitTypeName(self, ctx):
 
+        t = self.visit(ctx.specifierQualifierList())
         ad = ctx.abstractDeclarator()
         if ad is not None:
             if ad.directAbstractDeclarator() is not None:
                 self._c.report_error(ctx, "Unsupported type")
-                t = self._c.init_node(c_node.InvalidTypeNode(), ctx)
-                return t
-
-        t = self.visit(ctx.specifierQualifierList())
-        if ad is not None:
-            assert ad.pointer() is not None
-            t = self._pointerHelper(ad.pointer(), t)
+            else:
+                t = process_pointers(self._c, ad.pointer(), t)
 
         return t
 
@@ -895,12 +924,16 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
 
                 arg = self._c.init_node(decl.ArgumentDeclNode(), each)
                 al.declarations.add(arg)
-                t = self._process_specifiers(each.declarationSpecifier())
+                stor, others, ts, tq = process_specifiers(
+                    self._c, each.declarationSpecifier())
+
+                process_qualifiers(self._c, arg, stor, others)
+                t = process_type_specifiers_and_qualifiers(self._c, ts, tq)
 
                 if each.declarator() is not None:
-                    if each.declarator().pointer() is not None:
-                        t = self._pointerHelper(
-                            each.declarator().pointer(), t)
+
+                    t = process_pointers(
+                        self._c, each.declarator().pointer(), t)
 
                     i = each.declarator().directDeclarator().Identifier()
                     if i is None:
@@ -909,9 +942,8 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
                     arg.txt_name = get_identifier_text(self._c, i, _prefix)
 
                 elif each.abstractDeclarator() is not None:
-                    if each.abstractDeclarator().pointer() is not None:
-                        t = self._pointerHelper(
-                            each.abstractDeclarator().pointer(), t)
+                    t = process_pointers(
+                        self._c, each.abstractDeclarator().pointer(), t)
 
                     if each.abstractDeclarator()\
                             .directAbstractDeclarator() is not None:
@@ -928,10 +960,7 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
             return
 
         dd = ctx.declarator().directDeclarator()
-        if dd.Identifier() is not None or \
-                len(dd.typeQualifier()) != 0 or \
-                dd.assignmentExpression() is not None or \
-                dd.identifierList() is not None:
+        if dd.Identifier() is not None:
             self._c.report_error(ctx, "Invalid function declaration")
             return
 
@@ -947,9 +976,12 @@ class _CParseTreeVisitor(CVisitor.CVisitor):
         declaration.txt_name = get_identifier_text(
             self._c, dd.directDeclarator().Identifier(), _prefix)
 
-        t = self._process_specifiers(ctx.declarationSpecifier())
-        if ctx.declarator().pointer() is not None:
-            t = self._pointerHelper(ctx.declarator().pointer(), t)
+        stor, others, ts, tq = process_specifiers(
+            self._c, ctx.declarationSpecifier())
+
+        process_qualifiers(self._c, declaration, stor, others)
+        t = process_type_specifiers_and_qualifiers(self._c, ts, tq)
+        t = process_pointers(self._c, ctx.declarator().pointer(), t)
 
         declaration.return_type.set(t)
 

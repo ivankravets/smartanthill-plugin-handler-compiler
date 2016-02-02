@@ -36,7 +36,7 @@ def make_non_blocking(prefix, split_all):
     plugin = ZeptoPlugin('manifest.xml')
 
     code, header, c2, parser = api.process_file(
-        c_file, plugin, prefix, split_all, True)
+        c_file, plugin, prefix, split_all, True, "../papi.h")
 
     f = open(nb_file, 'wb')
     f.write(code)
